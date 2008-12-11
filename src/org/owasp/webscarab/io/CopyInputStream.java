@@ -1,5 +1,6 @@
 package org.owasp.webscarab.io;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,9 +33,6 @@ public class CopyInputStream extends FilterInputStream {
 		super(in);
 		if (copy == null || copy.length == 0)
 			throw new IllegalArgumentException("copy may not be null or empty");
-		for (int i=0; i<copy.length; i++)
-			if (copy[i] == null)
-				throw new IllegalArgumentException("copy may not contain a null element [" + i + "]");
 		this.copy = copy;
 	}
 	
@@ -76,7 +74,8 @@ public class CopyInputStream extends FilterInputStream {
 				if (copy[i] == null)
 					continue;
 				try {
-					copy[i].write(b, 0, ret);
+					copy[i].write(b, off, ret);
+					copy[i].flush();
 				} catch (IOException ioe) {
 					copy[i] = null;
 				}
@@ -125,6 +124,18 @@ public class CopyInputStream extends FilterInputStream {
 						+ Integer.toHexString(i) + ". Expected 0x0d");
 		}
 		return line.toString();
+	}
+
+	/* (non-Javadoc)
+	 * @see java.io.FilterInputStream#close()
+	 */
+	@Override
+	public void close() throws IOException {
+		super.close();
+		for (int i=0; i<copy.length; i++) {
+			if (copy[i] != null)
+				copy[i].close();
+		}
 	}
 
 }
