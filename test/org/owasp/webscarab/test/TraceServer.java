@@ -1,7 +1,9 @@
 package org.owasp.webscarab.test;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -9,6 +11,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
+import org.owasp.webscarab.io.ChunkedOutputStream;
 import org.owasp.webscarab.io.CopyInputStream;
 import org.owasp.webscarab.model.Request;
 import org.owasp.webscarab.model.Response;
@@ -19,6 +22,10 @@ public class TraceServer implements Runnable {
 	
 	private ServerSocket socket;
 	
+	private boolean chunked = false;
+	
+	private boolean verbose = false;
+	
 	public TraceServer(int port) throws IOException {
 		try {
 			InetAddress address = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
@@ -28,6 +35,14 @@ public class TraceServer implements Runnable {
 		} catch (UnknownHostException uhe) {
 			// should never happen
 		}
+	}
+	
+	public void setChunked(boolean chunked) {
+		this.chunked = chunked;
+	}
+	
+	public void setVerbose(boolean verbose) {
+		this.verbose = verbose;
 	}
 	
 	public void run() {
@@ -80,7 +95,7 @@ public class TraceServer implements Runnable {
 		return thread == null || !thread.isAlive();
 	}
 	
-	private static class CH implements Runnable {
+	private class CH implements Runnable {
 		
 		private Socket socket;
 		
@@ -94,6 +109,8 @@ public class TraceServer implements Runnable {
 				CopyInputStream in = new CopyInputStream(socket.getInputStream(), copy);
 				OutputStream out = socket.getOutputStream();
 				
+				if (verbose)
+					System.err.println("Connection: " + socket);
 				boolean close = true;
 				do {
                 	copy.reset();
@@ -117,12 +134,28 @@ public class TraceServer implements Runnable {
                     // Get the request content (if any) from the stream,
                     if (Request.flushContent(request, in, null))
                     	request.setMessage(copy.toByteArray());
-	            		
+	            	
+                    if (verbose)
+                    	System.out.write(request.getMessage());
+                    
                     Response response = new Response();
-                    response.setStartLine("HTTP/1.0 200 Ok");
-                    response.setContent(request.getMessage());
+                    response.setStartLine("HTTP/1.1 200 Ok");
+                    if (chunked) {
+                    	response.setHeader("Transfer-Encoding", "chunked");
+                    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    	ChunkedOutputStream cos = new ChunkedOutputStream(baos, 16);
+                    	cos.write(request.getMessage());
+                    	cos.close();
+                    	response.setContent(baos.toByteArray());
+                    } else {
+                    	response.setContent(request.getMessage());
+                    }
+                    if (verbose)
+                    	System.out.write(response.getMessage());
+                    
                     out.write(response.getMessage());
                     out.flush();
+
                     String connection = request.getHeader("Connection");
 	                if ("Keep-Alive".equalsIgnoreCase(connection)) {
 	                    close = false;
@@ -141,4 +174,16 @@ public class TraceServer implements Runnable {
 		}
 	}
 	
+	public static void main(String[] args) throws Exception {
+		TraceServer ts = new TraceServer(9999);
+		ts.setChunked(true);
+		ts.setVerbose(true);
+		Thread t = new Thread(ts);
+		t.start();
+		System.out.println("Started");
+		new BufferedReader(new InputStreamReader(System.in)).readLine();
+		
+		ts.stop();
+		System.out.println("stopped");
+	}
 }
