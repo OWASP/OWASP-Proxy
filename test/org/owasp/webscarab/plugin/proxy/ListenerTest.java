@@ -1,6 +1,6 @@
 package org.owasp.webscarab.plugin.proxy;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -93,6 +93,7 @@ public class ListenerTest {
 
 	@Test
 	public void testChunked() throws Exception {
+		ts.setChunked(true);
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
 		ProxMon pm = new ProxMon();
 		l.setProxyMonitor(pm);
@@ -108,16 +109,15 @@ public class ListenerTest {
 		});
 		
 		Request request = new Request();
-		request.setStartLine("GET http://www.google.co.za/search?q=webscarab&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+		request.setStartLine("GET http://localhost:9999/search?q=webscarab&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
 		request.addHeader("Host", "www.google.co.za");
 
 		Conversation c = client.fetchResponse(request);
 		System.out.write(c.getResponse().getMessage());
 		
-		
 		l.stop();
 		Thread.sleep(1000);
-		assertTrue("Listener didn't exit", l.isStopped());
+		assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
 	}
 
 	private static class ProxMon extends ProxyMonitor {

@@ -1,10 +1,8 @@
 package org.owasp.webscarab.plugin.proxy;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -25,24 +23,26 @@ import org.owasp.webscarab.model.Request;
 import org.owasp.webscarab.model.Response;
 
 /**
- * This class implements an intercepting HTTP proxy, which can be customized to modify and/or log the 
- * conversations passing through it in various ways. It also supports streaming large responses 
- * directly to the browser, although this behaviour can be controlled on a per-request basis.
+ * This class implements an intercepting HTTP proxy, which can be customized to
+ * modify and/or log the conversations passing through it in various ways. It
+ * also supports streaming large responses directly to the browser, although
+ * this behaviour can be controlled on a per-request basis.
  * 
  * The most basic proxy (that has no customized behaviour) should look like:
  * 
+ * <code>
  * 	int port = . . .;
- * 	Listener listener = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
- *		0, 1 }), port);
- *	Thread t = new Thread(listener);
- *	t.setDaemon(true);
- *	t.start();
- *
- *  <wait for signal to stop>
- *  
- *  if (!listener.stop()) {
- *  	// error stopping listener
- *  }
+ * 	Listener listener = new Listener(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), port); 
+ * 	Thread t = new Thread(listener);
+ * 	t.setDaemon(true);
+ * 	t.start();
+ * 	
+ * 	<wait for signal to stop>
+ *	
+ * 	if (!listener.stop()) {
+ * 		// error stopping listener 
+ * 	}
+ * </code>
  * 
  * Observing and influencing the proxy is accomplished through the ProxyMonitor.
  * 
@@ -71,7 +71,8 @@ class Listener implements Runnable {
 		this(address, port, null);
 	}
 
-	public Listener(InetAddress address, int port, String base) throws IOException {
+	public Listener(InetAddress address, int port, String base)
+			throws IOException {
 		this.base = base;
 		socket = new ServerSocket(port, 20, address);
 		socket.setReuseAddress(true);
@@ -80,8 +81,8 @@ class Listener implements Runnable {
 	public void run() {
 		try {
 			do {
-				ConnectionHandler ch = new ConnectionHandler(socket
-						.accept(), base);
+				ConnectionHandler ch = new ConnectionHandler(socket.accept(),
+						base);
 				Thread thread = new Thread(ch);
 				thread.setDaemon(true);
 				thread.start();
@@ -117,7 +118,7 @@ class Listener implements Runnable {
 					wait(1000);
 				} catch (InterruptedException ie) {
 					loop++;
-					if (loop>10)
+					if (loop > 10)
 						return false;
 				}
 			}
@@ -170,7 +171,7 @@ class Listener implements Runnable {
 			this.socket = accept;
 			this.base = base;
 			try {
-				socket.setSoTimeout(60000);
+				socket.setSoTimeout(0);
 			} catch (SocketException se) {
 				se.printStackTrace();
 			}
@@ -185,13 +186,17 @@ class Listener implements Runnable {
 		}
 
 		private void writeErrorResponse(PrintStream out, Request request,
-				Exception e) throws IOException {
-			out.write(ERROR_HEADER.getBytes());
-			out.write(ERROR_MESSAGE1.getBytes());
-			out.write(request.getMessage());
-			out.write(ERROR_MESSAGE2.getBytes());
-			e.printStackTrace(out);
-			out.write(ERROR_MESSAGE3.getBytes());
+				Exception e) {
+			try {
+				out.write(ERROR_HEADER.getBytes());
+				out.write(ERROR_MESSAGE1.getBytes());
+				out.write(request.getMessage());
+				out.write(ERROR_MESSAGE2.getBytes());
+				e.printStackTrace(out);
+				out.write(ERROR_MESSAGE3.getBytes());
+			} catch (IOException ioe) {
+				// just eat it
+			}
 		}
 
 		private void doConnect(OutputStream out, Request request)
@@ -241,21 +246,36 @@ class Listener implements Runnable {
 		public void run() {
 			try {
 				ByteArrayOutputStream copy = new ByteArrayOutputStream();
-				CopyInputStream in = new CopyInputStream(socket
-						.getInputStream(), copy);
-				OutputStream out = socket.getOutputStream();
+				CopyInputStream in;
+				OutputStream out;
+				try {
+					in = new CopyInputStream(socket.getInputStream(), copy);
+					out = socket.getOutputStream();
+				} catch (IOException ioe) {
+					// shouldn't happen
+					ioe.printStackTrace();
+					return;
+				}
 
 				boolean close;
 				do {
 					Request request = null;
 					try {
 						// read the whole header. Each line gets written into
-						// the copy defined
-						// above
-						while (!"".equals(in.readLine()))
-							;
+						// the copy defined above
+						try {
+							while (!"".equals(in.readLine()))
+								;
 
-						{ 
+						} catch (IOException ioe) {
+							byte[] headerBytes = copy.toByteArray();
+							// connection closed while waiting for a new request
+							if (headerBytes == null || headerBytes.length == 0)
+								return;
+							throw ioe;
+						}
+
+						{
 							// scoping block to ensure headerBytes can soon be
 							// garbage collected
 							byte[] headerBytes = copy.toByteArray();
@@ -265,7 +285,7 @@ class Listener implements Runnable {
 								return;
 
 							request = new Request();
-							request.setHeader(headerBytes);
+							request.setMessage(headerBytes);
 						}
 
 						// Get the request content (if any) from the stream,
@@ -283,7 +303,7 @@ class Listener implements Runnable {
 							out.write(response.getMessage());
 							return;
 						}
-						
+
 						if (request.getMethod().equals("CONNECT")) {
 							copy = null;
 							in = null;
@@ -292,10 +312,10 @@ class Listener implements Runnable {
 						}
 					} catch (IOException ioe) {
 						errorReadingRequest(request, ioe);
-						throw ioe;
+						return;
 					} catch (MessageFormatException mfe) {
 						errorReadingRequest(request, mfe);
-						throw mfe;
+						return;
 					}
 
 					Conversation conversation = null;
@@ -340,18 +360,20 @@ class Listener implements Runnable {
 							return;
 						}
 					}
-					// FIXME: Also consider the HTTP version here
-					String connection = conversation.getResponse().getHeader(
-							"Connection");
-					if ("Keep-Alive".equalsIgnoreCase(connection)) {
+					String version = conversation.getResponse().getVersion();
+					if ("HTTP/1.1".equals(version)) {
 						close = false;
 					} else {
 						close = true;
 					}
+					String connection = conversation.getResponse().getHeader(
+							"Connection");
+					if ("close".equals(connection)) {
+						close = true;
+					} else if ("Keep-Alive".equalsIgnoreCase(connection)) {
+						close = false;
+					}
 				} while (!close);
-			} catch (IOException ioe) {
-				logger.severe(ioe.getMessage());
-				ioe.printStackTrace();
 			} catch (MessageFormatException mfe) {
 				logger.severe(mfe.getMessage());
 				mfe.printStackTrace();
@@ -372,7 +394,8 @@ class Listener implements Runnable {
 
 		}
 
-		private Response errorReadingRequest(Request request, Exception e) throws MessageFormatException {
+		private Response errorReadingRequest(Request request, Exception e)
+				throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					return monitor.errorReadingRequest(request, e);
@@ -383,7 +406,8 @@ class Listener implements Runnable {
 			return null;
 		}
 
-		private Response requestReceived(Request request) throws MessageFormatException {
+		private Response requestReceived(Request request)
+				throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					return monitor.requestReceived(request);
@@ -394,7 +418,8 @@ class Listener implements Runnable {
 			return null;
 		}
 
-		private Response errorFetchingResponseHeader(Request request, Exception e) throws MessageFormatException {
+		private Response errorFetchingResponseHeader(Request request,
+				Exception e) throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					return monitor.errorFetchingResponseHeader(request, e);
@@ -405,10 +430,13 @@ class Listener implements Runnable {
 			return null;
 		}
 
-		private Response errorFetchingResponseContent(Conversation conversation, Exception e) throws MessageFormatException {
+		private Response errorFetchingResponseContent(
+				Conversation conversation, Exception e)
+				throws MessageFormatException {
 			if (monitor != null) {
 				try {
-					return monitor.errorFetchingResponseContent(conversation, e);
+					return monitor
+							.errorFetchingResponseContent(conversation, e);
 				} catch (Exception e2) {
 					e2.printStackTrace();
 				}
@@ -416,7 +444,8 @@ class Listener implements Runnable {
 			return null;
 		}
 
-		private boolean responseHeaderReceived(Conversation conversation) throws MessageFormatException {
+		private boolean responseHeaderReceived(Conversation conversation)
+				throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					return monitor.responseHeaderReceived(conversation);
@@ -427,7 +456,8 @@ class Listener implements Runnable {
 			return true;
 		}
 
-		private void responseContentReceived(Conversation conversation, boolean streamed) throws MessageFormatException {
+		private void responseContentReceived(Conversation conversation,
+				boolean streamed) throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					monitor.responseContentReceived(conversation, streamed);
@@ -448,7 +478,8 @@ class Listener implements Runnable {
 			}
 		}
 
-		private void wroteResponseToBrowser(Conversation conversation) throws MessageFormatException {
+		private void wroteResponseToBrowser(Conversation conversation)
+				throws MessageFormatException {
 			if (monitor != null) {
 				try {
 					monitor.wroteResponseToBrowser(conversation);
@@ -466,28 +497,31 @@ class Listener implements Runnable {
 			@Override
 			protected HttpClient createHttpClient() {
 				HttpClient client = new HttpClient();
-//				client.setProxyManager(new ProxyManager() {
-//					public String findProxyForUrl(URI uri) {
-//						return "PROXY localhost:8008";
-//					}
-//				});
+				// client.setProxyManager(new ProxyManager() {
+				// public String findProxyForUrl(URI uri) {
+				// return "PROXY localhost:8008";
+				// }
+				// });
 				return client;
 			}
 		};
 		l.setProxyMonitor(new ProxyMonitor() {
-			
+
 			@Override
-			public Response requestReceived(Request request) throws MessageFormatException {
+			public Response requestReceived(Request request)
+					throws MessageFormatException {
+				Response ret = super.requestReceived(request);
 				try {
-//					request.deleteHeader("Accept-Encoding");
+					// request.deleteHeader("Accept-Encoding");
 					System.out.write(request.getMessage());
 				} catch (IOException ioe) {
 				}
-				return super.requestReceived(request);
+				return ret;
 			}
 
 			@Override
-			public Response errorFetchingResponseHeader(Request request, Exception e) throws MessageFormatException {
+			public Response errorFetchingResponseHeader(Request request,
+					Exception e) throws MessageFormatException {
 				try {
 					System.err.println("Error fetching response header: \n");
 					System.err.write(request.getMessage());
@@ -498,7 +532,9 @@ class Listener implements Runnable {
 			}
 
 			@Override
-			public Response errorFetchingResponseContent(Conversation conversation, Exception e) throws MessageFormatException {
+			public Response errorFetchingResponseContent(
+					Conversation conversation, Exception e)
+					throws MessageFormatException {
 				try {
 					System.err.println("Error fetching response content: \n");
 					System.err.write(conversation.getRequest().getMessage());
@@ -512,7 +548,8 @@ class Listener implements Runnable {
 			}
 
 			@Override
-			public Response errorReadingRequest(Request request, Exception e) throws MessageFormatException {
+			public Response errorReadingRequest(Request request, Exception e)
+					throws MessageFormatException {
 				try {
 					System.err.println("Error reading request: \n");
 					if (request != null)
@@ -521,11 +558,12 @@ class Listener implements Runnable {
 				} catch (IOException ioe) {
 				}
 				return null;
-				
+
 			}
 
 			public void errorWritingResponseToBrowser(
-					Conversation conversation, Exception e) throws MessageFormatException {
+					Conversation conversation, Exception e)
+					throws MessageFormatException {
 				try {
 					System.err
 							.println("Error writing response to browser: \nRequest:\n");
@@ -538,43 +576,48 @@ class Listener implements Runnable {
 			}
 
 			@Override
-			public boolean responseHeaderReceived(Conversation conversation) throws MessageFormatException {
-//				try {
-//					String te = conversation.getResponse().getHeader("Transfer-Encoding");
-//					if (te != null)
-//						System.err.write(conversation.getResponse().getHeader());
-//				} catch (MessageFormatException mfe) {
-//					mfe.printStackTrace();
-//				} catch (IOException ioe) {}
+			public boolean responseHeaderReceived(Conversation conversation)
+					throws MessageFormatException {
+				try {
+					System.err.write(conversation.getResponse().getHeader());
+				} catch (IOException ioe) {
+				}
 				return true;
 			}
 
 			@Override
-			public void responseContentReceived(Conversation conversation, boolean streamed) throws MessageFormatException {
-//				try {
-//					String te = conversation.getResponse().getHeader("Transfer-Encoding");
-//					if (te != null) {
-//						ByteArrayOutputStream out = new ByteArrayOutputStream();
-//						Request request = conversation.getRequest();
-//						Response response = conversation.getResponse();
-//						InputStream in = new ByteArrayInputStream(response.getContent());
-//						Response.flushContent(request.getMethod(), response, in, out);
-//						byte[] content = out.toByteArray();
-//						response.deleteHeader("Transfer-Encoding");
-//						response.setContent(content);
-//						System.err.write(response.getMessage());
-//					}
-//				} catch (IOException ioe) {}
+			public void responseContentReceived(Conversation conversation,
+					boolean streamed) throws MessageFormatException {
+				// try {
+				// String te =
+				// conversation.getResponse().getHeader("Transfer-Encoding");
+				// if (te != null) {
+				// ByteArrayOutputStream out = new ByteArrayOutputStream();
+				// Request request = conversation.getRequest();
+				// Response response = conversation.getResponse();
+				// InputStream in = new
+				// ByteArrayInputStream(response.getContent());
+				// Response.flushContent(request.getMethod(), response, in,
+				// out);
+				// byte[] content = out.toByteArray();
+				// response.deleteHeader("Transfer-Encoding");
+				// response.setContent(content);
+				// System.err.write(response.getMessage());
+				// }
+				// } catch (IOException ioe) {}
 			}
-			
+
 			@Override
-			public void wroteResponseToBrowser(Conversation conversation) throws MessageFormatException {
+			public void wroteResponseToBrowser(Conversation conversation)
+					throws MessageFormatException {
 				int resp = conversation.getResponse().getMessage().length;
-				long time = conversation.getResponseBodyTime() - conversation.getRequestTime();
-				
+				long time = conversation.getResponseBodyTime()
+						- conversation.getRequestTime();
+
 				System.out.println(conversation.getRequest().getStartLine()
 						+ " : " + conversation.getResponse().getStatus()
-						+ " - " + resp + " bytes in " + time + " (" + (resp*1000/time) + " bps)");
+						+ " - " + resp + " bytes in " + time + " ("
+						+ (resp * 1000 / time) + " bps)");
 			}
 
 		});
@@ -589,7 +632,8 @@ class Listener implements Runnable {
 		System.out.println("Exiting!");
 		long s = System.currentTimeMillis();
 		if (!l.stop()) {
-			System.err.println("Failed to exit after " + (System.currentTimeMillis() - s));
+			System.err.println("Failed to exit after "
+					+ (System.currentTimeMillis() - s));
 		} else {
 			System.out.println("Exited in " + (System.currentTimeMillis() - s));
 		}

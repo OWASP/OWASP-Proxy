@@ -30,6 +30,16 @@ public abstract class ProxyMonitor {
 	 * @throws MessageFormatException TODO
 	 */
 	public Response requestReceived(Request request) throws MessageFormatException {
+//		String connection = request.getHeader("Connection");
+//		String version = request.getVersion();
+//		if ("HTTP/1.1".equals(version) && connection != null) {
+//			String[] headers = connection.split(" *, *");
+//			for (int i=0; i<headers.length; i++) {
+//				String value = request.deleteHeader(headers[i]);
+//				System.out.println("Deleting header " + headers[i] + ", was " + value);
+//			}
+//		}
+//		request.deleteHeader("Proxy-Connection");
 		return null;
 	}
 	
