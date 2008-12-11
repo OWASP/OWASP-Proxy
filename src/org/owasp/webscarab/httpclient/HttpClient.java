@@ -180,8 +180,12 @@ public class HttpClient {
 			}
 			if (conversation.getResponse() != null)
 				return;
+			if (socket != null && socket.isConnected()) {
+				// success
+				return;
+			}
 		}
-		
+		throw new IOException("Couldn't connect to server");
 	}
 	
 	private boolean isConnected(String host, int port, String[] proxies) {
@@ -264,12 +268,14 @@ public class HttpClient {
 
 		Response response = new Response();
 		response.setMessage(copy.toByteArray());
+
 		if ("100".equals(response.getStatus())) { // 100 Continue, expect another set of headers
 			// read the next header
 			while (!"".equals(in.readLine()))
 				;
 			response.setMessage(copy.toByteArray());
 		}
+
 		conversation.setResponse(response);
 		conversation.setResponseHeaderTime(System.currentTimeMillis());
 	}
