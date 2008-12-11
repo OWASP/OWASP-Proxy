@@ -22,11 +22,11 @@ public class ChunkedInputStream extends FilterInputStream {
 	}
 
 	private void readChunk() throws IOException {
-		String line = readLine().trim();
+		String line = readLine();
 		try {
 			int semi = line.indexOf(';');
 			if (semi > -1)
-				line = line.substring(0, semi).trim();
+				line = line.substring(0, semi);
 			size = Integer.parseInt(line.trim(), 16);
 			if (chunk == null || size > chunk.length)
 				chunk = new byte[size];
@@ -40,11 +40,13 @@ public class ChunkedInputStream extends FilterInputStream {
 					continue;
 				}
 			}
-			if (size == 0) { // read the trailer and the CRLF
-				discardTrailer();
+			if (size > 0) {
+				// read the trailing line feed after the chunk body,
+				// but before the next chunk size
+				readCRLF();
 			} else {
-				readLine(); // read the trailing line feed after the chunk body,
-							// but before the next chunk size
+				chunk = null; // enable GC
+				discardTrailer();
 			}
 			start = 0;
 		} catch (NumberFormatException nfe) {
@@ -96,17 +98,30 @@ public class ChunkedInputStream extends FilterInputStream {
 		return false;
 	}
 
+    /**
+     * Read the CRLF terminator.
+     * @throws IOException If an IO error occurs.
+     */
+    private void readCRLF() throws IOException {
+        int cr = in.read();
+        int lf = in.read();
+        if ((cr != '\r') || (lf != '\n')) { 
+            throw new IOException("CRLF expected at end of chunk: " + cr + "/" + lf);
+        }
+    }
+
 	private String readLine() throws IOException {
 		StringBuilder line = new StringBuilder();
 		int i = in.read();
-		while (i > -1 && i != 10 && i != 13) {
+		while (i > -1 && i != '\r' && i != '\n') {
 			line = line.append((char) (i & 0xFF));
 			i = in.read();
 		}
-		if (i == 13) { // 10 is unix LF, but DOS does 13+10, so read the 10 if
-						// we got 13
+		if (i == '\n') {
+			throw new IOException("Unexpected LF, was expecting a CR first");
+		} else if (i == '\r') {
 			i = in.read();
-			if (i != 10)
+			if (i != '\n')
 				throw new IOException("Unexpected character "
 						+ Integer.toHexString(i) + ", was expecting 0x0A");
 		}
@@ -120,7 +135,7 @@ public class ChunkedInputStream extends FilterInputStream {
 	 * @throws IOException
 	 */
 	private void discardTrailer() throws IOException {
-		for (String line = readLine(); !"".equals(line); line = readLine())
+		while (!"".equals(readLine()))
 			;
 	}
 }
