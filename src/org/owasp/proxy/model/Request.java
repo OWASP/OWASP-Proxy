@@ -123,7 +123,7 @@ public class Request extends Message {
 	 * @throws MessageFormatException if the request headers could not be parsed
 	 */
     public static boolean flushContent(Request request, InputStream in) throws IOException, MessageFormatException {
-    	return Response.flushContent(request, in, null);
+    	return Request.flushContent(request, in, null);
     }
 
 }
