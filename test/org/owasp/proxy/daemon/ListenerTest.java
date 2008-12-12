@@ -1,6 +1,7 @@
 package org.owasp.proxy.daemon;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -9,8 +10,6 @@ import java.net.InetAddress;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.proxy.daemon.Listener;
-import org.owasp.proxy.daemon.ProxyMonitor;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.ProxyManager;
 import org.owasp.proxy.model.Conversation;
@@ -57,9 +56,7 @@ public class ListenerTest {
 
 //	@Test
 	public void testRun() throws Exception {
-		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
-		ProxMon pm = new ProxMon();
-		l.setProxyMonitor(pm);
+		Listener l = new LoggingListener(9998);
 		Thread t = new Thread(l);
 		t.setDaemon(true);
 		t.start();
@@ -96,9 +93,7 @@ public class ListenerTest {
 	@Test
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
-		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
-		ProxMon pm = new ProxMon();
-		l.setProxyMonitor(pm);
+		Listener l = new LoggingListener(9998);
 		Thread t = new Thread(l);
 		t.setDaemon(true);
 		t.start();
@@ -122,8 +117,12 @@ public class ListenerTest {
 		assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
 	}
 
-	private static class ProxMon extends ProxyMonitor {
+	private static class LoggingListener extends Listener {
 
+		public LoggingListener(int port) throws IOException {
+			super(port);
+		}
+		
 		@Override
 		public Response errorFetchingResponseHeader(Request request, Exception e) throws MessageFormatException {
 			try {

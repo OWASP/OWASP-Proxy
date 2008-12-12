@@ -56,15 +56,13 @@ class Listener implements Runnable {
 
 	private String base;
 
-	private ProxyMonitor monitor;
-
 	private volatile ServerSocket socket = null;
 
 	private final static Logger logger = Logger.getLogger(Listener.class
 			.getName());
 
 	public Listener(int port) throws IOException {
-		this(null, port);
+		this(InetAddress.getByAddress(new byte[] {127,0,0,1}), port);
 	}
 
 	public Listener(InetAddress address, int port) throws IOException {
@@ -134,18 +132,99 @@ class Listener implements Runnable {
 		return null;
 	}
 
-	public ProxyMonitor getMonitor() {
-		return monitor;
-	}
-
-	public void setProxyMonitor(ProxyMonitor monitor) {
-		this.monitor = monitor;
-	}
-
 	protected HttpClient createHttpClient() {
 		return new HttpClient();
 	}
 
+	/**
+	 * Called when a request is received by the proxy. Changes can be made
+	 * to the Request object to alter what may be sent to the server.
+	 * 
+	 * @param request the Request received from the client
+	 * @return a custom Response to be sent directly back to the client 
+	 * without making any request to a server, or null to forward the Request
+	 * @throws MessageFormatException if the request cannot be parsed
+	 */
+	protected Response requestReceived(Request request) throws MessageFormatException {
+//		String connection = request.getHeader("Connection");
+//		String version = request.getVersion();
+//		if ("HTTP/1.1".equals(version) && connection != null) {
+//			String[] headers = connection.split(" *, *");
+//			for (int i=0; i<headers.length; i++) {
+//				String value = request.deleteHeader(headers[i]);
+//				System.out.println("Deleting header " + headers[i] + ", was " + value);
+//			}
+//		}
+//		request.deleteHeader("Proxy-Connection");
+		return null;
+	}
+	
+	/**
+	 * Called when an error is encountered while reading the request from the client.
+	 * 
+	 * @param request
+	 * @param e
+	 * @return a customized Response to be sent to the browser, 
+	 * or null to send the default error message
+	 * @throws MessageFormatException if the request couldn't be parsed
+	 */
+	protected Response errorReadingRequest(Request request, Exception e) throws MessageFormatException {
+		return null;
+	}
+	
+	/**
+	 * Called when the Response headers have been read from the server. The response content (if any)
+	 * will not yet have been read. Analysis can be performed based on the headers to determine
+	 * whether to intercept the complete response at a later stage. 
+	 * 
+	 * NB: DO NOT modify the response at this stage! They will be overwritten!
+	 * 
+	 * @param conversation
+	 * @return true to stream the response to the client as it is being read from the server, or false
+	 * to delay writing the response to the client until after responseContentReceived is called
+	 * @throws MessageFormatException if either the request or response couldn't be parsed
+	 */
+	protected boolean responseHeaderReceived(Conversation conversation) throws MessageFormatException {
+		return true;
+	}
+	
+	/**
+	 * Called after the Response content has been received from the server.
+	 * If streamed is false, the response can be modified here, and the modified version
+	 * will be written to the client.
+	 * 
+	 * @param conversation
+	 * @param streamed true if the response has already been written to the client
+	 * @throws MessageFormatException if either the request or response couldn't be parsed
+	 */
+	protected void responseContentReceived(Conversation conversation, boolean streamed) throws MessageFormatException {}
+	
+	/**
+	 * Called in the event of an error occurring while reading the response header from the client
+	 * @param request
+	 * @param e
+	 * @return a custom Response to be sent to the client, or null to use the default
+	 * @throws MessageFormatException if either the request or response couldn't be parsed
+	 */
+	protected Response errorFetchingResponseHeader(Request request, Exception e) throws MessageFormatException {
+		return null;
+	}
+	
+	/**
+	 * Called in the event of an error occurring while reading the response content from the client
+	 * @param conversation
+	 * @param e
+	 * @return a custom Response to be sent to the client, or null to use the default
+	 * @throws MessageFormatException if either the request or response couldn't be parsed
+	 */
+	protected Response errorFetchingResponseContent(Conversation conversation, Exception e) throws MessageFormatException {
+		return null;
+	}
+	
+	protected void wroteResponseToBrowser(Conversation conversation) throws MessageFormatException {}
+	
+	protected void errorWritingResponseToBrowser(Conversation conversation, Exception e) throws MessageFormatException {}
+	
 	private class ConnectionHandler implements Runnable {
 
 		private final static String NO_CERTIFICATE_HEADER = "HTTP/1.0 503 Service unavailable - SSL server certificate not available\r\n\r\n";
@@ -393,36 +472,30 @@ class Listener implements Runnable {
 
 		private Response errorReadingRequest(Request request, Exception e)
 				throws MessageFormatException {
-			if (monitor != null) {
-				try {
-					return monitor.errorReadingRequest(request, e);
-				} catch (Exception e2) {
-					e2.printStackTrace();
-				}
+			try {
+				return Listener.this.errorReadingRequest(request, e);
+			} catch (Exception e2) {
+				e2.printStackTrace();
 			}
 			return null;
 		}
 
 		private Response requestReceived(Request request)
 				throws MessageFormatException {
-			if (monitor != null) {
-				try {
-					return monitor.requestReceived(request);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
+			try {
+				return Listener.this.requestReceived(request);
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 			return null;
 		}
 
 		private Response errorFetchingResponseHeader(Request request,
 				Exception e) throws MessageFormatException {
-			if (monitor != null) {
-				try {
-					return monitor.errorFetchingResponseHeader(request, e);
-				} catch (Exception e2) {
-					e2.printStackTrace();
-				}
+			try {
+				return Listener.this.errorFetchingResponseHeader(request, e);
+			} catch (Exception e2) {
+				e2.printStackTrace();
 			}
 			return null;
 		}
@@ -430,59 +503,49 @@ class Listener implements Runnable {
 		private Response errorFetchingResponseContent(
 				Conversation conversation, Exception e)
 				throws MessageFormatException {
-			if (monitor != null) {
-				try {
-					return monitor
-							.errorFetchingResponseContent(conversation, e);
-				} catch (Exception e2) {
-					e2.printStackTrace();
-				}
+			try {
+				return Listener.this
+						.errorFetchingResponseContent(conversation, e);
+			} catch (Exception e2) {
+				e2.printStackTrace();
 			}
 			return null;
 		}
 
 		private boolean responseHeaderReceived(Conversation conversation)
 				throws MessageFormatException {
-			if (monitor != null) {
 				try {
-					return monitor.responseHeaderReceived(conversation);
+					return Listener.this.responseHeaderReceived(conversation);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
-			}
 			return true;
 		}
 
 		private void responseContentReceived(Conversation conversation,
 				boolean streamed) throws MessageFormatException {
-			if (monitor != null) {
 				try {
-					monitor.responseContentReceived(conversation, streamed);
+					Listener.this.responseContentReceived(conversation, streamed);
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
-			}
 		}
 
 		private void errorWritingResponseToBrowser(Conversation conversation,
 				Exception e) throws MessageFormatException {
-			if (monitor != null) {
 				try {
-					monitor.errorWritingResponseToBrowser(conversation, e);
+					Listener.this.errorWritingResponseToBrowser(conversation, e);
 				} catch (Exception e2) {
 					e2.printStackTrace();
 				}
-			}
 		}
 
 		private void wroteResponseToBrowser(Conversation conversation)
 				throws MessageFormatException {
-			if (monitor != null) {
 				try {
-					monitor.wroteResponseToBrowser(conversation);
+					Listener.this.wroteResponseToBrowser(conversation);
 				} catch (Exception e) {
 					e.printStackTrace();
-				}
 			}
 		}
 
@@ -490,9 +553,7 @@ class Listener implements Runnable {
 
 	public static void main(String[] args) throws Exception {
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
-				0, 1 }), 9998);
-		l.setProxyMonitor(new ProxyMonitor() {
-
+				0, 1 }), 9998) {
 			@Override
 			public Response requestReceived(Request request)
 					throws MessageFormatException {
@@ -586,7 +647,7 @@ class Listener implements Runnable {
 						+ (resp * 1000 / time) + " bps)");
 			}
 
-		});
+		};
 		Thread t = new Thread(l);
 		t.setDaemon(true);
 		t.start();
