@@ -3,6 +3,7 @@ package org.owasp.proxy.daemon;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -10,8 +11,16 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
 import java.util.logging.Logger;
 
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
@@ -128,8 +137,12 @@ class Listener implements Runnable {
 		return socket == null || socket.isClosed();
 	}
 
+	private SSLSocketFactory sslSocketFactory = null;
+	
 	/**
-	 * Override this method to enable SSL support
+	 * Override this method to control SSL support.
+	 * The default implementation uses the same certificate for all
+	 * hosts.
 	 * 
 	 * @param host
 	 *            the host that the client wishes to CONNECT to
@@ -139,7 +152,34 @@ class Listener implements Runnable {
 	 *         material
 	 */
 	protected SSLSocketFactory getSocketFactory(String host, int port) {
-		return null;
+		if (sslSocketFactory == null) {
+			try {
+				String pn = getClass().getPackage().getName().replace('.', '/');
+				KeyStore ks = KeyStore.getInstance("PKCS12");
+				InputStream is = getClass().getClassLoader()
+						.getResourceAsStream(pn + "/server.p12");
+				if (is != null) {
+					char[] ksp = "password".toCharArray();
+					ks.load(is, ksp);
+					KeyManagerFactory kmf = KeyManagerFactory
+							.getInstance("SunX509");
+					char[] kp = "password".toCharArray();
+					kmf.init(ks, kp);
+					SSLContext sslcontext = SSLContext.getInstance("SSLv3");
+					sslcontext.init(kmf.getKeyManagers(), null, null);
+					sslSocketFactory = sslcontext.getSocketFactory();
+				}
+//			} catch (KeyStoreException kse) {
+//			} catch (IOException ioe) {
+//			} catch (CertificateException ce) {
+//			} catch (NoSuchAlgorithmException nsae) {
+//			} catch (UnrecoverableKeyException uke) {
+//			} catch (KeyManagementException kme) {
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return sslSocketFactory;
 	}
 
 	protected HttpClient createHttpClient() {
@@ -266,13 +306,16 @@ class Listener implements Runnable {
 
 	private class ConnectionHandler implements Runnable {
 
-		private final static String NO_CERTIFICATE_HEADER = "HTTP/1.0 503 Service unavailable - SSL server certificate not available\r\n\r\n";
+		private final static String NO_CERTIFICATE_HEADER = "HTTP/1.0 503 Service unavailable"
+				+ " - SSL server certificate not available\r\n\r\n";
 
 		private final static String NO_CERTIFICATE_MESSAGE = "There is no SSL server certificate available for use";
 
-		private final static String ERROR_HEADER = "HTTP/1.0 500 OWASP Proxy Error\r\nContent-Type: text/html\r\nConnection: close\r\n\r\n";
+		private final static String ERROR_HEADER = "HTTP/1.0 500 OWASP Proxy Error\r\n"
+				+ "Content-Type: text/html\r\nConnection: close\r\n\r\n";
 
-		private final static String ERROR_MESSAGE1 = "<html><head><title>OWASP Proxy Error</title></head><body><h1>OWASP Proxy Error</h1>"
+		private final static String ERROR_MESSAGE1 = "<html><head><title>OWASP Proxy Error</title></head>"
+				+ "<body><h1>OWASP Proxy Error</h1>"
 				+ "OWASP Proxy encountered an error fetching the following request : <br/><pre>";
 
 		private final static String ERROR_MESSAGE2 = "</pre><br/>The error was: <br/><pre>";

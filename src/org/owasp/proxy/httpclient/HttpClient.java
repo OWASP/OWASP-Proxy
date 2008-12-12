@@ -20,7 +20,7 @@ import org.owasp.proxy.model.URI;
 
 public class HttpClient {
 
-	private SSLContextManager contextManager = null;
+	private SSLContextManager contextManager = new SSLContextManager();
 
 	private ProxyManager proxyManager = null;
 	
