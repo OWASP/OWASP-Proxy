@@ -169,14 +169,12 @@ class Listener implements Runnable {
 					sslcontext.init(kmf.getKeyManagers(), null, null);
 					sslSocketFactory = sslcontext.getSocketFactory();
 				}
-//			} catch (KeyStoreException kse) {
-//			} catch (IOException ioe) {
-//			} catch (CertificateException ce) {
-//			} catch (NoSuchAlgorithmException nsae) {
-//			} catch (UnrecoverableKeyException uke) {
-//			} catch (KeyManagementException kme) {
-			} catch (Exception e) {
-				e.printStackTrace();
+			} catch (KeyStoreException kse) {
+			} catch (IOException ioe) {
+			} catch (CertificateException ce) {
+			} catch (NoSuchAlgorithmException nsae) {
+			} catch (UnrecoverableKeyException uke) {
+			} catch (KeyManagementException kme) {
 			}
 		}
 		return sslSocketFactory;
