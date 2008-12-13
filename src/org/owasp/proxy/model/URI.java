@@ -23,7 +23,7 @@ import java.net.URISyntaxException;
 
 public class URI {
 
-	private String input, scheme, host, path, query, fragment;
+	private String input = null, scheme = null, host = null, path = null, query = null, fragment = null;
 
 	private int port = -1;
 
@@ -78,7 +78,7 @@ public class URI {
 		if (input.charAt(end) == '?') { // get the query
 			start = end;
 			end = scan(start, "#");
-			path = input.substring(start, end);
+			query = input.substring(start, end);
 		}
 		if (end == length)
 			return;
