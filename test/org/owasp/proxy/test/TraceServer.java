@@ -27,7 +27,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 import org.owasp.proxy.io.ChunkedOutputStream;
@@ -36,8 +35,6 @@ import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
 public class TraceServer implements Runnable {
-	
-	private Thread thread;
 	
 	private ServerSocket socket;
 	
@@ -66,24 +63,16 @@ public class TraceServer implements Runnable {
 	
 	public void run() {
 		try {
-			synchronized(this) {
-				if (thread == null) {
-					thread = Thread.currentThread();
-				} else {
-					throw new RuntimeException("Multiple threads! " + thread + " and " + Thread.currentThread());
-				}
-			}
-	        while (!Thread.interrupted()) {
-	            try {
-	                CH ch = new CH(socket.accept());
-	                Thread thread = new Thread(ch);
-	                thread.setDaemon(true);
-	                thread.start();
-	            } catch (SocketTimeoutException ste) {
-	            }
-	        }
+			do {
+				CH ch = new CH(socket.accept());
+				Thread thread = new Thread(ch);
+				thread.setDaemon(true);
+				thread.start();
+			} while (!socket.isClosed());
 		} catch (IOException ioe) {
-			ioe.printStackTrace();
+			if (!isStopped()) {
+				ioe.printStackTrace();
+			}
 		}
 		try {
 			if (socket != null && !socket.isClosed())
@@ -91,29 +80,37 @@ public class TraceServer implements Runnable {
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		synchronized(this) {
-			thread = null;
+		synchronized (this) {
 			notifyAll();
 		}
 	}
 
-	public void stop() {
-		if (thread != null && thread.isAlive()) {
-			thread.interrupt();
-			synchronized(this) {
-				while (!isStopped()) {
-					try {
-						wait();
-					} catch (InterruptedException ie) {}
+	public synchronized boolean stop() {
+		if (!isStopped()) {
+			try {
+				socket.close();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+			while (!isStopped()) {
+				int loop = 0;
+				try {
+					wait(1000);
+				} catch (InterruptedException ie) {
+					loop++;
+					if (loop > 10)
+						return false;
 				}
 			}
 		}
+		return true;
 	}
-	
+
 	public synchronized boolean isStopped() {
-		return thread == null || !thread.isAlive();
+		return socket == null || socket.isClosed();
 	}
-	
+
+
 	private class CH implements Runnable {
 		
 		private Socket socket;
