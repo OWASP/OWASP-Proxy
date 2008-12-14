@@ -32,7 +32,7 @@ import org.owasp.proxy.io.CopyInputStream;
 
 public class CopyInputStreamTest {
 
-	private final String sample = "This is a test of the CopyInputStream";
+	private final static String sample = "This is a test of the CopyInputStream";
 	private InputStream in;
 	private ByteArrayOutputStream[] copies;
 	

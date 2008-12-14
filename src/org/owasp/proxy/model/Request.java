@@ -22,9 +22,54 @@ package org.owasp.proxy.model;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
 
 public class Request extends Message {
+
+	private String scheme = null, host = null;
+
+	private int port = -1;
+	
+	/**
+	 * @return the scheme
+	 */
+	public String getScheme() {
+		return scheme;
+	}
+
+	/**
+	 * @param scheme the scheme to set
+	 */
+	public void setScheme(String scheme) {
+		this.scheme = scheme;
+	}
+
+	/**
+	 * @return the host
+	 */
+	public String getHost() {
+		return host;
+	}
+
+	/**
+	 * @param host the host to set
+	 */
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	/**
+	 * @return the port
+	 */
+	public int getPort() {
+		return port;
+	}
+
+	/**
+	 * @param port the port to set
+	 */
+	public void setPort(int port) {
+		this.port = port;
+	}
 
 	@Override
 	protected String[] getStartParts() throws MessageFormatException {
@@ -51,7 +96,7 @@ public class Request extends Message {
 		return "".equals(parts[0]) ? null : parts[0];
 	}
 	
-	public void setUrl(String url) throws MessageFormatException {
+	public void setResource(String resource) throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 2) {
 			String[] p = new String[2];
@@ -62,23 +107,15 @@ public class Request extends Message {
 			}
 			parts = p;
 		}
-		parts[1] = url;
+		parts[1] = resource;
 		setStartParts(parts);
 	}
 	
-	public String getUrl() throws MessageFormatException {
+	public String getResource() throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 2)
 			return null;
 		return "".equals(parts[1]) ? null : parts[1];
-	}
-	
-	public URI getUri() throws MessageFormatException {
-		try {
-			return new URI(getUrl());
-		} catch (URISyntaxException use) {
-			throw new MessageFormatException("Malformed URI", use);
-		}
 	}
 	
 	public void setVersion(String version) throws MessageFormatException {

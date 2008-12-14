@@ -129,6 +129,15 @@ public class URI {
 		return fragment;
 	}
 
+	public String getResource() {
+		StringBuilder buff = new StringBuilder(path);
+		if (query != null)
+			buff.append("?").append(query);
+		if (fragment != null)
+			buff.append("#").append(fragment);
+		return buff.toString();
+	}
+	
 	public String toString() {
 		StringBuilder buff = new StringBuilder();
 		buff.append(scheme).append("://");

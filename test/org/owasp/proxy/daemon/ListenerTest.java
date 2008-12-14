@@ -35,7 +35,6 @@ import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
-import org.owasp.proxy.model.URI;
 import org.owasp.proxy.test.TraceServer;
 
 public class ListenerTest {
@@ -45,10 +44,14 @@ public class ListenerTest {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		System.err.println("Running setupBeforeClass()");
-		ts = new TraceServer(9999);
-		Thread t = new Thread(ts);
-		t.setDaemon(false);
-		t.start();
+		try {
+			ts = new TraceServer(9999);
+			Thread t = new Thread(ts);
+			t.setDaemon(true);
+			t.start();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	@AfterClass
@@ -59,7 +62,7 @@ public class ListenerTest {
 		assertTrue("TraceServer shutdown failed!", ts.isStopped());
 	}
 
-//	@Test
+	@Test
 	public void testListenerStartStop() throws Exception {
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
 		Thread t = new Thread(l);
@@ -69,11 +72,10 @@ public class ListenerTest {
 		Thread.sleep(1000);
 		
 		l.stop();
-		Thread.sleep(1000);
 		assertTrue("Listener didn't exit", l.isStopped());
 	}
 
-//	@Test
+	@Test
 	public void testRun() throws Exception {
 		Listener l = new LoggingListener(9998);
 		Thread t = new Thread(l);
@@ -82,31 +84,39 @@ public class ListenerTest {
 		
 		HttpClient client = new HttpClient();
 		client.setProxyManager(new ProxyManager() {
-			public String findProxyForUrl(URI uri) {
+			public String findProxyForUrl(String uri) {
 				return "PROXY localhost:9998";
 			}
 		});
 		
-		Request request = new Request();
-		request.setHeader("GET http://localhost:9999/ HTTP/1.0\r\n\r\n".getBytes());
-		// Conversation c = 
-		client.fetchResponse(request);
-		// System.out.write(c.getResponse().getMessage());
-		
-		
-		request.setMessage("POST http://localhost:9999/ HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
-		// c = 
-		client.fetchResponse(request);
-		// System.out.write(c.getResponse().getMessage());
-		
-		request.setMessage("POST http://localhost:999 HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
-		// c = 
-		client.fetchResponse(request);
-		// System.out.write(c.getResponse().getMessage());
-		
-		l.stop();
-		Thread.sleep(1000);
-		assertTrue("Listener didn't exit", l.isStopped());
+		try {
+			Request request = new Request();
+			request.setScheme("http");
+			request.setHost("localhost");
+			request.setPort(9999);
+			
+			request.setMessage("GET / HTTP/1.0\r\n\r\n".getBytes());
+			// Conversation c = 
+			client.fetchResponse(request);
+			// System.out.write(c.getResponse().getMessage());
+			
+			
+			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
+			// c = 
+			client.fetchResponse(request);
+			// System.out.write(c.getResponse().getMessage());
+			
+			request.setPort(999);
+			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
+			// c = 
+			client.fetchResponse(request);
+			// System.out.write(c.getResponse().getMessage());
+			
+		} finally {
+			
+			l.stop();
+			Thread.sleep(1000);
+		}
 	}
 
 	@Test
@@ -119,21 +129,26 @@ public class ListenerTest {
 		
 		HttpClient client = new HttpClient();
 		client.setProxyManager(new ProxyManager() {
-			public String findProxyForUrl(URI uri) {
+			public String findProxyForUrl(String uri) {
 				return "PROXY localhost:9998";
 			}
 		});
 		
-		Request request = new Request();
-		request.setStartLine("GET http://localhost:9999/search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
-		request.addHeader("Host", "www.google.co.za");
-
-		Conversation c = client.fetchResponse(request);
-		System.out.write(c.getResponse().getMessage());
-		
-		l.stop();
-		Thread.sleep(1000);
-		assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
+		try {
+			Request request = new Request();
+			request.setScheme("http");
+			request.setHost("localhost");
+			request.setPort(9999);
+			request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+			request.addHeader("Host", "www.google.co.za");
+	
+			Conversation c = client.fetchResponse(request);
+			System.out.write(c.getResponse().getMessage());
+			assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
+		} finally {
+			l.stop();
+			assertTrue("Listener didn't exit", l.isStopped());
+		}
 	}
 
 	private static class LoggingListener extends Listener {

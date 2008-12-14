@@ -30,12 +30,8 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
-import java.security.KeyManagementException;
+import java.net.URISyntaxException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -49,6 +45,7 @@ import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
+import org.owasp.proxy.model.URI;
 
 /**
  * This class implements an intercepting HTTP proxy, which can be customized to
@@ -82,33 +79,34 @@ import org.owasp.proxy.model.Response;
  */
 class Listener implements Runnable {
 
-	private String base;
+	private String scheme, host;
+
+	private int port;
 
 	private volatile ServerSocket socket = null;
 
 	private final static Logger logger = Logger.getLogger(Listener.class
 			.getName());
 
-	public Listener(int port) throws IOException {
-		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), port);
+	public Listener(int listenPort) throws IOException {
+		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), listenPort);
 	}
 
-	public Listener(InetAddress address, int port) throws IOException {
-		this(address, port, null);
-	}
-
-	public Listener(InetAddress address, int port, String base)
-			throws IOException {
-		this.base = base;
-		socket = new ServerSocket(port, 20, address);
+	public Listener(InetAddress address, int listenPort) throws IOException {
+		socket = new ServerSocket(listenPort, 20, address);
 		socket.setReuseAddress(true);
 	}
 
+	public void setTarget(String scheme, String host, int port) {
+		this.scheme = scheme;
+		this.host = host;
+		this.port = port;
+	}
+	
 	public void run() {
 		try {
 			do {
-				ConnectionHandler ch = new ConnectionHandler(socket.accept(),
-						base);
+				ConnectionHandler ch = new ConnectionHandler(socket.accept());
 				Thread thread = new Thread(ch);
 				thread.setDaemon(true);
 				thread.start();
@@ -157,11 +155,10 @@ class Listener implements Runnable {
 	}
 
 	private SSLSocketFactory sslSocketFactory = null;
-	
+
 	/**
-	 * Override this method to control SSL support.
-	 * The default implementation uses the same certificate for all
-	 * hosts.
+	 * Override this method to control SSL support. The default implementation
+	 * uses the same certificate for all hosts.
 	 * 
 	 * @param host
 	 *            the host that the client wishes to CONNECT to
@@ -188,12 +185,8 @@ class Listener implements Runnable {
 					sslcontext.init(kmf.getKeyManagers(), null, null);
 					sslSocketFactory = sslcontext.getSocketFactory();
 				}
-			} catch (KeyStoreException kse) {
-			} catch (IOException ioe) {
-			} catch (CertificateException ce) {
-			} catch (NoSuchAlgorithmException nsae) {
-			} catch (UnrecoverableKeyException uke) {
-			} catch (KeyManagementException kme) {
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 		return sslSocketFactory;
@@ -341,13 +334,17 @@ class Listener implements Runnable {
 
 		private Socket socket;
 
-		private String base;
+		private String targetScheme = null, targetHost = null;
+
+		private int targetPort = -1;
 
 		private HttpClient httpClient = null;
 
-		public ConnectionHandler(Socket accept, String base) {
+		public ConnectionHandler(Socket accept) {
 			this.socket = accept;
-			this.base = base;
+			targetScheme = Listener.this.scheme;
+			targetHost = Listener.this.host;
+			targetPort = Listener.this.port;
 			try {
 				socket.setSoTimeout(0);
 			} catch (SocketException se) {
@@ -379,21 +376,21 @@ class Listener implements Runnable {
 
 		private void doConnect(OutputStream out, Request request)
 				throws IOException, MessageFormatException {
-			String url = request.getUrl();
-			int colon = url.indexOf(':');
+			String resource = request.getResource();
+			int colon = resource.indexOf(':');
 			if (colon == -1)
 				throw new MessageFormatException("Malformed CONNECT line : '"
-						+ url + "'");
-			String host = url.substring(0, colon);
+						+ resource + "'");
+			String host = resource.substring(0, colon);
 			if (host.length() == 0)
 				throw new MessageFormatException("Malformed CONNECT line : '"
-						+ url + "'");
+						+ resource + "'");
 			int port;
 			try {
-				port = Integer.parseInt(url.substring(colon + 1));
+				port = Integer.parseInt(resource.substring(colon + 1));
 			} catch (NumberFormatException nfe) {
 				throw new MessageFormatException("Malformed CONNECT line : '"
-						+ url + "'");
+						+ resource + "'");
 			}
 			SSLSocketFactory socketFactory = getSocketFactory(host, port);
 			if (socketFactory == null) {
@@ -407,18 +404,11 @@ class Listener implements Runnable {
 				// start over from the beginning to handle this
 				// connection as an SSL connection
 				socket = negotiateSSL(socketFactory, socket);
-				base = "https://" + url + "/";
+				targetScheme = "https";
+				targetHost = host;
+				targetPort = port;
 				run();
 			}
-		}
-
-		private void insertBase(Request request) throws MessageFormatException {
-			String url = request.getUrl();
-			if (!url.startsWith("/"))
-				throw new MessageFormatException(
-						"Cannot prepend base to url: '" + url + "'");
-			url = base + url;
-			request.setUrl(url);
 		}
 
 		private Request readRequest(CopyInputStream in,
@@ -458,8 +448,43 @@ class Listener implements Runnable {
 				// clear the stream copy
 				copy.reset();
 
-				if (base != null)
-					insertBase(request);
+				if (targetHost != null) {
+					request.setScheme(targetScheme);
+					request.setHost(targetHost);
+					request.setPort(targetPort);
+				} else if (!"CONNECT".equals(request.getMethod())){
+					String resource = request.getResource();
+					int css = resource.indexOf("://");
+					if (css > 3 && css < 6) {
+						try {
+							URI uri = new URI(resource);
+							request.setScheme(uri.getScheme());
+							request.setHost(uri.getHost());
+							request.setPort(uri.getPort());
+							request.setResource(uri.getResource());
+						} catch (URISyntaxException use) {
+							throw new MessageFormatException("Couldn't parse resource as a UR", use);
+						}
+					} else {
+						String host = request.getHeader("Host");
+						if (host == null)
+							throw new MessageFormatException("Couldn't determine target scheme/host/port");
+						request.setScheme(socket instanceof SSLSocket ? "https" : "http");
+						int colon = host.indexOf(':');
+						if (colon > -1) {
+							try {
+								request.setHost(host.substring(0, colon));
+								int port = Integer.parseInt(host.substring(colon+1).trim());
+								request.setPort(port);
+							} catch (NumberFormatException nfe) {
+								throw new MessageFormatException("Couldn't parse target port from Host: header", nfe);
+							}
+						} else {
+							request.setHost(host);
+							request.setPort("https".equals(scheme) ? 443 : 80);
+						}
+					}
+				}
 
 				response = requestReceived(request);
 

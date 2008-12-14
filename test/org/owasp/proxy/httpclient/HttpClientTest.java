@@ -54,11 +54,14 @@ public class HttpClientTest {
 		assertTrue("TraceServer shutdown failed!", ts.isStopped());
 	}
 
-//	@Test
+	@Test
 	public void testFetchResponse() throws Exception {
 		HttpClient client = new HttpClient();
 		Request request = new Request();
-		request.setMessage("GET http://localhost:9999/blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n".getBytes());
+		request.setScheme("http");
+		request.setHost("localhost");
+		request.setPort(9999);
+		request.setMessage("GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n".getBytes());
 		Conversation c = client.fetchResponse(request);
 		System.out.println("Headers: " + (c.getResponseHeaderTime() - c.getRequestTime()));
 		System.out.println("Content: " + (c.getResponseBodyTime() - c.getResponseHeaderTime()));
@@ -69,7 +72,10 @@ public class HttpClientTest {
 	public void testChunked() throws Exception {
 		HttpClient client = new HttpClient();
 		Request request = new Request();
-		request.setStartLine("GET http://www.google.co.za/search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+		request.setScheme("http");
+		request.setHost("www.google.co.za");
+		request.setPort(80);
+		request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
 		request.addHeader("Host", "www.google.co.za");
 		Conversation c = client.fetchResponse(request);
 		System.out.println("Headers: " + (c.getResponseHeaderTime() - c.getRequestTime()));

@@ -87,7 +87,9 @@ public class Message {
 	protected Message() {}
 	
 	/**
-	 * @return
+	 * Get the exact representation of the message
+	 * 
+	 * @return the internal byte[] representing the contents of this message.
 	 */
 	public byte[] getMessage() {
 		return message;

@@ -47,7 +47,6 @@ public class TraceServer implements Runnable {
 			InetAddress address = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
 			socket = new ServerSocket(port, 20, address);
 			socket.setReuseAddress(true);
-			socket.setSoTimeout(500);
 		} catch (UnknownHostException uhe) {
 			// should never happen
 		}

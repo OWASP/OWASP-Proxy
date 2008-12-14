@@ -35,7 +35,6 @@ import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
-import org.owasp.proxy.model.URI;
 
 public class HttpClient {
 
@@ -92,16 +91,16 @@ public class HttpClient {
 	public Conversation fetchResponseHeader(Request request)
 		throws MessageFormatException, IOException {
 		conversation = new Conversation();
+		conversation.setRequest(request);
 		
-		URI uri = request.getUri();
-		String scheme = uri.getScheme().toLowerCase();
+		String scheme = request.getScheme();
 		if (!("http".equals(scheme) || "https".equals(scheme)))
 			throw new IOException("Unsupported scheme : " + scheme);
 
 		// establish a socket connection that is connected either to the proxy server
 		// or to the server itself. conversation.response will be non-null if the proxy
 		// server returned an error
-		openConnection(uri, conversation);
+		openConnection(conversation);
 		
 		if (conversation.getResponse() != null)
 			return conversation;
@@ -137,15 +136,27 @@ public class HttpClient {
 		}
 	}
 	
-	private void openConnection(URI uri, Conversation conversation) throws MessageFormatException, IOException {
-		String[] proxies = getProxiesFor(uri);
+	private String constructUri(String scheme, String host, int port, String resource) {
+		StringBuilder buff = new StringBuilder();
+		buff.append(scheme).append("://").append(host).append(":").append(port);
+		return buff.append(resource).toString();
+	}
+	
+	private void openConnection(Conversation conversation) throws MessageFormatException, IOException {
+		Request request = conversation.getRequest();
+		String scheme = request.getScheme();
+		String host = request.getHost();
+		int port = request.getPort();
+		String resource = request.getResource();
 		
-		String host = uri.getHost();
-		int port = uri.getPort();
-		ssl = "https".equals(uri.getScheme());
+		ssl = "https".equals(scheme);
 		if (port == -1)
 			port = (ssl ? 443 : 80);
-
+		
+		String uri = constructUri(scheme, host, port, resource);
+		
+		String[] proxies = getProxiesFor(uri);
+		
 		if (isConnected(host, port, proxies)) {
 			return;
 		} else if (socket != null && !socket.isClosed()) {
@@ -258,7 +269,7 @@ public class HttpClient {
 	
 	private static final String[] DIRECT = { "DIRECT" };
 	
-	private String[] getProxiesFor(URI uri) {
+	private String[] getProxiesFor(String uri) {
 		if (proxyManager == null) 
 			return DIRECT;
 		String proxy = proxyManager.findProxyForUrl(uri);
@@ -271,8 +282,8 @@ public class HttpClient {
 		OutputStream out = new BufferedOutputStream(socket.getOutputStream());
 
 		conversation.setRequestTime(System.currentTimeMillis());
-		if (direct) {
-			writeDirect(out, conversation.getRequest());
+		if (!direct) {
+			writeProxy(out, conversation.getRequest());
 		} else {
 			out.write(conversation.getRequest().getMessage());
 		}
@@ -362,10 +373,9 @@ public class HttpClient {
 //		return null;
 //	}
 
-	private void writeDirect(OutputStream out, Request request)
+	private void writeProxy(OutputStream out, Request request)
 			throws MessageFormatException, IOException {
-		int baseStart = -1;
-		int baseEnd = 0;
+		int resourceStart = -1;
 		boolean method = true;
 		byte[] message = request.getMessage();
 		for (int i = 0; i < message.length; i++) {
@@ -373,24 +383,20 @@ public class HttpClient {
 				method = false;
 			}
 			if (!method && !Character.isWhitespace(message[i])
-					&& baseStart == -1) {
-				baseStart = i;
-			}
-			if (baseStart > -1 && message[i] == '/') {
-				if (baseEnd == -2) {
-					baseEnd = i;
-					break;
-				} else {
-					baseEnd--;
-				}
+					&& resourceStart == -1) {
+				resourceStart = i;
+				break;
 			}
 			if (message[i] == 0x0d || message[i] == 0x0a)
 				throw new MessageFormatException(
 						"Encountered CR or LF when parsing the URI!");
 		}
-		if (baseStart > 0 && baseEnd > baseStart) {
-			out.write(message, 0, baseStart);
-			out.write(message, baseEnd, message.length - baseEnd);
+		if (resourceStart > 0) {
+			BufferedOutputStream bos = new BufferedOutputStream(out);
+			bos.write(message, 0, resourceStart);
+			bos.write(constructUri(request.getScheme(), request.getHost(), port, "").getBytes());
+			bos.write(message, resourceStart, message.length - resourceStart);
+			bos.flush();
 		} else {
 			throw new MessageFormatException("Couldn't parse the URI!");
 		}
