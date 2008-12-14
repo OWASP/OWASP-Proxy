@@ -320,59 +320,6 @@ public class HttpClient {
 		}
 	}
 
-//	private Socket connect(URI uri, String proxy) throws IOException {
-//
-//		String host = uri.getHost();
-//		int port = uri.getPort();
-//		boolean ssl = "https".equals(scheme);
-//		if (port == -1)
-//			port = ( ssl ? 443 : 80);
-//
-//		Socket socket = new Socket();
-//		socket.setSoTimeout(10000);
-//		if (proxy == null || "".equals(proxy) || "DIRECT".equalsIgnoreCase(proxy)) {
-//			socket.connect(new InetSocketAddress(host, port), 10000);
-//		} else {
-//			if (proxy.toLowerCase().startsWith("proxy")) { // http proxy
-//				String[] parts = proxy.split("[ \t]+");
-//				if (parts.length != 2)
-//					throw new IOException("Could not connect to proxy '" + proxy + "'");
-//				parts = parts[1].split(":");
-//				if (parts.length != 2)
-//					throw new IOException("Could not connect to proxy '" + proxy + "'");
-//				String proxyHost = parts[0];
-//				int proxyPort;
-//				try {
-//					proxyPort = Integer.parseInt(parts[1]);
-//				} catch (NumberFormatException nfe) {
-//					throw new IOException("Could not connect to proxy '" + proxy + "'", nfe);
-//				}
-//				socket.connect(new InetSocketAddress(proxyHost, proxyPort), 10000);
-//				if (ssl)
-//					proxyConnect(socket, host, port);
-//			}
-//		}
-//		
-//		if (ssl) {
-//		}
-//
-//		return socket;
-//	}
-
-//	private Response proxyConnect(Socket socket, String host, int port) throws IOException, MessageFormatException {
-//		OutputStream out = socket.getOutputStream();
-//		out.write(("CONNECT " + host + ":" + port + " HTTP/1.0\r\n\r\n").getBytes("ASCII"));
-//		ByteArrayOutputStream copy = new ByteArrayOutputStream();
-//		InputStream in = new CopyInputStream(socket.getInputStream(), copy);
-//		while (!"".equals(readLine(in)))
-//			;
-//		Response response = new Response();
-//		response.setMessage(copy.toByteArray());
-//		if (!"200".equals(response.getStatus()))
-//			return response;
-//		return null;
-//	}
-
 	private void writeProxy(OutputStream out, Request request)
 			throws MessageFormatException, IOException {
 		int resourceStart = -1;
