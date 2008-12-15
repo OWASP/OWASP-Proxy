@@ -102,7 +102,7 @@ class Listener implements Runnable {
 		this.host = host;
 		this.port = port;
 	}
-	
+
 	public void run() {
 		try {
 			do {
@@ -243,9 +243,15 @@ class Listener implements Runnable {
 	 * Called when the Response headers have been read from the server. The
 	 * response content (if any) will not yet have been read. Analysis can be
 	 * performed based on the headers to determine whether to intercept the
-	 * complete response at a later stage.
+	 * complete response at a later stage. If you wish to intercept the complete
+	 * response message at a later stage, return false from this method to
+	 * disable streaming of the response content, otherwise the response would
+	 * already have been written to the browser when responseContentReceived is
+	 * called.
 	 * 
-	 * NB: DO NOT modify the response at this stage! They will be overwritten!
+	 * Note: If you modify the response headers in this method, be very careful
+	 * not to affect the retrieval of the response content. For example,
+	 * deleting a "Transfer-Encoding: chunked" header would be a bad idea!
 	 * 
 	 * @param conversation
 	 * @return true to stream the response to the client as it is being read
@@ -452,7 +458,7 @@ class Listener implements Runnable {
 					request.setScheme(targetScheme);
 					request.setHost(targetHost);
 					request.setPort(targetPort);
-				} else if (!"CONNECT".equals(request.getMethod())){
+				} else if (!"CONNECT".equals(request.getMethod())) {
 					String resource = request.getResource();
 					int css = resource.indexOf("://");
 					if (css > 3 && css < 6) {
@@ -463,21 +469,27 @@ class Listener implements Runnable {
 							request.setPort(uri.getPort());
 							request.setResource(uri.getResource());
 						} catch (URISyntaxException use) {
-							throw new MessageFormatException("Couldn't parse resource as a UR", use);
+							throw new MessageFormatException(
+									"Couldn't parse resource as a UR", use);
 						}
 					} else {
 						String host = request.getHeader("Host");
 						if (host == null)
-							throw new MessageFormatException("Couldn't determine target scheme/host/port");
-						request.setScheme(socket instanceof SSLSocket ? "https" : "http");
+							throw new MessageFormatException(
+									"Couldn't determine target scheme/host/port");
+						request.setScheme(socket instanceof SSLSocket ? "https"
+								: "http");
 						int colon = host.indexOf(':');
 						if (colon > -1) {
 							try {
 								request.setHost(host.substring(0, colon));
-								int port = Integer.parseInt(host.substring(colon+1).trim());
+								int port = Integer.parseInt(host.substring(
+										colon + 1).trim());
 								request.setPort(port);
 							} catch (NumberFormatException nfe) {
-								throw new MessageFormatException("Couldn't parse target port from Host: header", nfe);
+								throw new MessageFormatException(
+										"Couldn't parse target port from Host: header",
+										nfe);
 							}
 						} else {
 							request.setHost(host);
@@ -511,11 +523,10 @@ class Listener implements Runnable {
 
 		public void run() {
 			try {
-				ByteArrayOutputStream copy = new ByteArrayOutputStream();
-				CopyInputStream in;
+				InputStream sockIn;
 				OutputStream out;
 				try {
-					in = new CopyInputStream(socket.getInputStream(), copy);
+					sockIn = socket.getInputStream();
 					out = socket.getOutputStream();
 				} catch (IOException ioe) {
 					// shouldn't happen
@@ -525,6 +536,8 @@ class Listener implements Runnable {
 
 				boolean close;
 				do {
+					ByteArrayOutputStream copy = new ByteArrayOutputStream();
+					CopyInputStream in = new CopyInputStream(sockIn, copy);
 					Request request = readRequest(in, copy, out);
 					// request may be null if a response has already been sent
 					// to the browser
@@ -588,6 +601,7 @@ class Listener implements Runnable {
 					} else if ("Keep-Alive".equalsIgnoreCase(connection)) {
 						close = false;
 					}
+					copy = null;
 				} while (!close);
 			} catch (MessageFormatException mfe) {
 				logger.severe(mfe.getMessage());
@@ -692,10 +706,10 @@ class Listener implements Runnable {
 			public Response requestReceived(Request request)
 					throws MessageFormatException {
 				Response ret = super.requestReceived(request);
-				try {
-					System.out.write(request.getMessage());
-				} catch (IOException ioe) {
-				}
+				// try {
+				// System.out.write(request.getMessage());
+				// } catch (IOException ioe) {
+				// }
 				return ret;
 			}
 
@@ -758,27 +772,40 @@ class Listener implements Runnable {
 			@Override
 			public boolean responseHeaderReceived(Conversation conversation)
 					throws MessageFormatException {
+				System.err.println(conversation.getResponse().getHeader("Connection"));
 				return true;
 			}
 
 			@Override
 			public void responseContentReceived(Conversation conversation,
 					boolean streamed) throws MessageFormatException {
+				// try {
+				// System.err.write(conversation.getResponse().getHeader());
+				// } catch (IOException ioe) {
+				// }
 			}
 
 			@Override
 			public void wroteResponseToBrowser(Conversation conversation)
 					throws MessageFormatException {
-				int resp = conversation.getResponse().getMessage().length;
-				long time = conversation.getResponseBodyTime();
-				if (time == 0)
-					time = conversation.getResponseHeaderTime();
-				time = time - conversation.getRequestTime();
+//				int resp = conversation.getResponse().getMessage().length;
+//				long time = conversation.getResponseBodyTime();
+//				if (time == 0)
+//					time = conversation.getResponseHeaderTime();
+//				time = time - conversation.getRequestTime();
 
-				System.out.println(conversation.getRequest().getStartLine()
-						+ " : " + conversation.getResponse().getStatus()
-						+ " - " + resp + " bytes in " + time + " ("
-						+ (resp * 1000 / time) + " bps)");
+//				long max = Runtime.getRuntime().maxMemory();
+//				long free = max + Runtime.getRuntime().freeMemory()
+//						- Runtime.getRuntime().totalMemory();
+//				String label = "Used " + toMB(max - free) + " of " + toMB(max)
+//						+ "MB";
+//
+//				System.out.println("Transferred " + resp + ". " + label);
+				// System.out.println(conversation.getRequest().getStartLine()
+				// + " : " + conversation.getResponse().getStatus()
+				// + " - " + resp + " bytes in " + time + " ("
+				// + (resp * 1000 / time) + " bps)");
+
 			}
 
 		};
@@ -798,5 +825,13 @@ class Listener implements Runnable {
 		} else {
 			System.out.println("Exited in " + (System.currentTimeMillis() - s));
 		}
+	}
+
+	private static String toMB(long bytes) {
+		String s = Double.toString((double) bytes / (1024 * 1024));
+		int dot = s.indexOf(".");
+		if (dot > 0 && dot < s.length() - 2)
+			s = s.substring(0, dot + 3);
+		return s;
 	}
 }

@@ -155,6 +155,6 @@ public class ChunkedInputStream extends FilterInputStream {
 	 */
 	private void discardTrailer() throws IOException {
 		while (!"".equals(readLine()))
-			;
+			System.err.println("t");
 	}
 }

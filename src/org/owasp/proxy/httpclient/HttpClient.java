@@ -44,7 +44,7 @@ public class HttpClient {
 	
 	private Socket socket;
 	
-	private ByteArrayOutputStream copy = new ByteArrayOutputStream();
+	private ByteArrayOutputStream copy = null;
 	
 	private CopyInputStream in = null;
 	
@@ -72,7 +72,8 @@ public class HttpClient {
 	
 	public Conversation fetchResponse(Request request)
 			throws MessageFormatException, IOException {
-		if (conversation != null) {
+		// try to clean up any previous conversations
+		if (in != null && conversation != null) {
 			try {
 				fetchResponseContent(null);
 			} catch (MessageFormatException mfe) {
@@ -115,7 +116,7 @@ public class HttpClient {
 		conversation.setRequest(request);
 		
 		writeRequest(conversation);
-		copy.reset();
+		copy = new ByteArrayOutputStream();
 		in = new CopyInputStream(socket.getInputStream(), copy);
 		readResponseHeader();
 		
@@ -128,11 +129,20 @@ public class HttpClient {
 		if (out != null)
 			in = new CopyInputStream(socket.getInputStream(), new OutputStream[] { copy, out });
 		readResponseBody();
+		String version = conversation.getResponse().getVersion();
+		boolean close = "HTTP/1.0".equals(version); // default to close
+		String connection = conversation.getResponse().getHeader("Connection");
+		if (connection != null)
+			close = "close".equalsIgnoreCase(connection);
+		if (close)
+			close();
 	}
 	
 	public void close() throws IOException {
 		if (socket != null && !socket.isClosed()) {
 			socket.close();
+			in = null;
+			copy = null;
 		}
 	}
 	
@@ -221,7 +231,17 @@ public class HttpClient {
 	private boolean isConnected(String host, int port, String[] proxies) {
 		if (socket == null || socket.isClosed() || this.host == null)
 			return false;
-		return (host.equals(this.host) && port == this.port);
+		if (host.equals(this.host) && port == this.port) {
+			try {
+				// try to check if the connection *is* alive
+				socket.getOutputStream().write(new byte[0]);
+				return true;
+			} catch (IOException ioe) {
+				System.err.println("Zero byte write failed, connection is closed!");
+				return false;
+			}
+		}
+		return false;
 	}
 	
 	private void layerSsl() throws IOException {
@@ -248,7 +268,8 @@ public class HttpClient {
 		ByteArrayOutputStream copy = new ByteArrayOutputStream();
 		CopyInputStream in = new CopyInputStream(socket.getInputStream(), copy);
 		while (!"".equals(in.readLine()))
-			; // flush the 
+			; // flush the response headers
+		
 		long responseHeaderTime = System.currentTimeMillis();
 		Response response = new Response();
 		response.setMessage(copy.toByteArray());
@@ -293,16 +314,22 @@ public class HttpClient {
 	private void readResponseHeader() throws MessageFormatException, IOException {
 		// read the whole header. Each line gets written into the copy defined
 		// above
-		while (!"".equals(in.readLine()))
-			;
+		String line;
+		do {
+			line = in.readLine();
+		} while (line != null && !"".equals(line));
 
+		if (line == null) {
+			throw new IOException("Unexpected end of stream reading response header");
+		}
+		
 		Response response = new Response();
 		response.setMessage(copy.toByteArray());
 
 		if ("100".equals(response.getStatus())) { // 100 Continue, expect another set of headers
 			// read the next header
 			while (!"".equals(in.readLine()))
-				;
+				System.err.println("'");
 			response.setMessage(copy.toByteArray());
 		}
 
@@ -311,13 +338,17 @@ public class HttpClient {
 	}
 	
 	private void readResponseBody() throws MessageFormatException, IOException {
+		copy.reset();
 		Response response = conversation.getResponse();
 		if (Response.flushContent(conversation.getRequest().getMethod(), response, in)) {
 			conversation.setResponseBodyTime(System.currentTimeMillis());
-			response.setMessage(copy.toByteArray());
+			response.setContent(copy.toByteArray());
 			conversation.setResponse(response);
 			copy.reset();
 		}
+		// allow the copy ByteArrayOutputStream to be GC'd 
+		copy = null;
+		in = null;
 	}
 
 	private void writeProxy(OutputStream out, Request request)
