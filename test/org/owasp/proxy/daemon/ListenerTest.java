@@ -65,9 +65,7 @@ public class ListenerTest {
 	@Test
 	public void testListenerStartStop() throws Exception {
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
-		Thread t = new Thread(l);
-		t.setDaemon(true);
-		t.start();
+		l.start();
 		
 		Thread.sleep(1000);
 		
@@ -78,9 +76,7 @@ public class ListenerTest {
 	@Test
 	public void testRun() throws Exception {
 		Listener l = new LoggingListener(9998);
-		Thread t = new Thread(l);
-		t.setDaemon(true);
-		t.start();
+		l.start();
 		
 		HttpClient client = new HttpClient();
 		client.setProxyManager(new ProxyManager() {
@@ -123,9 +119,7 @@ public class ListenerTest {
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
 		Listener l = new LoggingListener(9998);
-		Thread t = new Thread(l);
-		t.setDaemon(true);
-		t.start();
+		l.start();
 		
 		HttpClient client = new HttpClient();
 		client.setProxyManager(new ProxyManager() {

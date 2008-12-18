@@ -77,7 +77,7 @@ import org.owasp.proxy.model.URI;
  * @author Rogan Dawes
  * 
  */
-class Listener implements Runnable {
+public class Listener {
 
 	private String scheme, host;
 
@@ -103,32 +103,45 @@ class Listener implements Runnable {
 		this.port = port;
 	}
 
-	public void run() {
-		try {
-			do {
-				ConnectionHandler ch = new ConnectionHandler(socket.accept());
-				Thread thread = new Thread(ch);
-				thread.setDaemon(true);
-				thread.start();
-			} while (!socket.isClosed());
-		} catch (IOException ioe) {
-			if (!isStopped()) {
-				ioe.printStackTrace();
-				logger.warning("Exception listening for connections: "
-						+ ioe.getMessage());
+	private Runner runner = null;
+	
+	private class Runner implements Runnable {
+		public void run() {
+			try {
+				do {
+					ConnectionHandler ch = new ConnectionHandler(socket.accept());
+					Thread thread = new Thread(ch);
+					thread.setDaemon(true);
+					thread.start();
+				} while (!socket.isClosed());
+			} catch (IOException ioe) {
+				if (!isStopped()) {
+					ioe.printStackTrace();
+					logger.warning("Exception listening for connections: "
+							+ ioe.getMessage());
+				}
+			}
+			try {
+				if (socket != null && !socket.isClosed())
+					socket.close();
+			} catch (IOException ioe) {
+				logger.warning("Exception closing socket: " + ioe.getMessage());
+			}
+			synchronized (this) {
+				notifyAll();
 			}
 		}
-		try {
-			if (socket != null && !socket.isClosed())
-				socket.close();
-		} catch (IOException ioe) {
-			logger.warning("Exception closing socket: " + ioe.getMessage());
-		}
-		synchronized (this) {
-			notifyAll();
-		}
 	}
-
+	
+	public synchronized void start() {
+		if (runner != null)
+			throw new IllegalStateException("Already running in another thread!");
+		runner = new Runner();
+		Thread thread = new Thread(runner);
+		thread.setDaemon(true);
+		thread.start();
+	}
+	
 	public synchronized boolean stop() {
 		if (!isStopped()) {
 			try {
@@ -147,6 +160,7 @@ class Listener implements Runnable {
 				}
 			}
 		}
+		runner = null;
 		return true;
 	}
 
@@ -320,7 +334,7 @@ class Listener implements Runnable {
 			Exception e) throws MessageFormatException {
 	}
 
-	private class ConnectionHandler implements Runnable {
+	protected class ConnectionHandler implements Runnable {
 
 		private final static String NO_CERTIFICATE_HEADER = "HTTP/1.0 503 Service unavailable"
 				+ " - SSL server certificate not available\r\n\r\n";
@@ -809,9 +823,7 @@ class Listener implements Runnable {
 			}
 
 		};
-		Thread t = new Thread(l);
-		t.setDaemon(true);
-		t.start();
+		l.start();
 
 		System.out.println("Listener started, press Enter to exit");
 
