@@ -25,22 +25,24 @@ import java.io.OutputStream;
 
 public class Request extends Message {
 
-	private String scheme = null, host = null;
+	private boolean ssl = false;
+	
+	private String host = null;
 
 	private int port = -1;
 	
 	/**
 	 * @return the scheme
 	 */
-	public String getScheme() {
-		return scheme;
+	public boolean isSsl() {
+		return ssl;
 	}
 
 	/**
 	 * @param scheme the scheme to set
 	 */
-	public void setScheme(String scheme) {
-		this.scheme = scheme;
+	public void setSsl(boolean ssl) {
+		this.ssl = ssl;
 	}
 
 	/**

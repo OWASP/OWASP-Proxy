@@ -79,7 +79,9 @@ import org.owasp.proxy.model.URI;
  */
 public class Listener {
 
-	private String scheme, host;
+	private boolean ssl = false;
+	
+	private String host;
 
 	private int port;
 
@@ -97,8 +99,8 @@ public class Listener {
 		socket.setReuseAddress(true);
 	}
 
-	public void setTarget(String scheme, String host, int port) {
-		this.scheme = scheme;
+	public void setTarget(boolean ssl, String host, int port) {
+		this.ssl = ssl;
 		this.host = host;
 		this.port = port;
 	}
@@ -354,7 +356,9 @@ public class Listener {
 
 		private Socket socket;
 
-		private String targetScheme = null, targetHost = null;
+		private boolean targetSsl = false;
+		
+		private String targetHost = null;
 
 		private int targetPort = -1;
 
@@ -362,7 +366,7 @@ public class Listener {
 
 		public ConnectionHandler(Socket accept) {
 			this.socket = accept;
-			targetScheme = Listener.this.scheme;
+			targetSsl = Listener.this.ssl;
 			targetHost = Listener.this.host;
 			targetPort = Listener.this.port;
 			try {
@@ -424,7 +428,7 @@ public class Listener {
 				// start over from the beginning to handle this
 				// connection as an SSL connection
 				socket = negotiateSSL(socketFactory, socket);
-				targetScheme = "https";
+				targetSsl = true;
 				targetHost = host;
 				targetPort = port;
 				run();
@@ -469,7 +473,7 @@ public class Listener {
 				copy.reset();
 
 				if (targetHost != null) {
-					request.setScheme(targetScheme);
+					request.setSsl(targetSsl);
 					request.setHost(targetHost);
 					request.setPort(targetPort);
 				} else if (!"CONNECT".equals(request.getMethod())) {
@@ -478,7 +482,7 @@ public class Listener {
 					if (css > 3 && css < 6) {
 						try {
 							URI uri = new URI(resource);
-							request.setScheme(uri.getScheme());
+							request.setSsl("https".equals(uri.getScheme()));
 							request.setHost(uri.getHost());
 							request.setPort(uri.getPort());
 							request.setResource(uri.getResource());
@@ -491,8 +495,7 @@ public class Listener {
 						if (host == null)
 							throw new MessageFormatException(
 									"Couldn't determine target scheme/host/port");
-						request.setScheme(socket instanceof SSLSocket ? "https"
-								: "http");
+						request.setSsl(socket instanceof SSLSocket);
 						int colon = host.indexOf(':');
 						if (colon > -1) {
 							try {
@@ -507,7 +510,7 @@ public class Listener {
 							}
 						} else {
 							request.setHost(host);
-							request.setPort("https".equals(scheme) ? 443 : 80);
+							request.setPort("https".equals(ssl) ? 443 : 80);
 						}
 					}
 				}

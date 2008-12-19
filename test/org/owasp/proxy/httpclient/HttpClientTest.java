@@ -58,7 +58,7 @@ public class HttpClientTest {
 	public void testFetchResponse() throws Exception {
 		HttpClient client = new HttpClient();
 		Request request = new Request();
-		request.setScheme("http");
+		request.setSsl(false);
 		request.setHost("localhost");
 		request.setPort(9999);
 		request.setMessage("GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n".getBytes());
@@ -72,7 +72,7 @@ public class HttpClientTest {
 	public void testChunked() throws Exception {
 		HttpClient client = new HttpClient();
 		Request request = new Request();
-		request.setScheme("http");
+		request.setSsl(false);
 		request.setHost("www.google.co.za");
 		request.setPort(80);
 		request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");

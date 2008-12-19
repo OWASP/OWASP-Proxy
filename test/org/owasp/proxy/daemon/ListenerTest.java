@@ -87,7 +87,7 @@ public class ListenerTest {
 		
 		try {
 			Request request = new Request();
-			request.setScheme("http");
+			request.setSsl(false);
 			request.setHost("localhost");
 			request.setPort(9999);
 			
@@ -130,7 +130,7 @@ public class ListenerTest {
 		
 		try {
 			Request request = new Request();
-			request.setScheme("http");
+			request.setSsl(false);
 			request.setHost("localhost");
 			request.setPort(9999);
 			request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");

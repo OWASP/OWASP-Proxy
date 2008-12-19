@@ -58,8 +58,6 @@ public class HttpClient {
 	
 	private int proxyPort;
 	
-	private boolean ssl;
-	
 	private boolean direct;
 	
 	public void setSSLContextManager(SSLContextManager contextManager) {
@@ -94,10 +92,6 @@ public class HttpClient {
 		conversation = new Conversation();
 		conversation.setRequest(request);
 		
-		String scheme = request.getScheme();
-		if (!("http".equals(scheme) || "https".equals(scheme)))
-			throw new IOException("Unsupported scheme : " + scheme);
-
 		// establish a socket connection that is connected either to the proxy server
 		// or to the server itself. conversation.response will be non-null if the proxy
 		// server returned an error
@@ -146,24 +140,23 @@ public class HttpClient {
 		}
 	}
 	
-	private String constructUri(String scheme, String host, int port, String resource) {
+	private String constructUri(boolean ssl, String host, int port, String resource) {
 		StringBuilder buff = new StringBuilder();
-		buff.append(scheme).append("://").append(host).append(":").append(port);
+		buff.append(ssl ? "https" : "http").append("://").append(host).append(":").append(port);
 		return buff.append(resource).toString();
 	}
 	
 	private void openConnection(Conversation conversation) throws MessageFormatException, IOException {
 		Request request = conversation.getRequest();
-		String scheme = request.getScheme();
+		boolean ssl = request.isSsl();
 		String host = request.getHost();
 		int port = request.getPort();
 		String resource = request.getResource();
 		
-		ssl = "https".equals(scheme);
 		if (port == -1)
 			port = (ssl ? 443 : 80);
 		
-		String uri = constructUri(scheme, host, port, resource);
+		String uri = constructUri(ssl, host, port, resource);
 		
 		String[] proxies = getProxiesFor(uri);
 		
@@ -372,7 +365,7 @@ public class HttpClient {
 		if (resourceStart > 0) {
 			BufferedOutputStream bos = new BufferedOutputStream(out);
 			bos.write(message, 0, resourceStart);
-			bos.write(constructUri(request.getScheme(), request.getHost(), port, "").getBytes());
+			bos.write(constructUri(request.isSsl(), request.getHost(), port, "").getBytes());
 			bos.write(message, resourceStart, message.length - resourceStart);
 			bos.flush();
 		} else {
