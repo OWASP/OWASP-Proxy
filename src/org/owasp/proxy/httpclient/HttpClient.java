@@ -63,12 +63,18 @@ public class HttpClient {
 	
 	private boolean direct;
 	
+	private Resolver resolver;
+	
 	public void setSSLContextManager(SSLContextManager contextManager) {
 		this.contextManager = contextManager;
 	}
 
 	public void setProxyManager(ProxyManager proxyManager) {
 		this.proxyManager = proxyManager;
+	}
+	
+	public void setResolver(Resolver resolver) {
+		this.resolver = resolver;
 	}
 	
 	public Conversation fetchResponse(Request request)
@@ -198,7 +204,12 @@ public class HttpClient {
 		for (String proxy : proxies){
 			try {
 				if (proxy.equals("DIRECT")) {
-					InetSocketAddress isa = new InetSocketAddress(host, port);
+					InetSocketAddress isa = null;
+					if (resolver != null) {
+						isa = new InetSocketAddress(resolver.getAddress(host), port);
+					} else {
+						isa = new InetSocketAddress(host, port);
+					}
 					checkLoop(isa);
 					proxyHost = null;
 					proxyPort = -1;
