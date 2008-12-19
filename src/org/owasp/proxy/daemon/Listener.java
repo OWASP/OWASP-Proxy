@@ -30,9 +30,12 @@ import java.io.PushbackInputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.SocketException;
 import java.net.URISyntaxException;
 import java.security.KeyStore;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -92,6 +95,12 @@ public class Listener {
 	private final static Logger logger = Logger.getLogger(Listener.class
 			.getName());
 
+	protected static Set<SocketAddress> listenAddresses = new HashSet<SocketAddress>();
+	
+	public static synchronized SocketAddress[] getListeners() {
+		return listenAddresses.toArray(new SocketAddress[listenAddresses.size()]);
+	}
+	
 	public Listener(int listenPort) throws IOException {
 		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), listenPort);
 	}
@@ -111,6 +120,10 @@ public class Listener {
 	
 	private class Runner implements Runnable {
 		public void run() {
+			SocketAddress addr = socket.getLocalSocketAddress();
+			synchronized (Listener.class) {
+				listenAddresses.add(addr);
+			}
 			try {
 				do {
 					ConnectionHandler ch = new ConnectionHandler(socket.accept());
@@ -130,6 +143,9 @@ public class Listener {
 					socket.close();
 			} catch (IOException ioe) {
 				logger.warning("Exception closing socket: " + ioe.getMessage());
+			}
+			synchronized (Listener.class) {
+				listenAddresses.remove(addr);
 			}
 			synchronized (this) {
 				notifyAll();

@@ -24,12 +24,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.net.Socket;
+import java.net.SocketAddress;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
@@ -146,10 +149,27 @@ public class HttpClient {
 		return buff.append(resource).toString();
 	}
 	
+	private void checkLoop(InetSocketAddress dest) throws IOException {
+		SocketAddress[] listeners = Listener.getListeners();
+		for (int i=0; i<listeners.length; i++) {
+			if (listeners[i] instanceof InetSocketAddress) {
+				InetSocketAddress isa = (InetSocketAddress) listeners[i];
+				if (isa.getAddress().isAnyLocalAddress()) {
+					if (NetworkInterface.getByInetAddress(dest.getAddress()) != null && 
+							dest.getPort() == isa.getPort())
+							throw new IOException("Loop detected! Request target is a local Listener");
+				} else if (dest.equals(listeners[i]))
+					throw new IOException("Loop detected! Request target is a local Listener");
+			}
+		}
+	}
+	
 	private void openConnection(Conversation conversation) throws MessageFormatException, IOException {
 		Request request = conversation.getRequest();
 		boolean ssl = request.isSsl();
 		String host = request.getHost();
+		if (host == null)
+			throw new MessageFormatException("Host is not set, don't know where to connect to!");
 		int port = request.getPort();
 		String resource = request.getResource();
 		
@@ -174,13 +194,16 @@ public class HttpClient {
 		
 		socket = new Socket();
 		socket.setSoTimeout(10000);
+		IOException lastAttempt = null;
 		for (String proxy : proxies){
 			try {
 				if (proxy.equals("DIRECT")) {
+					InetSocketAddress isa = new InetSocketAddress(host, port);
+					checkLoop(isa);
 					proxyHost = null;
 					proxyPort = -1;
 					direct = true;
-					socket.connect(new InetSocketAddress(host, port), 10000);
+					socket.connect(isa, 10000);
 					if (ssl)
 						layerSsl();
 				} else if (proxy.startsWith("PROXY ")) {
@@ -196,7 +219,9 @@ public class HttpClient {
 						ioe.initCause(nfe);
 						throw ioe;
 					}
-					socket.connect(new InetSocketAddress(proxyHost, proxyPort), 10000);
+					InetSocketAddress isa = new InetSocketAddress(proxyHost, proxyPort);
+					checkLoop(isa);
+					socket.connect(isa, 10000);
 					if (ssl) {
 						proxyConnect(proxyHost, proxyPort, conversation);
 						if (conversation.getResponse() != null) // CONNECT failed!
@@ -207,7 +232,7 @@ public class HttpClient {
 					continue;
 				}
 			} catch (IOException ioe) {
-				ioe.printStackTrace();
+				lastAttempt = ioe;
 				socket.close();
 				socket = null;
 			}
@@ -218,6 +243,8 @@ public class HttpClient {
 				return;
 			}
 		}
+		if (lastAttempt != null)
+			throw lastAttempt;
 		throw new IOException("Couldn't connect to server");
 	}
 	
