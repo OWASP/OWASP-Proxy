@@ -839,11 +839,4 @@ public class Listener {
 		}
 	}
 
-	private static String toMB(long bytes) {
-		String s = Double.toString((double) bytes / (1024 * 1024));
-		int dot = s.indexOf(".");
-		if (dot > 0 && dot < s.length() - 2)
-			s = s.substring(0, dot + 3);
-		return s;
-	}
 }
