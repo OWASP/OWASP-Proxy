@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.PushbackInputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -41,6 +42,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.io.CopyInputStream;
+import org.owasp.proxy.io.SocketWrapper;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
@@ -538,6 +540,13 @@ public class Listener {
 			}
 		}
 
+		private boolean isSSL(byte[] sniff, int len) {
+			for (int i=0; i<len; i++)
+				if (sniff[i] == 0x03)
+					return true;
+			return false;
+		}
+		
 		public void run() {
 			try {
 				InputStream sockIn;
@@ -551,6 +560,27 @@ public class Listener {
 					return;
 				}
 
+				if (!targetSsl) {
+					// check if it is an SSL Connection
+					try {
+						byte[] sslsniff = new byte[4];
+						PushbackInputStream pbis = new PushbackInputStream(socket.getInputStream(), sslsniff.length);
+						int got = pbis.read(sslsniff);
+						pbis.unread(sslsniff, 0, got);
+						if (isSSL(sslsniff, got)) {
+							SSLSocketFactory factory = getSocketFactory(targetHost, targetPort);
+							SocketWrapper wrapper = new SocketWrapper(socket, pbis, out);
+							socket = negotiateSSL(factory, wrapper);
+							targetSsl = true;
+							run();
+							return;
+						} else {
+							sockIn = pbis;
+						}
+					} catch (IOException ioe) {
+						ioe.printStackTrace();
+					}
+				}
 				boolean close;
 				do {
 					ByteArrayOutputStream copy = new ByteArrayOutputStream();
