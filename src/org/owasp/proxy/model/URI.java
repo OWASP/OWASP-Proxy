@@ -132,9 +132,9 @@ public class URI {
 	public String getResource() {
 		StringBuilder buff = new StringBuilder(path);
 		if (query != null)
-			buff.append("?").append(query);
+			buff.append(query);
 		if (fragment != null)
-			buff.append("#").append(fragment);
+			buff.append(fragment);
 		return buff.toString();
 	}
 	
