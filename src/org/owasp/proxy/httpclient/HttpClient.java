@@ -27,6 +27,7 @@ import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -260,15 +261,29 @@ public class HttpClient {
 	}
 	
 	private boolean isConnected(String host, int port, String[] proxies) {
-		if (socket == null || socket.isClosed() || this.host == null)
+		if (socket == null || socket.isClosed() || socket.isInputShutdown() || this.host == null)
 			return false;
 		if (host.equals(this.host) && port == this.port) {
 			try {
-				// try to check if the connection *is* alive
-				socket.getOutputStream().write(new byte[0]);
-				return true;
+				// FIXME: This only works because we don't implement pipelining!
+	            int oldtimeout = socket.getSoTimeout();
+	            try {
+	                socket.setSoTimeout(1);
+	                byte[] buff = new byte[1024];
+	                int got = socket.getInputStream().read(buff);
+	                if (got == -1)
+	                	return false;
+	                if (got > 0) {
+	                	System.err.println("Unexpected data read from socket:\n\n" + new String(buff, 0, got));
+	                	return false;
+	                }
+	            } catch (SocketTimeoutException e) {
+	            	return true;
+	            } finally {
+	                socket.setSoTimeout(oldtimeout);
+	            }
 			} catch (IOException ioe) {
-				System.err.println("Zero byte write failed, connection is closed!");
+				System.err.println("Looks closed!");
 				return false;
 			}
 		}
