@@ -22,9 +22,9 @@ package org.owasp.proxy.daemon;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.HashSet;
 import java.util.Set;
@@ -86,10 +86,18 @@ public class Listener {
 	private final static Logger logger = Logger.getLogger(Listener.class
 			.getName());
 
-	protected static Set<SocketAddress> listenAddresses = new HashSet<SocketAddress>();
+	private static Set<SocketAddress> listenAddresses = new HashSet<SocketAddress>();
 	
 	public static synchronized SocketAddress[] getListeners() {
 		return listenAddresses.toArray(new SocketAddress[listenAddresses.size()]);
+	}
+	
+	protected static synchronized void registerListener(SocketAddress addr) {
+		listenAddresses.add(addr);
+	}
+	
+	protected static synchronized void deregisterListener(SocketAddress addr) {
+		listenAddresses.remove(addr);
 	}
 	
 	public Listener(int listenPort) throws IOException {
@@ -119,24 +127,40 @@ public class Listener {
 		this.clientFactory = clientFactory;
 	}
 	
+	
+	protected ConnectionHandler createConnectionHandler(Socket socket) throws IOException {
+		ConnectionHandler ch = new ConnectionHandler(socket);
+		ch.setTarget(ssl, host, port);
+		ch.setProxyMonitor(monitor);
+		ch.setCertificateProvider(certProvider);
+		ch.setHttpClientFactory(clientFactory);
+		return ch;
+	}
+	
+	private void handleConnection(final Socket accept) {
+		Thread thread = new Thread(new Runnable() {
+			public void run() {
+				try {
+					ConnectionHandler ch = createConnectionHandler(accept);
+					ch.run();
+				} catch (IOException ioe) {
+					logger.severe("Error creating connection handler!" + ioe.getMessage());
+				}
+			}
+		});
+		thread.setDaemon(true);
+		thread.start();
+	}
+	
 	private Runner runner = null;
 	
 	private class Runner implements Runnable {
 		public void run() {
 			SocketAddress addr = socket.getLocalSocketAddress();
-			synchronized (Listener.class) {
-				listenAddresses.add(addr);
-			}
+			registerListener(addr);
 			try {
 				do {
-					ConnectionHandler ch = new ConnectionHandler(socket.accept());
-					ch.setTarget(ssl, host, port);
-					ch.setProxyMonitor(monitor);
-					ch.setCertificateProvider(certProvider);
-					ch.setHttpClientFactory(clientFactory);
-					Thread thread = new Thread(ch);
-					thread.setDaemon(true);
-					thread.start();
+					handleConnection(socket.accept());
 				} while (!socket.isClosed());
 			} catch (IOException ioe) {
 				if (!isStopped()) {
@@ -151,9 +175,7 @@ public class Listener {
 			} catch (IOException ioe) {
 				logger.warning("Exception closing socket: " + ioe.getMessage());
 			}
-			synchronized (Listener.class) {
-				listenAddresses.remove(addr);
-			}
+			deregisterListener(addr);
 			synchronized (this) {
 				notifyAll();
 			}
