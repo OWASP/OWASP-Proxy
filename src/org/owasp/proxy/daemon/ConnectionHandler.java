@@ -291,6 +291,8 @@ public class ConnectionHandler implements Runnable {
 					if (isSSL(sslsniff, got)) {
 						SSLSocketFactory factory = getSocketFactory(targetHost,
 								targetPort);
+						if (factory == null)
+							return;
 						SocketWrapper wrapper = new SocketWrapper(socket, pbis,
 								out);
 						socket = negotiateSSL(factory, wrapper);
