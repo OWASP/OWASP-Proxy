@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.Proxy;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
@@ -199,7 +200,7 @@ public class HttpClient {
 		this.host = host;
 		this.port = port;
 		
-		socket = new Socket();
+		socket = new Socket(Proxy.NO_PROXY);
 		socket.setSoTimeout(10000);
 		IOException lastAttempt = null;
 		for (String proxy : proxies){
