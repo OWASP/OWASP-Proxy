@@ -236,7 +236,7 @@ public class HttpClient {
 					checkLoop(isa);
 					socket.connect(isa, 10000);
 					if (ssl) {
-						proxyConnect(proxyHost, proxyPort, conversation);
+						proxyConnect(host, port, conversation);
 						if (conversation.getResponse() != null) // CONNECT failed!
 							return;
 						layerSsl();
