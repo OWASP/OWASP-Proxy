@@ -349,7 +349,9 @@ public class SocksSocket extends Socket {
 	private void doDirect() throws SocksException {
 		try {
 			// System.out.println("IP:"+remoteIP+":"+remotePort);
-			directSock = new Socket(remoteIP, remotePort);
+			directSock = new Socket(java.net.Proxy.NO_PROXY);
+			SocketAddress sockAddr = new InetSocketAddress(remoteIP, remotePort);
+			directSock.connect(sockAddr);
 			proxy.out = directSock.getOutputStream();
 			proxy.in = directSock.getInputStream();
 			proxy.proxySocket = directSock;
