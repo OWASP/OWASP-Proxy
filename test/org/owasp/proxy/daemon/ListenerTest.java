@@ -22,8 +22,6 @@ package org.owasp.proxy.daemon;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetAddress;
 
 import org.junit.AfterClass;
@@ -32,9 +30,7 @@ import org.junit.Test;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.ProxyManager;
 import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
 import org.owasp.proxy.test.TraceServer;
 
 public class ListenerTest {
