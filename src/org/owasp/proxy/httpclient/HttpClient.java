@@ -26,9 +26,13 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Proxy;
+import java.net.ProxySelector;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketTimeoutException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -43,11 +47,26 @@ import org.owasp.proxy.model.Response;
 
 public class HttpClient {
 
+	public static final ProxySelector NO_PROXY = new ProxySelector() {
+		@Override
+		public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+		}
+
+		@Override
+		public List<Proxy> select(URI uri) {
+			return Arrays.asList(Proxy.NO_PROXY);
+		}
+	};
+	
 	private SSLContextManager contextManager = new SSLContextManager();
 
-	private ProxyManager proxyManager = null;
+	private ProxySelector proxySelector = null;
 	
 	private Socket socket;
+	
+	private InetSocketAddress target = null;
+	
+	private boolean direct = true;
 	
 	private ByteArrayOutputStream copy = null;
 	
@@ -55,24 +74,14 @@ public class HttpClient {
 	
 	private Conversation conversation = null;
 	
-	private String host;
-	
-	private int port;
-	
-	private String proxyHost;
-	
-	private int proxyPort;
-	
-	private boolean direct;
-	
 	private Resolver resolver;
 	
 	public void setSSLContextManager(SSLContextManager contextManager) {
 		this.contextManager = contextManager;
 	}
 
-	public void setProxyManager(ProxyManager proxyManager) {
-		this.proxyManager = proxyManager;
+	public void setProxySelector(ProxySelector proxySelector) {
+		this.proxySelector = proxySelector;
 	}
 	
 	public void setResolver(Resolver resolver) {
@@ -106,6 +115,7 @@ public class HttpClient {
 		// establish a socket connection that is connected either to the proxy server
 		// or to the server itself. conversation.response will be non-null if the proxy
 		// server returned an error
+		// instance variable "direct" is set to false if we connect through a non-SSL http proxy
 		openConnection(conversation);
 		
 		if (conversation.getResponse() != null)
@@ -151,23 +161,27 @@ public class HttpClient {
 		}
 	}
 	
-	private String constructUri(boolean ssl, String host, int port, String resource) {
+	private URI constructUri(boolean ssl, String host, int port) {
 		StringBuilder buff = new StringBuilder();
 		buff.append(ssl ? "https" : "http").append("://").append(host).append(":").append(port);
-		return buff.append(resource).toString();
+		return URI.create(buff.toString());
 	}
 	
-	private void checkLoop(InetSocketAddress dest) throws IOException {
+	private void checkLoop(SocketAddress dest) throws IOException {
+		// FIXME - this is looking a bit clunky
 		SocketAddress[] listeners = Listener.getListeners();
-		for (int i=0; i<listeners.length; i++) {
-			if (listeners[i] instanceof InetSocketAddress) {
-				InetSocketAddress isa = (InetSocketAddress) listeners[i];
-				if (isa.getAddress().isAnyLocalAddress()) {
-					if (NetworkInterface.getByInetAddress(dest.getAddress()) != null && 
-							dest.getPort() == isa.getPort())
-							throw new IOException("Loop detected! Request target is a local Listener");
-				} else if (dest.equals(listeners[i]))
-					throw new IOException("Loop detected! Request target is a local Listener");
+		if (dest instanceof InetSocketAddress) {
+			InetSocketAddress dst = (InetSocketAddress) dest;
+			for (int i=0; i<listeners.length; i++) {
+				if (listeners[i] instanceof InetSocketAddress) {
+					InetSocketAddress isa = (InetSocketAddress) listeners[i];
+					if (isa.getAddress().isAnyLocalAddress()) {
+						if (NetworkInterface.getByInetAddress(dst.getAddress()) != null && 
+								dst.getPort() == isa.getPort())
+								throw new IOException("Loop detected! Request target is a local Listener");
+					} else if (dest.equals(listeners[i]))
+						throw new IOException("Loop detected! Request target is a local Listener");
+				}
 			}
 		}
 	}
@@ -179,16 +193,21 @@ public class HttpClient {
 		if (host == null)
 			throw new MessageFormatException("Host is not set, don't know where to connect to!");
 		int port = request.getPort();
-		String resource = request.getResource();
 		
 		if (port == -1)
 			port = (ssl ? 443 : 80);
 		
-		String uri = constructUri(ssl, host, port, resource);
+		InetSocketAddress target = null;
+		if (resolver != null) {
+			target = new InetSocketAddress(resolver.getAddress(host), port);
+		} else {
+			target = new InetSocketAddress(host, port);
+		}
 		
-		String[] proxies = getProxiesFor(uri);
+		URI uri = constructUri(ssl, host, port);
+		List<Proxy> proxies = getProxySelector().select(uri);
 		
-		if (isConnected(host, port, proxies)) {
+		if (isConnected(target)) {
 			return;
 		} else if (socket != null && !socket.isClosed()) {
 			try {
@@ -197,74 +216,34 @@ public class HttpClient {
 				ioe.printStackTrace();
 			}
 		}
-		this.host = host;
-		this.port = port;
 		
-		socket = new Socket(Proxy.NO_PROXY);
-		socket.setSoTimeout(10000);
+		socket = null;
 		IOException lastAttempt = null;
-		for (String proxy : proxies){
+		for (Proxy proxy : proxies) {
+			direct = true;
 			try {
-				if (proxy.equals("DIRECT")) {
-					InetSocketAddress isa = null;
-					if (resolver != null) {
-						isa = new InetSocketAddress(resolver.getAddress(host), port);
-					} else {
-						isa = new InetSocketAddress(host, port);
-					}
-					checkLoop(isa);
-					proxyHost = null;
-					proxyPort = -1;
-					direct = true;
-					socket.connect(isa, 10000);
-					if (ssl)
-						layerSsl();
-				} else if (proxy.startsWith("PROXY ")) {
-					proxy = proxy.substring(6); // "PROXY "
-					int c = proxy.indexOf(':');
-					if (c == -1)
-						throw new IOException("Unparseable proxy '" + proxy + "'");
-					proxyHost = proxy.substring(0, c);
-					try {
-						proxyPort = Integer.parseInt(proxy.substring(c+1));
-					} catch (NumberFormatException nfe) {
-						IOException ioe = new IOException("Unparseable proxy '" + proxy + "'");
-						ioe.initCause(nfe);
-						throw ioe;
-					}
-					InetSocketAddress isa = new InetSocketAddress(proxyHost, proxyPort);
-					checkLoop(isa);
-					socket.connect(isa, 10000);
+				SocketAddress addr = proxy.address();
+				checkLoop(addr);
+				if (proxy.type() == Proxy.Type.HTTP) {
+					socket = new Socket(Proxy.NO_PROXY);
+					socket.setSoTimeout(10000);
+					socket.connect(addr);
 					if (ssl) {
-						proxyConnect(host, port, conversation);
+						proxyConnect(target, conversation);
 						if (conversation.getResponse() != null) // CONNECT failed!
 							return;
-						layerSsl();
-					}
-				} else if (proxy.startsWith("SOCKS ")) {
-					proxy = proxy.substring(6); // "SOCKS "
-					int c = proxy.indexOf(':');
-					if (c == -1)
-						throw new IOException("Unparseable proxy '" + proxy + "'");
-					proxyHost = proxy.substring(0, c);
-					try {
-						proxyPort = Integer.parseInt(proxy.substring(c+1));
-					} catch (NumberFormatException nfe) {
-						IOException ioe = new IOException("Unparseable proxy '" + proxy + "'");
-						ioe.initCause(nfe);
-						throw ioe;
-					}
-					InetSocketAddress isa = new InetSocketAddress(proxyHost, proxyPort);
-					checkLoop(isa);
-					Proxy socks = new Proxy(Proxy.Type.SOCKS, isa);
-					socket = new Socket(socks);
-					socket.connect(new InetSocketAddress(host, port));
+						layerSsl(target);
+					} else 
+						direct = false;
+				} else {
+					socket = new Socket(proxy);
+					socket.setSoTimeout(10000);
+					socket.connect(target);
 					if (ssl)
-						layerSsl();
-				} else { // unsupported proxy type!
-					continue;
+						layerSsl(target);
 				}
 			} catch (IOException ioe) {
+				getProxySelector().connectFailed(uri, target, ioe);
 				lastAttempt = ioe;
 				socket.close();
 				socket = null;
@@ -281,10 +260,10 @@ public class HttpClient {
 		throw new IOException("Couldn't connect to server");
 	}
 	
-	private boolean isConnected(String host, int port, String[] proxies) {
-		if (socket == null || socket.isClosed() || socket.isInputShutdown() || this.host == null)
+	private boolean isConnected(InetSocketAddress target) {
+		if (socket == null || socket.isClosed() || socket.isInputShutdown())
 			return false;
-		if (host.equals(this.host) && port == this.port) {
+		if (target.equals(this.target)) {
 			try {
 				// FIXME: This only works because we don't implement pipelining!
 	            int oldtimeout = socket.getSoTimeout();
@@ -311,11 +290,11 @@ public class HttpClient {
 		return false;
 	}
 	
-	private void layerSsl() throws IOException {
+	private void layerSsl(InetSocketAddress target) throws IOException {
 		if (contextManager == null)
 			throw new IOException(
 					"Context Manager is null, SSL is not supported!");
-		SSLContext sslContext = contextManager.getSSLContext(host);
+		SSLContext sslContext = contextManager.getSSLContext(target.getHostName());
 		SSLSocketFactory factory = sslContext.getSocketFactory();
 		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket,
 				socket.getInetAddress().getHostName(), socket.getPort(),
@@ -326,10 +305,10 @@ public class HttpClient {
 		socket = sslsocket;
 	}
 	
-	private void proxyConnect(String host, int port, Conversation conversation) throws IOException, MessageFormatException {
+	private void proxyConnect(InetSocketAddress target, Conversation conversation) throws IOException, MessageFormatException {
 		OutputStream out = new BufferedOutputStream(socket.getOutputStream());
 		Request request = new Request();
-		request.setStartLine("CONNECT " + host + ":" + port + " HTTP/1.0");
+		request.setStartLine("CONNECT " + target.getHostName() + ":" + target.getPort() + " HTTP/1.0");
 		long requestTime = System.currentTimeMillis();
 		out.write(request.getMessage());
 		out.flush();
@@ -356,15 +335,10 @@ public class HttpClient {
 		}
 	}
 	
-	private static final String[] DIRECT = { "DIRECT" };
-	
-	private String[] getProxiesFor(String uri) {
-		if (proxyManager == null) 
-			return DIRECT;
-		String proxy = proxyManager.findProxyForUrl(uri);
-		if (proxy == null || "".equals(proxy.trim()))
-			return DIRECT;
-		return proxy.split("[ \t]*;[ \t]*");
+	private ProxySelector getProxySelector() {
+		if (proxySelector == null) 
+			return NO_PROXY;
+		return proxySelector;
 	}
 	
 	private void writeRequest(Conversation conversation) throws MessageFormatException, IOException {
@@ -440,7 +414,7 @@ public class HttpClient {
 		if (resourceStart > 0) {
 			BufferedOutputStream bos = new BufferedOutputStream(out);
 			bos.write(message, 0, resourceStart);
-			bos.write(constructUri(request.isSsl(), request.getHost(), port, "").getBytes());
+			bos.write(constructUri(request.isSsl(), request.getHost(), request.getPort()).toString().getBytes());
 			bos.write(message, resourceStart, message.length - resourceStart);
 			bos.flush();
 		} else {

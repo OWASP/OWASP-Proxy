@@ -22,13 +22,20 @@ package org.owasp.proxy.daemon;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
+import java.net.SocketAddress;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.owasp.proxy.httpclient.HttpClient;
-import org.owasp.proxy.httpclient.ProxyManager;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.test.TraceServer;
@@ -77,9 +84,16 @@ public class ListenerTest {
 		l.start();
 		
 		HttpClient client = new HttpClient();
-		client.setProxyManager(new ProxyManager() {
-			public String findProxyForUrl(String uri) {
-				return "PROXY localhost:9998";
+		client.setProxySelector(new ProxySelector() {
+			private final Proxy local = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
+			@Override
+			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+				System.err.println("Proxy connection failed! " + ioe.getLocalizedMessage());
+			}
+
+			@Override
+			public List<Proxy> select(URI uri) {
+				return Arrays.asList(local);
 			}
 		});
 		
@@ -122,9 +136,16 @@ public class ListenerTest {
 		l.start();
 		
 		HttpClient client = new HttpClient();
-		client.setProxyManager(new ProxyManager() {
-			public String findProxyForUrl(String uri) {
-				return "PROXY localhost:9998";
+		client.setProxySelector(new ProxySelector() {
+			private final Proxy local = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
+			@Override
+			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+				System.err.println("Proxy connection failed! " + ioe.getLocalizedMessage());
+			}
+
+			@Override
+			public List<Proxy> select(URI uri) {
+				return Arrays.asList(local);
 			}
 		});
 		
