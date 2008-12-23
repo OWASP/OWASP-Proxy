@@ -84,7 +84,13 @@ public class Message {
 	
 	private byte[] separator = CRLFCRLF;
 	
+	private volatile String[] headerLines = null;
+	
 	protected Message() {}
+	
+	protected void clearCaches() {
+		headerLines = null;
+	}
 	
 	/**
 	 * Get the exact representation of the message
@@ -99,8 +105,13 @@ public class Message {
 	 * @param message
 	 */
 	public void setMessage(byte[] message) {
+		setMessage(message, CRLFCRLF);
+	}
+	
+	public void setMessage(byte[] message, byte[] separator) {
 		this.message = message;
-		this.separator = CRLFCRLF;
+		this.separator = separator;
+		clearCaches();
 	}
 	
 	/**
@@ -109,12 +120,12 @@ public class Message {
 	 * @param content
 	 */
 	public void setMessage(byte[] header, byte[] separator, byte[] content) {
-		this.separator = separator;
-		message = new byte[header.length + separator.length + (content == null ? 0 : content.length)];
+		byte[] message = new byte[header.length + separator.length + (content == null ? 0 : content.length)];
 		System.arraycopy(header, 0, message, 0, header.length);
 		System.arraycopy(separator, 0, message, header.length, separator.length);
 		if (content != null)
 			System.arraycopy(content, 0, message, header.length + separator.length, content.length);
+		setMessage(message, separator);
 	}
 	
 	/**
@@ -196,6 +207,8 @@ public class Message {
 	 * @throws MessageFormatException
 	 */
 	protected String[] getHeaderLines(byte[] separator) throws MessageFormatException {
+		if (headerLines != null)
+			return headerLines;
 		byte[] header = getHeader();
 		if (header == null) return null;
 		List<String> lines = new LinkedList<String>();
@@ -277,13 +290,14 @@ public class Message {
 	 * @throws MessageFormatException
 	 */
 	public void setHeaders(NamedValue[] headers) throws MessageFormatException {
-		String[] lines = new String[headers.length + 1];
+		String[] lines = new String[(headers == null ? 0 : headers.length) + 1];
 		lines[0] = getStartLine();
 		if (lines[0] == null)
-			throw new MessageFormatException("No first line found, can't set headers without one!");
-		for (int i=0; i<headers.length; i++) {
-			lines[i+1] = headers[i].toString();
-		}
+			throw new MessageFormatException("No start line found, can't set headers without one!");
+		if (headers != null)
+			for (int i=0; i<headers.length; i++) {
+				lines[i+1] = headers[i].toString();
+			}
 		setHeaderLines(lines, CRLF);
 	}
 	
