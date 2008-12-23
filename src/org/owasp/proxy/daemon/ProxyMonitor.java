@@ -25,9 +25,7 @@ public class ProxyMonitor {
 		if ("HTTP/1.1".equals(version) && connection != null) {
 			String[] headers = connection.split(" *, *");
 			for (int i = 0; i < headers.length; i++) {
-				String value = request.deleteHeader(headers[i]);
-				System.out.println("Deleting header " + headers[i] + ", was "
-						+ value);
+				request.deleteHeader(headers[i]);
 			}
 		}
 		request.deleteHeader("Proxy-Connection");
