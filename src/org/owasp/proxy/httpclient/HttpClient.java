@@ -241,6 +241,26 @@ public class HttpClient {
 							return;
 						layerSsl();
 					}
+				} else if (proxy.startsWith("SOCKS ")) {
+					proxy = proxy.substring(6); // "SOCKS "
+					int c = proxy.indexOf(':');
+					if (c == -1)
+						throw new IOException("Unparseable proxy '" + proxy + "'");
+					proxyHost = proxy.substring(0, c);
+					try {
+						proxyPort = Integer.parseInt(proxy.substring(c+1));
+					} catch (NumberFormatException nfe) {
+						IOException ioe = new IOException("Unparseable proxy '" + proxy + "'");
+						ioe.initCause(nfe);
+						throw ioe;
+					}
+					InetSocketAddress isa = new InetSocketAddress(proxyHost, proxyPort);
+					checkLoop(isa);
+					Proxy socks = new Proxy(Proxy.Type.SOCKS, isa);
+					socket = new Socket(socks);
+					socket.connect(new InetSocketAddress(host, port));
+					if (ssl)
+						layerSsl();
 				} else { // unsupported proxy type!
 					continue;
 				}
@@ -302,6 +322,7 @@ public class HttpClient {
 				true);
 		sslsocket.setUseClientMode(true);
 		sslsocket.setSoTimeout(10000);
+		sslsocket.startHandshake();
 		socket = sslsocket;
 	}
 	
