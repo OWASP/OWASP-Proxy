@@ -217,6 +217,8 @@ public class HttpClient {
 			}
 		}
 		
+		this.target = target;
+		
 		socket = null;
 		IOException lastAttempt = null;
 		for (Proxy proxy : proxies) {

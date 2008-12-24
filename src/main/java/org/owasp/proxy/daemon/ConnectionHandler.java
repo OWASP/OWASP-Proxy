@@ -230,7 +230,7 @@ public class ConnectionHandler implements Runnable {
 						}
 					} else {
 						request.setHost(host);
-						request.setPort("https".equals(targetSsl) ? 443 : 80);
+						request.setPort(targetSsl ? 443 : 80);
 					}
 				}
 			}

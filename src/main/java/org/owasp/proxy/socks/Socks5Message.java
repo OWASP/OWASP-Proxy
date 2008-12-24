@@ -178,8 +178,7 @@ public class Socks5Message extends ProxyMessage {
 		if (clientMode && command != 0)
 			throw new SocksException(command);
 
-		@SuppressWarnings("unused")
-		int reserved = di.readUnsignedByte();
+		di.readUnsignedByte(); // reserved
 		addrType = di.readUnsignedByte();
 
 		byte addr[];

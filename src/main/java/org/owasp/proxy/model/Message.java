@@ -224,7 +224,8 @@ public class Message {
 			// this should never happen
 			e.printStackTrace();
 		}
-		return lines.toArray(new String[lines.size()]);
+		headerLines = lines.toArray(new String[lines.size()]);
+		return headerLines;
 	}
 	
 	/**
