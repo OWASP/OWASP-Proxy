@@ -154,7 +154,7 @@ public class TraceServer implements Runnable {
                     	System.out.write(request.getMessage());
                     
                     Response response = new Response();
-                    response.setStartLine("HTTP/1.1 200 Ok");
+                    response.setStartLine("HTTP/1.0 200 Ok");
                     if (chunked) {
                     	response.setHeader("Transfer-Encoding", "chunked");
                     	ByteArrayOutputStream baos = new ByteArrayOutputStream();
