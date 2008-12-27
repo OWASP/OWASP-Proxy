@@ -25,9 +25,9 @@ import org.junit.Test;
 
 public class NamedValueTest {
 
-//	@Test
+	@Test
 	public void testNamedValue() {
-		fail("Not yet implemented");
+//		fail("Not yet implemented");
 	}
 
 //	@Test
