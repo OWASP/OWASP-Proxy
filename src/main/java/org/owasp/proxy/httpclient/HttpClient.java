@@ -247,8 +247,10 @@ public class HttpClient {
 			} catch (IOException ioe) {
 				getProxySelector().connectFailed(uri, target, ioe);
 				lastAttempt = ioe;
-				socket.close();
-				socket = null;
+				if (socket != null) {
+					socket.close();
+					socket = null;
+				}
 			}
 			if (conversation.getResponse() != null)
 				return;
