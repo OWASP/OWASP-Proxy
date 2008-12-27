@@ -19,25 +19,19 @@
  */
 package org.owasp.proxy.daemon;
 
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
-import java.net.ProxySelector;
-import java.net.SocketAddress;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.List;
+import java.net.URL;
+import java.net.URLConnection;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.proxy.httpclient.HttpClient;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
 import org.owasp.proxy.test.TraceServer;
 
 public class ListenerTest {
@@ -83,42 +77,38 @@ public class ListenerTest {
 		l.setProxyMonitor(pm);
 		l.start();
 		
-		HttpClient client = new HttpClient();
-		client.setProxySelector(new ProxySelector() {
-			private final Proxy local = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
-			@Override
-			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-				System.err.println("Proxy connection failed! " + ioe.getLocalizedMessage());
-			}
-
-			@Override
-			public List<Proxy> select(URI uri) {
-				return Arrays.asList(local);
-			}
-		});
+		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
 		
 		try {
-			Request request = new Request();
-			request.setSsl(false);
-			request.setHost("localhost");
-			request.setPort(9999);
+			URL url = new URL("http://localhost:9999/");
+			URLConnection uc = url.openConnection(p);
+			uc.connect();
+			InputStream is = uc.getInputStream();
+			byte buff[] = new byte[1024];
+			int got;
+			while ((got = is.read(buff)) > 0) {
+				System.out.write(buff, 0, got);
+			}
+			is.close();
 			
-			request.setMessage("GET / HTTP/1.0\r\n\r\n".getBytes());
-			// Conversation c = 
-			client.fetchResponse(request);
-			// System.out.write(c.getResponse().getMessage());
+			uc = url.openConnection(p);
+			uc.setRequestProperty("Content-Length", "15");
+			uc.setDoOutput(true);
+			uc.connect();
+			OutputStream os = uc.getOutputStream();
+			os.write("123456789012345".getBytes());
+			os.close();
+			is = uc.getInputStream();
+			while ((got = is.read(buff)) > 0) {
+				System.out.write(buff, 0, got);
+			}
+			is.close();
 			
-			
-			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
-			// c = 
-			client.fetchResponse(request);
-			// System.out.write(c.getResponse().getMessage());
-			
-			request.setPort(999);
-			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
-			// c = 
-			client.fetchResponse(request);
-			// System.out.write(c.getResponse().getMessage());
+//			request.setPort(999);
+//			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
+//			// c = 
+//			client.fetchResponse(request);
+//			// System.out.write(c.getResponse().getMessage());
 			
 		} finally {
 			
@@ -135,35 +125,21 @@ public class ListenerTest {
 		l.setProxyMonitor(pm);
 		l.start();
 		
-		HttpClient client = new HttpClient();
-		client.setProxySelector(new ProxySelector() {
-			private final Proxy local = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
-			@Override
-			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-				System.err.println("Proxy connection failed! " + ioe.getLocalizedMessage());
-			}
-
-			@Override
-			public List<Proxy> select(URI uri) {
-				return Arrays.asList(local);
-			}
-		});
-		
-		try {
-			Request request = new Request();
-			request.setSsl(false);
-			request.setHost("localhost");
-			request.setPort(9999);
-			request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
-			request.addHeader("Host", "www.google.co.za");
-	
-			Conversation c = client.fetchResponse(request);
-			System.out.write(c.getResponse().getMessage());
-			assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
-		} finally {
+//		try {
+//			Request request = new Request();
+//			request.setSsl(false);
+//			request.setHost("localhost");
+//			request.setPort(9999);
+//			request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+//			request.addHeader("Host", "www.google.co.za");
+//	
+//			Conversation c = client.fetchResponse(request);
+//			System.out.write(c.getResponse().getMessage());
+//			assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
+//		} finally {
 			l.stop();
-			assertTrue("Listener didn't exit", l.isStopped());
-		}
+//			assertTrue("Listener didn't exit", l.isStopped());
+//		}
 	}
 
 }
