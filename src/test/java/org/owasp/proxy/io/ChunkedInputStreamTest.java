@@ -101,7 +101,7 @@ public class ChunkedInputStreamTest {
 			System.err.println("Read " + got + " bytes");
 			// verify expectation
 			for (int i=0; i<got; i++) {
-				assertEquals("byte " + (total + i) + " different!", (total + i) % 26 + 'A', buff[i]);
+				assertEquals("byte " + (total + i) + " different!", (byte) ((total + i) % 26 + 'A'), buff[i]);
 			}
 			total = total + got;
 		}
