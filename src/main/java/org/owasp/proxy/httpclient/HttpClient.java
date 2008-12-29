@@ -58,7 +58,7 @@ public class HttpClient {
 		}
 	};
 	
-	private SSLContextManager contextManager = new SSLContextManager();
+	private SSLContextSelector contextSelector = new DefaultSSLContextSelector();
 
 	private ProxySelector proxySelector = null;
 	
@@ -76,8 +76,8 @@ public class HttpClient {
 	
 	private Resolver resolver;
 	
-	public void setSSLContextManager(SSLContextManager contextManager) {
-		this.contextManager = contextManager;
+	public void setSSLContextSelector(SSLContextSelector contextSelector) {
+		this.contextSelector = contextSelector;
 	}
 
 	public void setProxySelector(ProxySelector proxySelector) {
@@ -295,10 +295,10 @@ public class HttpClient {
 	}
 	
 	private void layerSsl(InetSocketAddress target) throws IOException {
-		if (contextManager == null)
+		if (contextSelector == null)
 			throw new IOException(
-					"Context Manager is null, SSL is not supported!");
-		SSLContext sslContext = contextManager.getSSLContext(target.getHostName());
+					"SSL Context Selector is null, SSL is not supported!");
+		SSLContext sslContext = contextSelector.select(target);
 		SSLSocketFactory factory = sslContext.getSocketFactory();
 		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket,
 				socket.getInetAddress().getHostName(), socket.getPort(),
