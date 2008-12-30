@@ -41,8 +41,6 @@ public class SocksListener extends Listener {
 
 	private ServerAuthenticator auth;
 
-	private int idleTimeout = 180000; // 3 minutes
-
 	/**
 	 * Creates a proxy server with given Authentication scheme.
 	 * 
@@ -58,16 +56,6 @@ public class SocksListener extends Listener {
 		super(address, listenPort);
 	}
 
-	/**
-	 * Sets the timeout for connections, how long should server wait for data to
-	 * arrive before dropping the connection.<br>
-	 * Zero timeout implies infinity.<br>
-	 * Default timeout is 3 minutes.
-	 */
-	public void setIdleTimeout(int timeout) {
-		idleTimeout = timeout;
-	}
-
 	public void setAuthenticator(ServerAuthenticator authenticator) {
 		this.auth = authenticator;
 	}
@@ -76,10 +64,7 @@ public class SocksListener extends Listener {
 	protected ConnectionHandler createConnectionHandler(Socket socket)
 			throws IOException {
 		SocksProtocol sp = new SocksProtocol(socket, auth);
-		sp.setIdleTimeout(idleTimeout);
-		
-		if (!sp.handleConnectRequest())
-			return null;
+		sp.handleConnectRequest();
 		
 		String host = sp.getTargetHost();
 		int port = sp.getTargetPort();
@@ -95,7 +80,6 @@ public class SocksListener extends Listener {
 		private OutputStream out;
 		private ProxyMessage msg;
 		private ServerAuthenticator auth;
-		private int idleTimeout = 0;
 		
 		public SocksProtocol(Socket accept, ServerAuthenticator auth) {
 			this.socket = accept;
@@ -106,32 +90,20 @@ public class SocksListener extends Listener {
 			}
 		}
 
-		public void setIdleTimeout(int timeout) {
-			this.idleTimeout = timeout;
-		}
-		
-		public boolean handleConnectRequest() {
+		public void handleConnectRequest() throws IOException {
 			try {
 				startSession();
-				return true;
 			} catch (IOException ioe) {
 				handleException(ioe);
-				return false;
+				throw ioe;
 			}
 		}
 		
 		private void startSession() throws IOException {
-			socket.setSoTimeout(idleTimeout);
-
-			try {
-				auth = auth.startSession(socket);
-			} catch (IOException ioe) {
-				auth = null;
-				return;
-			}
+			auth = auth.startSession(socket);
 
 			if (auth == null) { // Authentication failed
-				return;
+				throw new SocksException(SocksConstants.SOCKS_AUTH_FAILURE);
 			}
 
 			in = auth.getInputStream();
