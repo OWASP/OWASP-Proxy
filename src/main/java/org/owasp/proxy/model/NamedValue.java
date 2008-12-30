@@ -47,7 +47,7 @@ public class NamedValue {
 	
 	@Override
 	public String toString() {
-		return name + separator + value;
+		return name + separator + (value == null ? "" : value);
 	}
 	
 	/**
@@ -60,10 +60,16 @@ public class NamedValue {
 	 */
 	public static NamedValue parse(String string, String separator) throws MessageFormatException {
 		String[] parts = string.split(separator, 2);
-		if (parts.length != 2)
-			throw new MessageFormatException("Couldn't parse invalid named value: '" + string + "'");
-		String sep = string.substring(parts[0].length(), string.length() - parts[1].length());
-		return new NamedValue(parts[0], sep, parts[1]);
+		if (parts.length == 2) {
+			String sep = string.substring(parts[0].length(), string.length() - parts[1].length());
+			return new NamedValue(parts[0], sep, parts[1]);
+		} else if (parts.length == 1) {
+			if (parts[0].length() < string.length()) {
+				String sep = string.substring(parts[0].length(), string.length());
+				return new NamedValue(parts[0], sep, "");
+			}
+		}
+		throw new MessageFormatException("Error parsing '" + string + "' into a NamedValue using '" + separator + "'");
 	}
 	
 	public static NamedValue[] parse(String string, String delimiter, String separator) throws MessageFormatException {

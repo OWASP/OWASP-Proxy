@@ -26,38 +26,68 @@ import org.junit.Test;
 public class NamedValueTest {
 
 	@Test
-	public void testNamedValue() {
-//		fail("Not yet implemented");
+	public void testParse() throws MessageFormatException {
+		String t;
+		NamedValue nv;
+		t = "a=b";
+		nv = NamedValue.parse(t, "=");
+		assertEquals("a", nv.getName());
+		assertEquals("=", nv.getSeparator());
+		assertEquals("b", nv.getValue());
+		assertEquals(t, nv.toString());
+		
+		t = "a=";
+		nv = NamedValue.parse(t, "=");
+		assertEquals("a", nv.getName());
+		assertEquals("=", nv.getSeparator());
+		assertEquals("", nv.getValue());
+		assertEquals(t, nv.toString());
+
+		t = "a: b";
+		nv = NamedValue.parse(t, " *: *");
+		assertEquals("a", nv.getName());
+		assertEquals(": ", nv.getSeparator());
+		assertEquals("b", nv.getValue());
+		assertEquals(t, nv.toString());
+
+		t = "a:";
+		nv = NamedValue.parse(t, " *: *");
+		assertEquals("a", nv.getName());
+		assertEquals(":", nv.getSeparator());
+		assertEquals("", nv.getValue());
+		assertEquals(t, nv.toString());
+
+		t = "a : b";
+		nv = NamedValue.parse(t, " *: *");
+		assertEquals("a", nv.getName());
+		assertEquals(" : ", nv.getSeparator());
+		assertEquals("b", nv.getValue());
+		assertEquals(t, nv.toString());
 	}
 
-//	@Test
-	public void testGetName() {
-		fail("Not yet implemented");
-	}
-
-//	@Test
-	public void testGetSeparator() {
-		fail("Not yet implemented");
-	}
-
-//	@Test
-	public void testGetValue() {
-		fail("Not yet implemented");
-	}
-
-//	@Test
-	public void testToString() {
-		fail("Not yet implemented");
-	}
-
-//	@Test
-	public void testParse() {
-		fail("Not yet implemented");
-	}
-
-//	@Test
-	public void testJoin() {
-		fail("Not yet implemented");
+	@Test
+	public void testJoin() throws MessageFormatException {
+		String t = "a=b&c=d&e=&f=g";
+		NamedValue[] nv = NamedValue.parse(t, "&", "=");
+		assertEquals(4, nv.length);
+		
+		assertEquals("a", nv[0].getName());
+		assertEquals("=", nv[0].getSeparator());
+		assertEquals("b", nv[0].getValue());
+		
+		assertEquals("c", nv[1].getName());
+		assertEquals("=", nv[1].getSeparator());
+		assertEquals("d", nv[1].getValue());
+		
+		assertEquals("e", nv[2].getName());
+		assertEquals("=", nv[2].getSeparator());
+		assertEquals("", nv[2].getValue());
+		
+		assertEquals("f", nv[3].getName());
+		assertEquals("=", nv[3].getSeparator());
+		assertEquals("g", nv[3].getValue());
+		
+		assertEquals(t, NamedValue.join(nv, "&"));
 	}
 
 }
