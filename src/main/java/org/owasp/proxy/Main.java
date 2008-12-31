@@ -24,11 +24,13 @@ import org.owasp.proxy.httpclient.HttpClientFactory;
 public class Main {
 
 	private static void usage() {
-		System.err.println("Usage: java -jar proxy.jar httpPort socksPort [\"proxy instruction\"]");
+		System.err
+				.println("Usage: java -jar proxy.jar httpPort socksPort [\"proxy instruction\"]");
 		System.err.println("Where \'proxy instruction\' might look like:");
-		System.err.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
+		System.err
+				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		if (args == null || (args.length != 2 && args.length != 3)) {
 			usage();
@@ -56,19 +58,24 @@ public class Main {
 				type = Proxy.Type.HTTP;
 			} else if (proxy.startsWith("SOCKS ")) {
 				type = Proxy.Type.SOCKS;
-			} else 
-				throw new IllegalArgumentException("Unknown Proxy type: " + proxy);
+			} else
+				throw new IllegalArgumentException("Unknown Proxy type: "
+						+ proxy);
 			proxy = proxy.substring(6); // "SOCKS " or "PROXY "
 			int c = proxy.indexOf(':');
 			if (c == -1)
-				throw new IllegalArgumentException("Illegal proxy address: " + proxy);
-			InetSocketAddress addr = new InetSocketAddress(proxy.substring(0,c), Integer.parseInt(proxy.substring(c+1)));
+				throw new IllegalArgumentException("Illegal proxy address: "
+						+ proxy);
+			InetSocketAddress addr = new InetSocketAddress(proxy
+					.substring(0, c), Integer.parseInt(proxy.substring(c + 1)));
 			upstream = new Proxy(type, addr);
 		}
 		final ProxySelector ps = new ProxySelector() {
+
 			@Override
 			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-				System.err.println("Proxy connection failed! " + ioe.getLocalizedMessage());
+				System.err.println("Proxy connection failed! "
+						+ ioe.getLocalizedMessage());
 			}
 
 			@Override
@@ -77,6 +84,7 @@ public class Main {
 			}
 		};
 		HttpClientFactory hcf = new DefaultHttpClientFactory() {
+
 			@Override
 			public HttpClient createHttpClient() {
 				HttpClient client = super.createHttpClient();
@@ -99,7 +107,8 @@ public class Main {
 		sl.setHttpClientFactory(hcf);
 		sl.start();
 
-		System.out.println("Http listener started on " + httpPort + ", SOCKS listener started on " + socksPort);
+		System.out.println("Http listener started on " + httpPort
+				+ ", SOCKS listener started on " + socksPort);
 		System.out.println("Press Enter to terminate");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
 		sl.stop();

@@ -59,13 +59,13 @@ public class SocksListener extends Listener {
 	public void setAuthenticator(ServerAuthenticator authenticator) {
 		this.auth = authenticator;
 	}
-	
+
 	@Override
 	protected ConnectionHandler createConnectionHandler(Socket socket)
 			throws IOException {
 		SocksProtocol sp = new SocksProtocol(socket, auth);
 		sp.handleConnectRequest();
-		
+
 		String host = sp.getTargetHost();
 		int port = sp.getTargetPort();
 		ConnectionHandler ch = super.createConnectionHandler(socket);
@@ -76,11 +76,15 @@ public class SocksListener extends Listener {
 	private static class SocksProtocol {
 
 		private Socket socket;
+
 		private InputStream in;
+
 		private OutputStream out;
+
 		private ProxyMessage msg;
+
 		private ServerAuthenticator auth;
-		
+
 		public SocksProtocol(Socket accept, ServerAuthenticator auth) {
 			this.socket = accept;
 			if (auth == null) {
@@ -98,7 +102,7 @@ public class SocksListener extends Listener {
 				throw ioe;
 			}
 		}
-		
+
 		private void startSession() throws IOException {
 			auth = auth.startSession(socket);
 
@@ -128,7 +132,8 @@ public class SocksListener extends Listener {
 			else if (ioe instanceof InterruptedIOException)
 				error_code = SocksConstants.SOCKS_TTL_EXPIRE;
 
-			if (error_code > SocksConstants.SOCKS_ADDR_NOT_SUPPORTED || error_code < 0) {
+			if (error_code > SocksConstants.SOCKS_ADDR_NOT_SUPPORTED
+					|| error_code < 0) {
 				error_code = SocksConstants.SOCKS_FAILURE;
 			}
 
@@ -193,8 +198,8 @@ public class SocksListener extends Listener {
 			ProxyMessage response = null;
 
 			if (msg instanceof Socks5Message) {
-				response = new Socks5Message(SocksConstants.SOCKS_SUCCESS, msg.ip,
-						msg.port);
+				response = new Socks5Message(SocksConstants.SOCKS_SUCCESS,
+						msg.ip, msg.port);
 			} else {
 				response = new Socks4Message(Socks4Message.REPLY_OK, msg.ip,
 						msg.port);
@@ -218,16 +223,17 @@ public class SocksListener extends Listener {
 		}
 
 	}
-	
+
 	public static void main(String[] args) throws Exception {
-		Listener l = new SocksListener(InetAddress.getByAddress(new byte[] { 127, 0,
-				0, 1 }), 9997);
+		Listener l = new SocksListener(InetAddress.getByAddress(new byte[] {
+				127, 0, 0, 1 }), 9997);
 		l.setProxyMonitor(new LoggingProxyMonitor() {
+
 			@Override
 			public Response requestReceived(Request request)
 					throws MessageFormatException {
 				Response ret = super.requestReceived(request);
-				 try {
+				try {
 					System.out.write(request.getMessage());
 				} catch (IOException ioe) {
 				}

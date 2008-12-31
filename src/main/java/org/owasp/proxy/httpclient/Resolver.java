@@ -6,5 +6,5 @@ import java.net.InetAddress;
 public interface Resolver {
 
 	InetAddress getAddress(String host) throws IOException;
-	
+
 }

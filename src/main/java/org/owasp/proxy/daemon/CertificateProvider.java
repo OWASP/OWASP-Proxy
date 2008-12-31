@@ -7,5 +7,5 @@ import javax.net.ssl.SSLSocketFactory;
 public interface CertificateProvider {
 
 	SSLSocketFactory getSocketFactory(String host, int port) throws IOException;
-	
+
 }

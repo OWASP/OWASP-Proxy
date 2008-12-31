@@ -35,9 +35,11 @@ import org.owasp.proxy.io.ChunkedOutputStream;
 public class ChunkedInputStreamTest {
 
 	private InputStream is;
+
 	private String sample = "F ; extension=value\r\n" + "123456789ABCDEF\r\n"
 			+ "E\r\n" + "123456789ABCDE\r\n" + "D; extension=value\r\n"
 			+ "123456789ABCD\r\n" + "0; extension=\"value\"\r\n" + "\r\n";
+
 	private String result = "123456789ABCDEF" + "123456789ABCDE"
 			+ "123456789ABCD";
 
@@ -85,8 +87,8 @@ public class ChunkedInputStreamTest {
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ChunkedOutputStream out = new ChunkedOutputStream((baos));
 		byte[] buff = new byte[1786]; // odd random number not a power of 2
-		for (int c=0; c<5; c++) {
-			for (int i=0; i<buff.length; i++) {
+		for (int c = 0; c < 5; c++) {
+			for (int i = 0; i < buff.length; i++) {
 				buff[i] = (byte) ((c * buff.length + i) % 26 + 'A');
 			}
 			out.write(buff);
@@ -100,8 +102,9 @@ public class ChunkedInputStreamTest {
 		while ((got = is.read(buff)) > 0) {
 			System.err.println("Read " + got + " bytes");
 			// verify expectation
-			for (int i=0; i<got; i++) {
-				assertEquals("byte " + (total + i) + " different!", (byte) ((total + i) % 26 + 'A'), buff[i]);
+			for (int i = 0; i < got; i++) {
+				assertEquals("byte " + (total + i) + " different!",
+						(byte) ((total + i) % 26 + 'A'), buff[i]);
 			}
 			total = total + got;
 		}

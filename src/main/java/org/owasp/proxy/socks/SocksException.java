@@ -5,6 +5,7 @@ package org.owasp.proxy.socks;
  * unsuccessful server responses.
  */
 public class SocksException extends java.io.IOException {
+
 	/**
 	 * 
 	 */
@@ -64,6 +65,7 @@ public class SocksException extends java.io.IOException {
 	}
 
 	static final String UNASSIGNED_ERROR_MESSAGE = "Unknown error message";
+
 	static final String serverReplyMessage[] = { "Succeeded",
 			"General SOCKS server failure",
 			"Connection not allowed by ruleset", "Network unreachable",
@@ -76,6 +78,7 @@ public class SocksException extends java.io.IOException {
 			"Authentication failed", "General SOCKS fault" };
 
 	String errString;
+
 	int errCode;
 
 }// End of SocksException class

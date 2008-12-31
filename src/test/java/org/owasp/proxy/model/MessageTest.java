@@ -32,18 +32,22 @@ import org.owasp.proxy.model.NamedValue;
 
 /**
  * @author Rogan Dawes
- *
+ * 
  */
 public class MessageTest {
 
 	private String get = "GET / HTTP/1.0";
+
 	private String get3 = "GET / HTTP/1.0\r\nHost: localhost\r\nCookie: a=b";
+
 	private String post = "POST / HTTP1.0\r\nHost: localhost\r\nCookie: a=b\r\nContent-Length: 10";
+
 	String content = "1234567890";
 
 	private String CRLF = "\r\n";
+
 	private String CRLFCRLF = CRLF + CRLF;
-	
+
 	/**
 	 * @throws java.lang.Exception
 	 */
@@ -57,19 +61,22 @@ public class MessageTest {
 	@Test
 	public void testGetSetMessage() throws Exception {
 		Message m = new Message();
-		m.setMessage((get+CRLFCRLF).getBytes("ASCII"));
+		m.setMessage((get + CRLFCRLF).getBytes("ASCII"));
 		String s = new String(m.getMessage(), "ASCII");
-		assertEquals(get+CRLFCRLF, s);
+		assertEquals(get + CRLFCRLF, s);
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#setMessage(byte[], byte[], byte[])}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#setMessage(byte[], byte[], byte[])}.
 	 */
 	@Test
 	public void testSetMessageByteArrayByteArrayByteArray() throws Exception {
 		Message m = new Message();
-		m.setMessage(post.getBytes("ASCII"), CRLFCRLF.getBytes("ASCII"), content.getBytes("ASCII"));
-		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(), "ASCII"));
+		m.setMessage(post.getBytes("ASCII"), CRLFCRLF.getBytes("ASCII"),
+				content.getBytes("ASCII"));
+		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(),
+				"ASCII"));
 	}
 
 	/**
@@ -110,11 +117,13 @@ public class MessageTest {
 		Message m = new Message();
 		m.setHeader(post.getBytes("ASCII"));
 		m.setContent(content.getBytes("ASCII"));
-		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(), "ASCII"));
+		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(),
+				"ASCII"));
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#getHeaderLines(byte[])}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#getHeaderLines(byte[])}.
 	 */
 	@Test
 	public void testGetHeaderLines() throws Exception {
@@ -122,7 +131,7 @@ public class MessageTest {
 		m.setMessage((post + CRLFCRLF + content).getBytes("ASCII"));
 		String[] lines = m.getHeaderLines(CRLF.getBytes("ASCII"));
 		StringBuilder b = new StringBuilder();
-		for (int i=0; i<lines.length; i++) {
+		for (int i = 0; i < lines.length; i++) {
 			b.append(lines[i]);
 			if (i < lines.length - 1)
 				b.append(CRLF);
@@ -131,7 +140,9 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#setHeaderLines(java.lang.String[], byte[])}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#setHeaderLines(java.lang.String[], byte[])}
+	 * .
 	 */
 	@Test
 	public void testSetHeaderLines() throws Exception {
@@ -155,7 +166,8 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#setStartLine(java.lang.String)}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#setStartLine(java.lang.String)}.
 	 */
 	@Test
 	public void testSetFirstLine() throws Exception {
@@ -171,17 +183,21 @@ public class MessageTest {
 	public void testGetHeaders() throws Exception {
 		Message m = new Message();
 		m.setHeader(post.getBytes("ASCII"));
-		assertEquals(post, m.getStartLine() + CRLF + NamedValue.join(m.getHeaders(), CRLF));
+		assertEquals(post, m.getStartLine() + CRLF
+				+ NamedValue.join(m.getHeaders(), CRLF));
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#setHeaders(org.owasp.proxy.model.NamedValue[])}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#setHeaders(org.owasp.proxy.model.NamedValue[])}
+	 * .
 	 */
 	@Test
 	public void testSetHeaders() throws Exception {
 		Message m = new Message();
 		String first = post.substring(0, post.indexOf(CRLF));
-		NamedValue[] h = NamedValue.parse(post.substring(first.length() + CRLF.length()), CRLF, " *: *");
+		NamedValue[] h = NamedValue.parse(post.substring(first.length()
+				+ CRLF.length()), CRLF, " *: *");
 		try {
 			m.setHeaders(h);
 			fail("Should have thrown an exception here");
@@ -195,7 +211,8 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#getHeader(java.lang.String)}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#getHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testGetHeaderString() throws Exception {
@@ -206,7 +223,9 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#setHeader(java.lang.String, java.lang.String)}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#setHeader(java.lang.String, java.lang.String)}
+	 * .
 	 */
 	@Test
 	public void testSetHeaderStringString() throws Exception {
@@ -217,7 +236,9 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#addHeader(java.lang.String, java.lang.String)}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#addHeader(java.lang.String, java.lang.String)}
+	 * .
 	 */
 	@Test
 	public void testAddHeader() throws Exception {
@@ -226,19 +247,22 @@ public class MessageTest {
 		m.addHeader("Cookie", "b=c");
 		NamedValue[] headers = m.getHeaders();
 		boolean found = false;
-		for (int i=0;i<headers.length; i++)
-			if ("cookie".equalsIgnoreCase(headers[i].getName()) && "a=b".equals(headers[i].getValue())) 
+		for (int i = 0; i < headers.length; i++)
+			if ("cookie".equalsIgnoreCase(headers[i].getName())
+					&& "a=b".equals(headers[i].getValue()))
 				found = true;
 		assertTrue(found);
 		found = false;
-		for (int i=0;i<headers.length; i++)
-			if ("cookie".equalsIgnoreCase(headers[i].getName()) && "b=c".equals(headers[i].getValue())) 
+		for (int i = 0; i < headers.length; i++)
+			if ("cookie".equalsIgnoreCase(headers[i].getName())
+					&& "b=c".equals(headers[i].getValue()))
 				found = true;
 		assertTrue(found);
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.model.Message#deleteHeader(java.lang.String)}.
+	 * Test method for
+	 * {@link org.owasp.proxy.model.Message#deleteHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testDeleteHeader() throws Exception {

@@ -19,23 +19,24 @@ import javax.net.ssl.X509TrustManager;
 public class DefaultSSLContextSelector implements SSLContextSelector {
 
 	private X509TrustManager trustManager;
-	
+
 	private Map<String, SSLContext> contextMap = new LinkedHashMap<String, SSLContext>();
-	
+
 	public DefaultSSLContextSelector() {
 		initTrustManager();
 	}
-	
+
 	public SSLContext select(InetSocketAddress target) {
 		String host = target.getHostName();
 		SSLContext context = contextMap.get(host);
 		if (context != null)
 			return context;
-        try {
-        	context = SSLContext.getInstance("SSL");
-            context.init(null, new TrustManager[] { getTrustManager() }, new SecureRandom());
-            contextMap.put(host, context);
-        } catch (NoSuchAlgorithmException e) {
+		try {
+			context = SSLContext.getInstance("SSL");
+			context.init(null, new TrustManager[] { getTrustManager() },
+					new SecureRandom());
+			contextMap.put(host, context);
+		} catch (NoSuchAlgorithmException e) {
 			// should never happen
 			e.printStackTrace();
 		} catch (KeyManagementException e) {
@@ -48,27 +49,34 @@ public class DefaultSSLContextSelector implements SSLContextSelector {
 	public void setTrustManager(X509TrustManager trustManager) {
 		this.trustManager = trustManager;
 	}
-	
+
 	private void initTrustManager() {
 		try {
-			TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+			TrustManagerFactory tmf = TrustManagerFactory
+					.getInstance("SunX509");
 			tmf.init((KeyStore) null);
 			TrustManager[] managers = tmf.getTrustManagers();
 			X509TrustManager manager = null;
-			for (int i=0; i < managers.length; i++) {
+			for (int i = 0; i < managers.length; i++) {
 				if (managers[i] instanceof X509TrustManager) {
-					manager = new LoggingTrustManager((X509TrustManager) managers[i]);
+					manager = new LoggingTrustManager(
+							(X509TrustManager) managers[i]);
 					break;
 				}
 			}
 			if (manager == null) {
 				manager = new X509TrustManager() {
+
 					public X509Certificate[] getAcceptedIssuers() {
 						return null;
 					}
-					public void checkClientTrusted(X509Certificate[] certs, String authType) {
+
+					public void checkClientTrusted(X509Certificate[] certs,
+							String authType) {
 					}
-					public void checkServerTrusted(X509Certificate[] certs, String authType) {
+
+					public void checkServerTrusted(X509Certificate[] certs,
+							String authType) {
 					}
 				};
 			}
@@ -79,19 +87,19 @@ public class DefaultSSLContextSelector implements SSLContextSelector {
 			kse.printStackTrace();
 		}
 	}
-	
+
 	public X509TrustManager getTrustManager() {
 		return trustManager;
 	}
-	
+
 	private static class LoggingTrustManager implements X509TrustManager {
-		
+
 		private X509TrustManager trustManager;
-		
+
 		public LoggingTrustManager(X509TrustManager trustManager) {
 			this.trustManager = trustManager;
 		}
-		
+
 		public X509Certificate[] getAcceptedIssuers() {
 			return trustManager.getAcceptedIssuers();
 		}

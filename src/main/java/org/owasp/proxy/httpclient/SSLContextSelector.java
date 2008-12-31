@@ -7,5 +7,5 @@ import javax.net.ssl.SSLContext;
 public interface SSLContextSelector {
 
 	SSLContext select(InetSocketAddress target);
-	
+
 }

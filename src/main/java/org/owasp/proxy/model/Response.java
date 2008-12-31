@@ -34,14 +34,14 @@ public class Response extends Message {
 			setStartParts(parts);
 		}
 	}
-	
+
 	public String getVersion() throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length == 0)
 			return null;
 		return "".equals(parts[0]) ? null : parts[0];
 	}
-	
+
 	public void setStatus(String status) throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 2) {
@@ -56,14 +56,14 @@ public class Response extends Message {
 		parts[1] = status;
 		setStartParts(parts);
 	}
-	
+
 	public String getStatus() throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 2)
 			return null;
 		return "".equals(parts[1]) ? null : parts[1];
 	}
-	
+
 	public void setReason(String reason) throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 3) {
@@ -84,35 +84,41 @@ public class Response extends Message {
 		parts[2] = reason;
 		setStartParts(parts);
 	}
-	
+
 	public String getReason() throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 3)
 			return null;
 		return "".equals(parts[2]) ? null : parts[2];
 	}
-	
-	public static boolean flushContent(String method, Response response, InputStream in, OutputStream out) throws MessageFormatException, IOException {
+
+	public static boolean flushContent(String method, Response response,
+			InputStream in, OutputStream out) throws MessageFormatException,
+			IOException {
 		String status = response.getStatus();
 		if ("HEAD".equalsIgnoreCase(method) || "204".equals(status)
-				|| "304".equals(status)) 
+				|| "304".equals(status))
 			return false;
 		return Message.flushContent(response, in, out);
 	}
-	
+
 	/**
 	 * reads the entire response body from an InputStream, taking into account
 	 * Transfer-Encoding and Content-Length headers
 	 * 
-	 * @param response the response headers
-	 * @param in the InputStream
+	 * @param response
+	 *            the response headers
+	 * @param in
+	 *            the InputStream
 	 * @return true if any bytes were read from the stream
 	 * 
 	 * @throws IOException
-	 * @throws MessageFormatException if the response headers could not be parsed
+	 * @throws MessageFormatException
+	 *             if the response headers could not be parsed
 	 */
-	public static boolean flushContent(String method, Response response, InputStream in) throws MessageFormatException, IOException {
+	public static boolean flushContent(String method, Response response,
+			InputStream in) throws MessageFormatException, IOException {
 		return Response.flushContent(method, response, in, null);
 	}
-	
+
 }

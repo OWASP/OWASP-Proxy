@@ -35,31 +35,32 @@ import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
 public class TraceServer implements Runnable {
-	
+
 	private ServerSocket socket;
-	
+
 	private boolean chunked = false;
-	
+
 	private boolean verbose = false;
-	
+
 	public TraceServer(int port) throws IOException {
 		try {
-			InetAddress address = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
+			InetAddress address = InetAddress.getByAddress(new byte[] { 127, 0,
+					0, 1 });
 			socket = new ServerSocket(port, 20, address);
 			socket.setReuseAddress(true);
 		} catch (UnknownHostException uhe) {
 			// should never happen
 		}
 	}
-	
+
 	public void setChunked(boolean chunked) {
 		this.chunked = chunked;
 	}
-	
+
 	public void setVerbose(boolean verbose) {
 		this.verbose = verbose;
 	}
-	
+
 	public void run() {
 		try {
 			do {
@@ -109,74 +110,76 @@ public class TraceServer implements Runnable {
 		return socket == null || socket.isClosed();
 	}
 
-
 	private class CH implements Runnable {
-		
+
 		private Socket socket;
-		
+
 		public CH(Socket socket) {
 			this.socket = socket;
 		}
-		
+
 		public void run() {
 			try {
 				ByteArrayOutputStream copy = new ByteArrayOutputStream();
-				CopyInputStream in = new CopyInputStream(socket.getInputStream(), copy);
+				CopyInputStream in = new CopyInputStream(socket
+						.getInputStream(), copy);
 				OutputStream out = socket.getOutputStream();
-				
+
 				if (verbose)
 					System.err.println("Connection: " + socket);
 				boolean close = true;
 				do {
-                	copy.reset();
-            		Request request = null;
-            		// read the whole header. Each line gets written into the copy defined
-            		// above
-            		while (!"".equals(in.readLine()))
-            			;
-            		
-            		{
-	            		byte[] headerBytes = copy.toByteArray();
-	            		
-	                    // empty request line, connection closed?
-	            		if (headerBytes == null || headerBytes.length == 0)
-	            			return;
-	            		
-	            		request = new Request();
-	                    request.setHeader(headerBytes);
-            		}
-            		
-                    // Get the request content (if any) from the stream,
-                    if (Request.flushContent(request, in, null))
-                    	request.setMessage(copy.toByteArray());
-	            	
-                    if (verbose)
-                    	System.out.write(request.getMessage());
-                    
-                    Response response = new Response();
-                    response.setStartLine("HTTP/1.0 200 Ok");
-                    if (chunked) {
-                    	response.setHeader("Transfer-Encoding", "chunked");
-                    	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    	ChunkedOutputStream cos = new ChunkedOutputStream(baos, 16);
-                    	cos.write(request.getMessage());
-                    	cos.close();
-                    	response.setContent(baos.toByteArray());
-                    } else {
-                    	response.setContent(request.getMessage());
-                    }
-                    if (verbose)
-                    	System.out.write(response.getMessage());
-                    
-                    out.write(response.getMessage());
-                    out.flush();
+					copy.reset();
+					Request request = null;
+					// read the whole header. Each line gets written into the
+					// copy defined
+					// above
+					while (!"".equals(in.readLine()))
+						;
 
-                    String connection = request.getHeader("Connection");
-	                if ("Keep-Alive".equalsIgnoreCase(connection)) {
-	                    close = false;
-	                } else {
-	                    close = true;
-	                }
+					{
+						byte[] headerBytes = copy.toByteArray();
+
+						// empty request line, connection closed?
+						if (headerBytes == null || headerBytes.length == 0)
+							return;
+
+						request = new Request();
+						request.setHeader(headerBytes);
+					}
+
+					// Get the request content (if any) from the stream,
+					if (Request.flushContent(request, in, null))
+						request.setMessage(copy.toByteArray());
+
+					if (verbose)
+						System.out.write(request.getMessage());
+
+					Response response = new Response();
+					response.setStartLine("HTTP/1.0 200 Ok");
+					if (chunked) {
+						response.setHeader("Transfer-Encoding", "chunked");
+						ByteArrayOutputStream baos = new ByteArrayOutputStream();
+						ChunkedOutputStream cos = new ChunkedOutputStream(baos,
+								16);
+						cos.write(request.getMessage());
+						cos.close();
+						response.setContent(baos.toByteArray());
+					} else {
+						response.setContent(request.getMessage());
+					}
+					if (verbose)
+						System.out.write(response.getMessage());
+
+					out.write(response.getMessage());
+					out.flush();
+
+					String connection = request.getHeader("Connection");
+					if ("Keep-Alive".equalsIgnoreCase(connection)) {
+						close = false;
+					} else {
+						close = true;
+					}
 				} while (!close);
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -184,11 +187,12 @@ public class TraceServer implements Runnable {
 				try {
 					if (!socket.isClosed())
 						socket.close();
-				} catch (IOException ioe2) {}
+				} catch (IOException ioe2) {
+				}
 			}
 		}
 	}
-	
+
 	public static void main(String[] args) throws Exception {
 		TraceServer ts = new TraceServer(9999);
 		ts.setChunked(true);
@@ -197,7 +201,7 @@ public class TraceServer implements Runnable {
 		t.start();
 		System.out.println("Started");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
-		
+
 		ts.stop();
 		System.out.println("stopped");
 	}

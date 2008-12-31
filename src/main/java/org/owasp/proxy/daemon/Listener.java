@@ -70,36 +70,37 @@ import org.owasp.proxy.model.Response;
 public class Listener {
 
 	private boolean ssl = false;
-	
+
 	private String host;
 
 	private int port;
 
 	private CertificateProvider certProvider = null;
-	
+
 	private ProxyMonitor monitor;
-	
+
 	private HttpClientFactory clientFactory;
-	
+
 	private volatile ServerSocket socket = null;
 
 	private final static Logger logger = Logger.getLogger(Listener.class
 			.getName());
 
 	private static Set<SocketAddress> listenAddresses = new HashSet<SocketAddress>();
-	
+
 	public static synchronized SocketAddress[] getListeners() {
-		return listenAddresses.toArray(new SocketAddress[listenAddresses.size()]);
+		return listenAddresses
+				.toArray(new SocketAddress[listenAddresses.size()]);
 	}
-	
+
 	protected static synchronized void registerListener(SocketAddress addr) {
 		listenAddresses.add(addr);
 	}
-	
+
 	protected static synchronized void deregisterListener(SocketAddress addr) {
 		listenAddresses.remove(addr);
 	}
-	
+
 	public Listener(int listenPort) throws IOException {
 		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), listenPort);
 	}
@@ -118,17 +119,17 @@ public class Listener {
 	public void setProxyMonitor(ProxyMonitor monitor) {
 		this.monitor = monitor;
 	}
-	
+
 	public void setCertificateProvider(CertificateProvider certProvider) {
 		this.certProvider = certProvider;
 	}
-	
+
 	public void setHttpClientFactory(HttpClientFactory clientFactory) {
 		this.clientFactory = clientFactory;
 	}
-	
-	
-	protected ConnectionHandler createConnectionHandler(Socket socket) throws IOException {
+
+	protected ConnectionHandler createConnectionHandler(Socket socket)
+			throws IOException {
 		ConnectionHandler ch = new ConnectionHandler(socket);
 		ch.setTarget(ssl, host, port);
 		ch.setProxyMonitor(monitor);
@@ -136,25 +137,28 @@ public class Listener {
 		ch.setHttpClientFactory(clientFactory);
 		return ch;
 	}
-	
+
 	private void handleConnection(final Socket accept) {
 		Thread thread = new Thread(new Runnable() {
+
 			public void run() {
 				try {
 					ConnectionHandler ch = createConnectionHandler(accept);
 					ch.run();
 				} catch (IOException ioe) {
-					logger.severe("Error creating connection handler!" + ioe.getMessage());
+					logger.severe("Error creating connection handler!"
+							+ ioe.getMessage());
 				}
 			}
 		});
 		thread.setDaemon(true);
 		thread.start();
 	}
-	
+
 	private Runner runner = null;
-	
+
 	private class Runner implements Runnable {
+
 		public void run() {
 			SocketAddress addr = socket.getLocalSocketAddress();
 			registerListener(addr);
@@ -181,16 +185,17 @@ public class Listener {
 			}
 		}
 	}
-	
+
 	public synchronized void start() {
 		if (runner != null)
-			throw new IllegalStateException("Already running in another thread!");
+			throw new IllegalStateException(
+					"Already running in another thread!");
 		runner = new Runner();
 		Thread thread = new Thread(runner);
 		thread.setDaemon(true);
 		thread.start();
 	}
-	
+
 	public synchronized boolean stop() {
 		if (!isStopped()) {
 			try {
@@ -217,7 +222,6 @@ public class Listener {
 		return socket == null || socket.isClosed();
 	}
 
-
 	protected HttpClient createHttpClient() {
 		return new HttpClient();
 	}
@@ -226,6 +230,7 @@ public class Listener {
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
 				0, 1 }), 9998);
 		l.setProxyMonitor(new LoggingProxyMonitor() {
+
 			@Override
 			public Response requestReceived(Request request)
 					throws MessageFormatException {

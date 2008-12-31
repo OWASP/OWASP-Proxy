@@ -36,7 +36,7 @@ import org.owasp.proxy.test.TraceServer;
 public class HttpClientTest {
 
 	private static TraceServer ts = null;
-	
+
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		System.err.println("Running setupBeforeClass()");
@@ -61,10 +61,14 @@ public class HttpClientTest {
 		request.setSsl(false);
 		request.setHost("localhost");
 		request.setPort(9999);
-		request.setMessage("GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n".getBytes());
+		request
+				.setMessage("GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n"
+						.getBytes());
 		Conversation c = client.fetchResponse(request);
-		System.out.println("Headers: " + (c.getResponseHeaderTime() - c.getRequestTime()));
-		System.out.println("Content: " + (c.getResponseBodyTime() - c.getResponseHeaderTime()));
+		System.out.println("Headers: "
+				+ (c.getResponseHeaderTime() - c.getRequestTime()));
+		System.out.println("Content: "
+				+ (c.getResponseBodyTime() - c.getResponseHeaderTime()));
 		System.out.write(c.getResponse().getMessage());
 	}
 
@@ -75,15 +79,19 @@ public class HttpClientTest {
 		request.setSsl(false);
 		request.setHost("www.google.co.za");
 		request.setPort(80);
-		request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+		request
+				.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
 		request.addHeader("Host", "www.google.co.za");
 		Conversation c = client.fetchResponse(request);
-		System.out.println("Headers: " + (c.getResponseHeaderTime() - c.getRequestTime()));
-		System.out.println("Content: " + (c.getResponseBodyTime() - c.getResponseHeaderTime()));
-//		System.out.write(c.getResponse().getMessage());
-//		System.out.print("<-The end");
-		
-		InputStream in = new ChunkedInputStream(new ByteArrayInputStream(c.getResponse().getContent()));
+		System.out.println("Headers: "
+				+ (c.getResponseHeaderTime() - c.getRequestTime()));
+		System.out.println("Content: "
+				+ (c.getResponseBodyTime() - c.getResponseHeaderTime()));
+		// System.out.write(c.getResponse().getMessage());
+		// System.out.print("<-The end");
+
+		InputStream in = new ChunkedInputStream(new ByteArrayInputStream(c
+				.getResponse().getContent()));
 		byte[] buff = new byte[1024];
 		int got;
 		while ((got = in.read(buff)) > 0) {

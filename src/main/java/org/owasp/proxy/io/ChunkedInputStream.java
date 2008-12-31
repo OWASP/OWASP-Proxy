@@ -28,11 +28,11 @@ import java.io.InputStream;
  * @author Rogan Dawes
  */
 public class ChunkedInputStream extends FilterInputStream {
-	
+
 	private byte[] chunk = null;
-	
+
 	private int start = 0;
-	
+
 	private int size = 0;
 
 	public ChunkedInputStream(InputStream in) throws IOException {
@@ -69,7 +69,8 @@ public class ChunkedInputStream extends FilterInputStream {
 			}
 			start = 0;
 		} catch (NumberFormatException nfe) {
-			IOException ioe = new IOException("Error parsing chunk size from '" + line);
+			IOException ioe = new IOException("Error parsing chunk size from '"
+					+ line);
 			ioe.initCause(nfe);
 			throw ioe;
 		}
@@ -117,17 +118,20 @@ public class ChunkedInputStream extends FilterInputStream {
 		return false;
 	}
 
-    /**
-     * Read the CRLF terminator.
-     * @throws IOException If an IO error occurs.
-     */
-    private void readCRLF() throws IOException {
-        int cr = in.read();
-        int lf = in.read();
-        if ((cr != '\r') || (lf != '\n')) { 
-            throw new IOException("CRLF expected at end of chunk: " + cr + "/" + lf);
-        }
-    }
+	/**
+	 * Read the CRLF terminator.
+	 * 
+	 * @throws IOException
+	 *             If an IO error occurs.
+	 */
+	private void readCRLF() throws IOException {
+		int cr = in.read();
+		int lf = in.read();
+		if ((cr != '\r') || (lf != '\n')) {
+			throw new IOException("CRLF expected at end of chunk: " + cr + "/"
+					+ lf);
+		}
+	}
 
 	private String readLine() throws IOException {
 		StringBuilder line = new StringBuilder();

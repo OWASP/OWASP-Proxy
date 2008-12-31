@@ -36,6 +36,7 @@ public class ServerAuthenticatorNone implements ServerAuthenticator {
 	static final byte[] socks5response = { 5, 0 };
 
 	InputStream in;
+
 	OutputStream out;
 
 	/**

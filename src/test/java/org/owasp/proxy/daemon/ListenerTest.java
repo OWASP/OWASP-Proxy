@@ -37,7 +37,7 @@ import org.owasp.proxy.test.TraceServer;
 public class ListenerTest {
 
 	private static TraceServer ts;
-	
+
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		System.err.println("Running setupBeforeClass()");
@@ -61,11 +61,12 @@ public class ListenerTest {
 
 	@Test
 	public void testListenerStartStop() throws Exception {
-		Listener l = new Listener(InetAddress.getByAddress(new byte[] {127,0,0,1}), 9998);
+		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
+				0, 1 }), 9998);
 		l.start();
-		
+
 		Thread.sleep(1000);
-		
+
 		l.stop();
 		assertTrue("Listener didn't exit", l.isStopped());
 	}
@@ -76,9 +77,10 @@ public class ListenerTest {
 		ProxyMonitor pm = new LoggingProxyMonitor();
 		l.setProxyMonitor(pm);
 		l.start();
-		
-		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost", 9998));
-		
+
+		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost",
+				9998));
+
 		try {
 			URL url = new URL("http://localhost:9999/");
 			URLConnection uc = url.openConnection(p);
@@ -90,7 +92,7 @@ public class ListenerTest {
 				System.out.write(buff, 0, got);
 			}
 			is.close();
-			
+
 			uc = url.openConnection(p);
 			uc.setRequestProperty("Content-Length", "15");
 			uc.setDoOutput(true);
@@ -103,15 +105,15 @@ public class ListenerTest {
 				System.out.write(buff, 0, got);
 			}
 			is.close();
-			
-//			request.setPort(999);
-//			request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
-//			// c = 
-//			client.fetchResponse(request);
-//			// System.out.write(c.getResponse().getMessage());
-			
+
+			// request.setPort(999);
+			// request.setMessage("POST / HTTP/1.0\r\nContent-Length: 15\r\n\r\n123456789012345".getBytes());
+			// // c =
+			// client.fetchResponse(request);
+			// // System.out.write(c.getResponse().getMessage());
+
 		} finally {
-			
+
 			l.stop();
 			Thread.sleep(1000);
 		}
@@ -124,22 +126,23 @@ public class ListenerTest {
 		ProxyMonitor pm = new LoggingProxyMonitor();
 		l.setProxyMonitor(pm);
 		l.start();
-		
-//		try {
-//			Request request = new Request();
-//			request.setSsl(false);
-//			request.setHost("localhost");
-//			request.setPort(9999);
-//			request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
-//			request.addHeader("Host", "www.google.co.za");
-//	
-//			Conversation c = client.fetchResponse(request);
-//			System.out.write(c.getResponse().getMessage());
-//			assertEquals("response did not match request", request.getMessage(), c.getResponse().getContent());
-//		} finally {
-			l.stop();
-//			assertTrue("Listener didn't exit", l.isStopped());
-//		}
+
+		// try {
+		// Request request = new Request();
+		// request.setSsl(false);
+		// request.setHost("localhost");
+		// request.setPort(9999);
+		// request.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
+		// request.addHeader("Host", "www.google.co.za");
+		//	
+		// Conversation c = client.fetchResponse(request);
+		// System.out.write(c.getResponse().getMessage());
+		// assertEquals("response did not match request", request.getMessage(),
+		// c.getResponse().getContent());
+		// } finally {
+		l.stop();
+		// assertTrue("Listener didn't exit", l.isStopped());
+		// }
 	}
 
 }

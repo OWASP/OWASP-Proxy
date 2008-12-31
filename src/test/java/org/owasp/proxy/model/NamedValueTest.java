@@ -35,7 +35,7 @@ public class NamedValueTest {
 		assertEquals("=", nv.getSeparator());
 		assertEquals("b", nv.getValue());
 		assertEquals(t, nv.toString());
-		
+
 		t = "a=";
 		nv = NamedValue.parse(t, "=");
 		assertEquals("a", nv.getName());
@@ -70,23 +70,23 @@ public class NamedValueTest {
 		String t = "a=b&c=d&e=&f=g";
 		NamedValue[] nv = NamedValue.parse(t, "&", "=");
 		assertEquals(4, nv.length);
-		
+
 		assertEquals("a", nv[0].getName());
 		assertEquals("=", nv[0].getSeparator());
 		assertEquals("b", nv[0].getValue());
-		
+
 		assertEquals("c", nv[1].getName());
 		assertEquals("=", nv[1].getSeparator());
 		assertEquals("d", nv[1].getValue());
-		
+
 		assertEquals("e", nv[2].getName());
 		assertEquals("=", nv[2].getSeparator());
 		assertEquals("", nv[2].getValue());
-		
+
 		assertEquals("f", nv[3].getName());
 		assertEquals("=", nv[3].getSeparator());
 		assertEquals("g", nv[3].getValue());
-		
+
 		assertEquals(t, NamedValue.join(nv, "&"));
 	}
 

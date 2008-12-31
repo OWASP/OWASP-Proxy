@@ -25,19 +25,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * CopyInputStream writes a copy of everything that is read through it to one or more
- * OutputStreams. This can be used to copy what is read from a SocketInputStream to a SocketOutputStream,
- * while keeping a copy of what was read in a ByteArrayOutputStream, for example.
+ * CopyInputStream writes a copy of everything that is read through it to one or
+ * more OutputStreams. This can be used to copy what is read from a
+ * SocketInputStream to a SocketOutputStream, while keeping a copy of what was
+ * read in a ByteArrayOutputStream, for example.
  * 
- * Any OutputStreams that throw Exceptions when being written to are not written to again. 
+ * Any OutputStreams that throw Exceptions when being written to are not written
+ * to again.
  * 
  * @author rogan
- *
+ * 
  */
 public class CopyInputStream extends FilterInputStream {
 
 	private OutputStream[] copy;
-	
+
 	public CopyInputStream(InputStream in, OutputStream copy) {
 		this(in, new OutputStream[] { copy });
 	}
@@ -49,8 +51,10 @@ public class CopyInputStream extends FilterInputStream {
 		this.copy = new OutputStream[copy.length];
 		System.arraycopy(copy, 0, this.copy, 0, copy.length);
 	}
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.io.FilterInputStream#markSupported()
 	 */
 	@Override
@@ -58,14 +62,16 @@ public class CopyInputStream extends FilterInputStream {
 		return false;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.io.FilterInputStream#read()
 	 */
 	@Override
 	public int read() throws IOException {
 		int ret = super.read();
 		if (ret > -1)
-			for (int i=0; i<copy.length; i++) {
+			for (int i = 0; i < copy.length; i++) {
 				if (copy[i] == null)
 					continue;
 				try {
@@ -77,14 +83,16 @@ public class CopyInputStream extends FilterInputStream {
 		return ret;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.io.FilterInputStream#read(byte[], int, int)
 	 */
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		int ret = super.read(b, off, len);
 		if (ret > 0)
-			for (int i=0; i<copy.length; i++) {
+			for (int i = 0; i < copy.length; i++) {
 				if (copy[i] == null)
 					continue;
 				try {
@@ -97,19 +105,23 @@ public class CopyInputStream extends FilterInputStream {
 		return ret;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.io.FilterInputStream#read(byte[])
 	 */
 	@Override
 	public int read(byte[] b) throws IOException {
 		return this.read(b, 0, b.length);
 	}
-	
+
 	/**
-	 * a method to read a line from the stream up to and including the CR or CRLF.
+	 * a method to read a line from the stream up to and including the CR or
+	 * CRLF.
 	 * 
 	 * We read character by character so that we don't read further than we
-	 * should i.e. into the next line, which could be a message body, or the next message!
+	 * should i.e. into the next line, which could be a message body, or the
+	 * next message!
 	 * 
 	 * @param is
 	 *            The InputStream to read the line from
@@ -140,13 +152,15 @@ public class CopyInputStream extends FilterInputStream {
 		return line.toString();
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see java.io.FilterInputStream#close()
 	 */
 	@Override
 	public void close() throws IOException {
 		super.close();
-		for (int i=0; i<copy.length; i++) {
+		for (int i = 0; i < copy.length; i++) {
 			if (copy[i] != null)
 				copy[i].close();
 		}

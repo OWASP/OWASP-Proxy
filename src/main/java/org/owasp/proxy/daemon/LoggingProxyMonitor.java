@@ -77,10 +77,13 @@ public class LoggingProxyMonitor extends ProxyMonitor {
 			StringBuilder buff = new StringBuilder();
 			buff.append(request.getMethod()).append(" ");
 			buff.append(request.isSsl() ? "ssl " : "");
-			buff.append(request.getHost()).append(":").append(request.getPort());
+			buff.append(request.getHost()).append(":")
+					.append(request.getPort());
 			buff.append(request.getResource()).append(" ");
-			buff.append(conversation.getResponse().getStatus()).append(" - ").append(resp);
-			buff.append(" bytes in ").append(time).append("(").append(resp / (time*1000));
+			buff.append(conversation.getResponse().getStatus()).append(" - ")
+					.append(resp);
+			buff.append(" bytes in ").append(time).append("(").append(
+					resp / (time * 1000));
 			buff.append(" bps)");
 			System.out.println(buff.toString());
 		} catch (MessageFormatException mfe) {

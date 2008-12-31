@@ -47,10 +47,11 @@ import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
 public class HttpClient {
-	
+
 	private int maxResponseSize = Integer.MAX_VALUE;
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {
+
 		@Override
 		public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
 		}
@@ -60,25 +61,25 @@ public class HttpClient {
 			return Arrays.asList(Proxy.NO_PROXY);
 		}
 	};
-	
+
 	private SSLContextSelector contextSelector = new DefaultSSLContextSelector();
 
 	private ProxySelector proxySelector = null;
-	
+
 	private Socket socket;
-	
+
 	private InetSocketAddress target = null;
-	
+
 	private boolean direct = true;
-	
+
 	private SizeLimitedByteArrayOutputStream copy = null;
-	
+
 	private CopyInputStream in = null;
-	
+
 	private Conversation conversation = null;
-	
+
 	private Resolver resolver;
-	
+
 	public void setSSLContextSelector(SSLContextSelector contextSelector) {
 		this.contextSelector = contextSelector;
 	}
@@ -86,11 +87,11 @@ public class HttpClient {
 	public void setProxySelector(ProxySelector proxySelector) {
 		this.proxySelector = proxySelector;
 	}
-	
+
 	public void setResolver(Resolver resolver) {
 		this.resolver = resolver;
 	}
-	
+
 	/**
 	 * @return the maxResponseSize
 	 */
@@ -99,18 +100,18 @@ public class HttpClient {
 	}
 
 	/**
-	 * This parameter controls the maximum size response content
-	 * that will be recorded. If the response content is larger
-	 * than this size, an IOException will be thrown while fetching
-	 * the response content.
+	 * This parameter controls the maximum size response content that will be
+	 * recorded. If the response content is larger than this size, an
+	 * IOException will be thrown while fetching the response content.
 	 * 
-	 *  Note: if the response is being streamed to an OutputStream,
-	 *  the full response will be written to that OutputStream, even
-	 *  though it is not recorded.
-	 *  
-	 *  @see HttpClient#fetchResponseContent(OutputStream)
-	 *  
-	 * @param maxResponseSize the maxResponseSize to set
+	 * Note: if the response is being streamed to an OutputStream, the full
+	 * response will be written to that OutputStream, even though it is not
+	 * recorded.
+	 * 
+	 * @see HttpClient#fetchResponseContent(OutputStream)
+	 * 
+	 * @param maxResponseSize
+	 *            the maxResponseSize to set
 	 */
 	public void setMaxResponseSize(int maxResponseSize) {
 		this.maxResponseSize = maxResponseSize;
@@ -130,8 +131,8 @@ public class HttpClient {
 		}
 		fetchResponseHeader(request);
 		readResponseBody();
-		
-		// allow the copy ByteArrayOutputStream to be GC'd 
+
+		// allow the copy ByteArrayOutputStream to be GC'd
 		copy = null;
 		in = null;
 
@@ -139,46 +140,53 @@ public class HttpClient {
 		this.conversation = null;
 		return conversation;
 	}
-	
+
 	public Conversation fetchResponseHeader(Request request)
-		throws MessageFormatException, IOException {
+			throws MessageFormatException, IOException {
 		conversation = new Conversation();
 		conversation.setRequest(request);
-		
-		// establish a socket connection that is connected either to the proxy server
-		// or to the server itself. conversation.response will be non-null if the proxy
+
+		// establish a socket connection that is connected either to the proxy
+		// server
+		// or to the server itself. conversation.response will be non-null if
+		// the proxy
 		// server returned an error
-		// instance variable "direct" is set to false if we connect through a non-SSL http proxy
+		// instance variable "direct" is set to false if we connect through a
+		// non-SSL http proxy
 		openConnection(conversation);
-		
+
 		if (conversation.getResponse() != null)
 			return conversation;
-		
-		if (socket == null) 
+
+		if (socket == null)
 			throw new IOException("Couldn't connect to server!");
-		
+
 		if (!socket.isConnected() || socket.isClosed())
 			throw new IOException("Socket is not connected");
-		
-		conversation.setConnection(socket.getLocalSocketAddress().toString() + "->" + socket.getRemoteSocketAddress().toString());
+
+		conversation.setConnection(socket.getLocalSocketAddress().toString()
+				+ "->" + socket.getRemoteSocketAddress().toString());
 		conversation.setRequest(request);
-		
+
 		writeRequest(conversation);
 		copy = new SizeLimitedByteArrayOutputStream();
 		in = new CopyInputStream(socket.getInputStream(), copy);
 		readResponseHeader();
-		
+
 		return conversation;
 	}
-	
-	public void fetchResponseContent(OutputStream out) throws MessageFormatException, IOException {
+
+	public void fetchResponseContent(OutputStream out)
+			throws MessageFormatException, IOException {
 		if (conversation == null)
-			throw new IllegalStateException("fetchResponseContent called without fetchResponseHeader");
+			throw new IllegalStateException(
+					"fetchResponseContent called without fetchResponseHeader");
 		if (out != null)
-			in = new CopyInputStream(socket.getInputStream(), new OutputStream[] { copy, out });
+			in = new CopyInputStream(socket.getInputStream(),
+					new OutputStream[] { copy, out });
 		readResponseBody();
-		
-		// allow the copy ByteArrayOutputStream to be GC'd 
+
+		// allow the copy ByteArrayOutputStream to be GC'd
 		copy = null;
 		in = null;
 
@@ -190,7 +198,7 @@ public class HttpClient {
 		if (close)
 			close();
 	}
-	
+
 	public void close() throws IOException {
 		if (socket != null && !socket.isClosed()) {
 			socket.close();
@@ -198,53 +206,58 @@ public class HttpClient {
 			copy = null;
 		}
 	}
-	
+
 	private URI constructUri(boolean ssl, String host, int port) {
 		StringBuilder buff = new StringBuilder();
-		buff.append(ssl ? "https" : "http").append("://").append(host).append(":").append(port);
+		buff.append(ssl ? "https" : "http").append("://").append(host).append(
+				":").append(port);
 		return URI.create(buff.toString());
 	}
-	
+
 	private void checkLoop(SocketAddress dest) throws IOException {
 		// FIXME - this is looking a bit clunky
 		SocketAddress[] listeners = Listener.getListeners();
 		if (dest instanceof InetSocketAddress) {
 			InetSocketAddress dst = (InetSocketAddress) dest;
-			for (int i=0; i<listeners.length; i++) {
+			for (int i = 0; i < listeners.length; i++) {
 				if (listeners[i] instanceof InetSocketAddress) {
 					InetSocketAddress isa = (InetSocketAddress) listeners[i];
 					if (isa.getAddress().isAnyLocalAddress()) {
-						if (NetworkInterface.getByInetAddress(dst.getAddress()) != null && 
-								dst.getPort() == isa.getPort())
-								throw new IOException("Loop detected! Request target is a local Listener");
+						if (NetworkInterface.getByInetAddress(dst.getAddress()) != null
+								&& dst.getPort() == isa.getPort())
+							throw new IOException(
+									"Loop detected! Request target is a local Listener");
 					} else if (dest.equals(listeners[i]))
-						throw new IOException("Loop detected! Request target is a local Listener");
+						throw new IOException(
+								"Loop detected! Request target is a local Listener");
 				}
 			}
 		}
 	}
-	
-	private void openConnection(Conversation conversation) throws MessageFormatException, IOException {
+
+	private void openConnection(Conversation conversation)
+			throws MessageFormatException, IOException {
 		Request request = conversation.getRequest();
 		boolean ssl = request.isSsl();
 		String host = request.getHost();
 		if (host == null)
-			throw new MessageFormatException("Host is not set, don't know where to connect to!");
+			throw new MessageFormatException(
+					"Host is not set, don't know where to connect to!");
 		int port = request.getPort();
-		
+
 		if (port == -1)
 			port = (ssl ? 443 : 80);
-		
+
 		InetSocketAddress target = null;
 		if (resolver != null) {
 			target = new InetSocketAddress(resolver.getAddress(host), port);
 		} else {
 			target = new InetSocketAddress(host, port);
 		}
-		
+
 		URI uri = constructUri(ssl, host, port);
 		List<Proxy> proxies = getProxySelector().select(uri);
-		
+
 		if (isConnected(target)) {
 			return;
 		} else if (socket != null && !socket.isClosed()) {
@@ -254,9 +267,9 @@ public class HttpClient {
 				ioe.printStackTrace();
 			}
 		}
-		
+
 		this.target = target;
-		
+
 		socket = null;
 		IOException lastAttempt = null;
 		for (Proxy proxy : proxies) {
@@ -270,10 +283,11 @@ public class HttpClient {
 					socket.connect(addr);
 					if (ssl) {
 						proxyConnect(target, conversation);
-						if (conversation.getResponse() != null) // CONNECT failed!
+						if (conversation.getResponse() != null) // CONNECT
+							// failed!
 							return;
 						layerSsl(target);
-					} else 
+					} else
 						direct = false;
 				} else {
 					socket = new Socket(proxy);
@@ -301,29 +315,31 @@ public class HttpClient {
 			throw lastAttempt;
 		throw new IOException("Couldn't connect to server");
 	}
-	
+
 	private boolean isConnected(InetSocketAddress target) {
 		if (socket == null || socket.isClosed() || socket.isInputShutdown())
 			return false;
 		if (target.equals(this.target)) {
 			try {
 				// FIXME: This only works because we don't implement pipelining!
-	            int oldtimeout = socket.getSoTimeout();
-	            try {
-	                socket.setSoTimeout(1);
-	                byte[] buff = new byte[1024];
-	                int got = socket.getInputStream().read(buff);
-	                if (got == -1)
-	                	return false;
-	                if (got > 0) {
-	                	System.err.println("Unexpected data read from socket:\n\n" + new String(buff, 0, got));
-	                	return false;
-	                }
-	            } catch (SocketTimeoutException e) {
-	            	return true;
-	            } finally {
-	                socket.setSoTimeout(oldtimeout);
-	            }
+				int oldtimeout = socket.getSoTimeout();
+				try {
+					socket.setSoTimeout(1);
+					byte[] buff = new byte[1024];
+					int got = socket.getInputStream().read(buff);
+					if (got == -1)
+						return false;
+					if (got > 0) {
+						System.err
+								.println("Unexpected data read from socket:\n\n"
+										+ new String(buff, 0, got));
+						return false;
+					}
+				} catch (SocketTimeoutException e) {
+					return true;
+				} finally {
+					socket.setSoTimeout(oldtimeout);
+				}
 			} catch (IOException ioe) {
 				System.err.println("Looks closed!");
 				return false;
@@ -331,26 +347,28 @@ public class HttpClient {
 		}
 		return false;
 	}
-	
+
 	private void layerSsl(InetSocketAddress target) throws IOException {
 		if (contextSelector == null)
 			throw new IOException(
 					"SSL Context Selector is null, SSL is not supported!");
 		SSLContext sslContext = contextSelector.select(target);
 		SSLSocketFactory factory = sslContext.getSocketFactory();
-		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket,
-				socket.getInetAddress().getHostName(), socket.getPort(),
-				true);
+		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket, socket
+				.getInetAddress().getHostName(), socket.getPort(), true);
 		sslsocket.setUseClientMode(true);
 		sslsocket.setSoTimeout(10000);
 		sslsocket.startHandshake();
 		socket = sslsocket;
 	}
-	
-	private void proxyConnect(InetSocketAddress target, Conversation conversation) throws IOException, MessageFormatException {
+
+	private void proxyConnect(InetSocketAddress target,
+			Conversation conversation) throws IOException,
+			MessageFormatException {
 		OutputStream out = new BufferedOutputStream(socket.getOutputStream());
 		Request request = new Request();
-		request.setStartLine("CONNECT " + target.getHostName() + ":" + target.getPort() + " HTTP/1.0");
+		request.setStartLine("CONNECT " + target.getHostName() + ":"
+				+ target.getPort() + " HTTP/1.0");
 		long requestTime = System.currentTimeMillis();
 		out.write(request.getMessage());
 		out.flush();
@@ -358,7 +376,7 @@ public class HttpClient {
 		CopyInputStream in = new CopyInputStream(socket.getInputStream(), copy);
 		while (!"".equals(in.readLine()))
 			; // flush the response headers
-		
+
 		long responseHeaderTime = System.currentTimeMillis();
 		Response response = new Response();
 		response.setMessage(copy.toByteArray());
@@ -376,14 +394,15 @@ public class HttpClient {
 			socket = null;
 		}
 	}
-	
+
 	private ProxySelector getProxySelector() {
-		if (proxySelector == null) 
+		if (proxySelector == null)
 			return NO_PROXY;
 		return proxySelector;
 	}
-	
-	private void writeRequest(Conversation conversation) throws MessageFormatException, IOException {
+
+	private void writeRequest(Conversation conversation)
+			throws MessageFormatException, IOException {
 		OutputStream out = new BufferedOutputStream(socket.getOutputStream());
 
 		conversation.setRequestTime(System.currentTimeMillis());
@@ -394,8 +413,9 @@ public class HttpClient {
 		}
 		out.flush();
 	}
-	
-	private void readResponseHeader() throws MessageFormatException, IOException {
+
+	private void readResponseHeader() throws MessageFormatException,
+			IOException {
 		// read the whole header. Each line gets written into the copy defined
 		// above
 		String line;
@@ -404,13 +424,15 @@ public class HttpClient {
 		} while (line != null && !"".equals(line));
 
 		if (line == null) {
-			throw new IOException("Unexpected end of stream reading response header");
+			throw new IOException(
+					"Unexpected end of stream reading response header");
 		}
-		
+
 		Response response = new Response();
 		response.setMessage(copy.toByteArray());
 
-		if ("100".equals(response.getStatus())) { // 100 Continue, expect another set of headers
+		if ("100".equals(response.getStatus())) { // 100 Continue, expect
+			// another set of headers
 			// read the next header
 			while (!"".equals(in.readLine()))
 				System.err.println("'");
@@ -420,11 +442,12 @@ public class HttpClient {
 		conversation.setResponse(response);
 		conversation.setResponseHeaderTime(System.currentTimeMillis());
 	}
-	
+
 	private void readResponseBody() throws MessageFormatException, IOException {
 		copy = new SizeLimitedByteArrayOutputStream(maxResponseSize);
 		Response response = conversation.getResponse();
-		if (Response.flushContent(conversation.getRequest().getMethod(), response, in)) {
+		if (Response.flushContent(conversation.getRequest().getMethod(),
+				response, in)) {
 			conversation.setResponseBodyTime(System.currentTimeMillis());
 			if (!copy.hasOverflowed()) {
 				response.setContent(copy.toByteArray());
@@ -455,7 +478,8 @@ public class HttpClient {
 		if (resourceStart > 0) {
 			BufferedOutputStream bos = new BufferedOutputStream(out);
 			bos.write(message, 0, resourceStart);
-			bos.write(constructUri(request.isSsl(), request.getHost(), request.getPort()).toString().getBytes());
+			bos.write(constructUri(request.isSsl(), request.getHost(),
+					request.getPort()).toString().getBytes());
 			bos.write(message, resourceStart, message.length - resourceStart);
 			bos.flush();
 		} else {

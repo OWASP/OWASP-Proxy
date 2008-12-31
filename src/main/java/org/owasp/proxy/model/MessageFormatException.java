@@ -29,13 +29,13 @@ public class MessageFormatException extends Exception {
 	public MessageFormatException(String message) {
 		super(message);
 	}
-	
+
 	public MessageFormatException(Throwable cause) {
 		super(cause);
 	}
-	
+
 	public MessageFormatException(String message, Throwable cause) {
 		super(message, cause);
 	}
-	
+
 }

@@ -10,22 +10,23 @@ import java.net.SocketException;
 import java.nio.channels.SocketChannel;
 
 /**
- * This class supports auto detection of SSL connections. We read the first
- * few bytes from the socket's InputStream, and if it looks like an SSL connection
- * we wrap the InputStream in a PushBackInputStream, push the bytes back into the stream,
- * and create a SocketWrapper to pass to SSLSocketFactory.createSocket()
+ * This class supports auto detection of SSL connections. We read the first few
+ * bytes from the socket's InputStream, and if it looks like an SSL connection
+ * we wrap the InputStream in a PushBackInputStream, push the bytes back into
+ * the stream, and create a SocketWrapper to pass to
+ * SSLSocketFactory.createSocket()
  * 
  * @author rogan
- *
+ * 
  */
 public class SocketWrapper extends Socket {
 
 	private Socket socket;
 
 	private InputStream is;
-	
+
 	private OutputStream os;
-	
+
 	public SocketWrapper(Socket socket, InputStream is, OutputStream os) {
 		this.socket = socket;
 		this.is = is;

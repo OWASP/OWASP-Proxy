@@ -23,7 +23,8 @@ import java.net.URISyntaxException;
 
 public class URI {
 
-	private String input = null, scheme = null, host = null, path = null, query = null, fragment = null;
+	private String input = null, scheme = null, host = null, path = null,
+			query = null, fragment = null;
 
 	private int port = -1;
 
@@ -40,18 +41,18 @@ public class URI {
 			throw new URISyntaxException(input,
 					"No ':' found extracting the scheme");
 		scheme = input.substring(start, end);
-		
+
 		if (end > length - 3 || !"://".equals(input.substring(end, end + 3)))
 			throw new URISyntaxException(input, "Expected '://'", end);
 		end = end + 3;
-		
+
 		start = end;
 		end = scan(start, ":/");
 		if (end == length)
 			throw new URISyntaxException(input,
 					"Unexpected end of URI looking for port or path");
 		host = input.substring(start, end);
-		
+
 		if (input.charAt(end) == ':') { // get the port
 			start = end;
 			end = scan(start, "/");
@@ -61,7 +62,8 @@ public class URI {
 			try {
 				port = Integer.parseInt(input.substring(start + 1, end));
 				if (port < 1 || port > 65535)
-					throw new URISyntaxException(input, "port out of range", start);
+					throw new URISyntaxException(input, "port out of range",
+							start);
 			} catch (NumberFormatException nfe) {
 				URISyntaxException use = new URISyntaxException(input,
 						"Illegal port specification!", start);
@@ -69,7 +71,7 @@ public class URI {
 				throw use;
 			}
 		}
-		
+
 		start = end;
 		end = scan(start, "?#");
 		path = input.substring(start, end);
@@ -82,7 +84,7 @@ public class URI {
 		}
 		if (end == length)
 			return;
-		
+
 		if (input.charAt(end) == '#') { // get the fragment
 			start = end;
 			fragment = input.substring(start);
@@ -137,7 +139,7 @@ public class URI {
 			buff.append(fragment);
 		return buff.toString();
 	}
-	
+
 	public String toString() {
 		StringBuilder buff = new StringBuilder();
 		buff.append(scheme).append("://");

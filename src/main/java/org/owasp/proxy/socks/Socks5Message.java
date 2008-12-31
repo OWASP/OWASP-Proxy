@@ -12,6 +12,7 @@ import java.net.UnknownHostException;
  */
 
 public class Socks5Message extends ProxyMessage {
+
 	/** Address type of given message */
 	public int addrType;
 
@@ -231,7 +232,8 @@ public class Socks5Message extends ProxyMessage {
 					try {
 						ip = InetAddress.getByName(host);
 					} catch (UnknownHostException uh_ex) {
-						throw new SocksException(SocksConstants.SOCKS_JUST_ERROR);
+						throw new SocksException(
+								SocksConstants.SOCKS_JUST_ERROR);
 					}
 				}
 				msg = new Socks5Message(command, ip, port);
@@ -297,7 +299,9 @@ public class Socks5Message extends ProxyMessage {
 	public static final int SOCKS_VERSION = 5;
 
 	public static final int SOCKS_ATYP_IPV4 = 0x1; // Where is 2??
+
 	public static final int SOCKS_ATYP_DOMAINNAME = 0x3; // !!!!rfc1928
+
 	public static final int SOCKS_ATYP_IPV6 = 0x4;
 
 	public static final int SOCKS_IPV6_LENGTH = 16;

@@ -5,18 +5,18 @@ import java.io.ByteArrayOutputStream;
 public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 
 	private int max;
-	
+
 	private boolean overflow = false;
-	
+
 	public SizeLimitedByteArrayOutputStream() {
 		this(Integer.MAX_VALUE);
 	}
-	
+
 	public SizeLimitedByteArrayOutputStream(int max) {
 		super();
 		this.max = max;
 	}
-	
+
 	@Override
 	public synchronized void reset() {
 		super.reset();
@@ -41,9 +41,9 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 		} else
 			super.write(b);
 	}
-	
+
 	public boolean hasOverflowed() {
 		return overflow;
 	}
-	
+
 }
