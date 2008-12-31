@@ -23,18 +23,14 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 /**
  * CopyInputStream writes a copy of everything that is read through it to one or more
  * OutputStreams. This can be used to copy what is read from a SocketInputStream to a SocketOutputStream,
  * while keeping a copy of what was read in a ByteArrayOutputStream, for example.
  * 
- * Any OutputStreams that throw Exceptions when being written to are not written to again. This can be
- * detected by using the constructor that passes an array of OutputStream. By keeping a reference to that array,
- * one can check if any of the OutputStreams have been replaced with null at any point. This is not a big
- * deal in practice, especially in the intended usage scenario of a HTTP proxy, since the OutputStream will
- * be either a ByteArrayOutputStream which never throws Exceptions, or a SocketOutputStream connected to the 
- * browser, which may be closed on user action (cancelling the page view).
+ * Any OutputStreams that throw Exceptions when being written to are not written to again. 
  * 
  * @author rogan
  *
@@ -51,7 +47,8 @@ public class CopyInputStream extends FilterInputStream {
 		super(in);
 		if (copy == null || copy.length == 0)
 			throw new IllegalArgumentException("copy may not be null or empty");
-		this.copy = copy;
+		this.copy = new OutputStream[copy.length];
+		System.arraycopy(copy, 0, this.copy, 0, copy.length);
 	}
 	
 	/* (non-Javadoc)

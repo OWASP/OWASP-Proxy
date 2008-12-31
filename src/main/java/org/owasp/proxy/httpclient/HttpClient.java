@@ -40,12 +40,15 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.io.CopyInputStream;
+import org.owasp.proxy.io.SizeLimitedByteArrayOutputStream;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
 public class HttpClient {
+	
+	private int maxResponseSize = Integer.MAX_VALUE;
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {
 		@Override
@@ -68,7 +71,7 @@ public class HttpClient {
 	
 	private boolean direct = true;
 	
-	private ByteArrayOutputStream copy = null;
+	private SizeLimitedByteArrayOutputStream copy = null;
 	
 	private CopyInputStream in = null;
 	
@@ -88,6 +91,31 @@ public class HttpClient {
 		this.resolver = resolver;
 	}
 	
+	/**
+	 * @return the maxResponseSize
+	 */
+	public int getMaxResponseSize() {
+		return maxResponseSize;
+	}
+
+	/**
+	 * This parameter controls the maximum size response content
+	 * that will be recorded. If the response content is larger
+	 * than this size, an IOException will be thrown while fetching
+	 * the response content.
+	 * 
+	 *  Note: if the response is being streamed to an OutputStream,
+	 *  the full response will be written to that OutputStream, even
+	 *  though it is not recorded.
+	 *  
+	 *  @see HttpClient#fetchResponseContent(OutputStream)
+	 *  
+	 * @param maxResponseSize the maxResponseSize to set
+	 */
+	public void setMaxResponseSize(int maxResponseSize) {
+		this.maxResponseSize = maxResponseSize;
+	}
+
 	public Conversation fetchResponse(Request request)
 			throws MessageFormatException, IOException {
 		// try to clean up any previous conversations
@@ -102,6 +130,11 @@ public class HttpClient {
 		}
 		fetchResponseHeader(request);
 		readResponseBody();
+		
+		// allow the copy ByteArrayOutputStream to be GC'd 
+		copy = null;
+		in = null;
+
 		Conversation conversation = this.conversation;
 		this.conversation = null;
 		return conversation;
@@ -131,7 +164,7 @@ public class HttpClient {
 		conversation.setRequest(request);
 		
 		writeRequest(conversation);
-		copy = new ByteArrayOutputStream();
+		copy = new SizeLimitedByteArrayOutputStream();
 		in = new CopyInputStream(socket.getInputStream(), copy);
 		readResponseHeader();
 		
@@ -144,6 +177,11 @@ public class HttpClient {
 		if (out != null)
 			in = new CopyInputStream(socket.getInputStream(), new OutputStream[] { copy, out });
 		readResponseBody();
+		
+		// allow the copy ByteArrayOutputStream to be GC'd 
+		copy = null;
+		in = null;
+
 		String version = conversation.getResponse().getVersion();
 		boolean close = "HTTP/1.0".equals(version); // default to close
 		String connection = conversation.getResponse().getHeader("Connection");
@@ -384,17 +422,16 @@ public class HttpClient {
 	}
 	
 	private void readResponseBody() throws MessageFormatException, IOException {
-		copy.reset();
+		copy = new SizeLimitedByteArrayOutputStream(maxResponseSize);
 		Response response = conversation.getResponse();
 		if (Response.flushContent(conversation.getRequest().getMethod(), response, in)) {
 			conversation.setResponseBodyTime(System.currentTimeMillis());
-			response.setContent(copy.toByteArray());
-			conversation.setResponse(response);
-			copy.reset();
+			if (!copy.hasOverflowed()) {
+				response.setContent(copy.toByteArray());
+			} else {
+				throw new IOException("response content too large!");
+			}
 		}
-		// allow the copy ByteArrayOutputStream to be GC'd 
-		copy = null;
-		in = null;
 	}
 
 	private void writeProxy(OutputStream out, Request request)
