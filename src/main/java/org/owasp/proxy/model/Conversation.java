@@ -31,7 +31,7 @@ public class Conversation {
 
 	private String connection;
 
-	private long requestTime, responseHeaderTime, responseBodyTime;
+	private long requestTime, responseHeaderTime, responseContentTime;
 
 	public static synchronized void resetSequence() {
 		sequence = 1;
@@ -99,12 +99,12 @@ public class Conversation {
 		return responseHeaderTime;
 	}
 
-	public void setResponseBodyTime(long time) {
-		responseBodyTime = time;
+	public void setResponseContentTime(long time) {
+		responseContentTime = time;
 	}
 
-	public long getResponseBodyTime() {
-		return responseBodyTime;
+	public long getResponseContentTime() {
+		return responseContentTime;
 	}
 
 }

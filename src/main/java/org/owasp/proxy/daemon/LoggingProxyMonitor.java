@@ -70,7 +70,7 @@ public class LoggingProxyMonitor extends ProxyMonitor {
 			throws MessageFormatException {
 		try {
 			int resp = conversation.getResponse().getMessage().length;
-			long time = conversation.getResponseBodyTime()
+			long time = conversation.getResponseContentTime()
 					- conversation.getRequestTime();
 
 			Request request = conversation.getRequest();

@@ -386,7 +386,7 @@ public class HttpClient {
 			conversation.setResponse(response);
 			conversation.setResponseHeaderTime(responseHeaderTime);
 			if (Response.flushContent(request.getMethod(), response, in)) {
-				conversation.setResponseBodyTime(System.currentTimeMillis());
+				conversation.setResponseContentTime(System.currentTimeMillis());
 				response.setMessage(copy.toByteArray());
 				conversation.setResponse(response);
 			}
@@ -448,7 +448,7 @@ public class HttpClient {
 		Response response = conversation.getResponse();
 		if (Response.flushContent(conversation.getRequest().getMethod(),
 				response, in)) {
-			conversation.setResponseBodyTime(System.currentTimeMillis());
+			conversation.setResponseContentTime(System.currentTimeMillis());
 			if (!copy.hasOverflowed()) {
 				response.setContent(copy.toByteArray());
 			} else {
