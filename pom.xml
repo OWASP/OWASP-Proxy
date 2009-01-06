@@ -10,13 +10,27 @@
   <name>OWASP Proxy</name>
   <url>http://www.owasp.org/index.php/Category:OWASP_Proxy</url>
   <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.1</version>
-      <scope>test</scope>
-    </dependency>
+  	<dependency>
+  		<groupId>junit</groupId>
+  		<artifactId>junit</artifactId>
+  		<version>4.1</version>
+  		<scope>test</scope>
+  		<optional>false</optional>
+  	</dependency>
   </dependencies>
+  <inceptionYear>2008</inceptionYear>
+  <developers>
+  	<developer>
+  		<id>rogan</id>
+  		<name>Rogan Dawes</name>
+  		<email>rogan@dawes.za.net</email>
+  		<url>http://dawes.za.net/rogan/</url>
+  		<timezone>GMT+2</timezone>
+  		<roles>
+  			<role></role>
+  		</roles>
+  	</developer>
+  </developers>
   <build>
     <plugins>
       <plugin>
