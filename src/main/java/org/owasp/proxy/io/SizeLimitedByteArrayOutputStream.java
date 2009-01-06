@@ -36,7 +36,7 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 
 	@Override
 	public synchronized void write(int b) {
-		if (!overflow && size() == max) {
+		if (!overflow && size() >= max) {
 			overflow = true;
 		} else
 			super.write(b);
