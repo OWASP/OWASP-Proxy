@@ -79,6 +79,10 @@ import org.owasp.proxy.io.FixedLengthInputStream;
  */
 public class Message {
 
+	private static long sequence = 1;
+
+	private long id;
+
 	private static byte[] CRLF = new byte[] { 0x0D, 0x0A };
 
 	private static byte[] CRLFCRLF = new byte[] { 0x0D, 0x0A, 0x0D, 0x0A };
@@ -90,10 +94,25 @@ public class Message {
 	private volatile String[] headerLines = null;
 
 	protected Message() {
+		synchronized (Message.class) {
+			id = sequence++;
+		}
+	}
+
+	protected Message(long id) {
+		synchronized (Message.class) {
+			if (sequence <= id)
+				sequence = id + 1;
+			this.id = id;
+		}
 	}
 
 	protected void clearCaches() {
 		headerLines = null;
+	}
+
+	public long getId() {
+		return id;
 	}
 
 	/**

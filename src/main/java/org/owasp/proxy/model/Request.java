@@ -25,6 +25,14 @@ import java.io.OutputStream;
 
 public class Request extends Message {
 
+	public Request() {
+		super();
+	}
+
+	public Request(long id) {
+		super(id);
+	}
+
 	private boolean ssl = false;
 
 	private String host = null;
