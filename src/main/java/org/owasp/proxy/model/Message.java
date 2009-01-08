@@ -79,9 +79,9 @@ import org.owasp.proxy.io.FixedLengthInputStream;
  */
 public class Message {
 
-	private static long sequence = 1;
+	private static int sequence = 1;
 
-	private long id;
+	private int id;
 
 	private static byte[] CRLF = new byte[] { 0x0D, 0x0A };
 
@@ -99,7 +99,7 @@ public class Message {
 		}
 	}
 
-	protected Message(long id) {
+	protected Message(int id) {
 		synchronized (Message.class) {
 			if (sequence <= id)
 				sequence = id + 1;
@@ -111,7 +111,7 @@ public class Message {
 		headerLines = null;
 	}
 
-	public long getId() {
+	public int getId() {
 		return id;
 	}
 

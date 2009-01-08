@@ -29,7 +29,7 @@ public class Response extends Message {
 		super();
 	}
 
-	public Response(long id) {
+	public Response(int id) {
 		super(id);
 	}
 

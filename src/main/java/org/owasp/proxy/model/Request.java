@@ -29,7 +29,7 @@ public class Request extends Message {
 		super();
 	}
 
-	public Request(long id) {
+	public Request(int id) {
 		super(id);
 	}
 

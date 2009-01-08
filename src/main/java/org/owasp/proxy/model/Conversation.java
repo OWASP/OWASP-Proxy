@@ -21,9 +21,9 @@ package org.owasp.proxy.model;
 
 public class Conversation {
 
-	private static long sequence = 1;
+	private static int sequence = 1;
 
-	private long id;
+	private int id;
 
 	private Request request;
 
@@ -43,7 +43,7 @@ public class Conversation {
 		}
 	}
 
-	public Conversation(long id) {
+	public Conversation(int id) {
 		synchronized (Conversation.class) {
 			this.id = id;
 			if (id > sequence)
@@ -51,12 +51,8 @@ public class Conversation {
 		}
 	}
 
-	public long getId() {
+	public int getId() {
 		return id;
-	}
-
-	public void setId(long id) {
-		this.id = id;
 	}
 
 	public void setRequest(Request request) {
