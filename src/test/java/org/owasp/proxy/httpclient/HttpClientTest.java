@@ -27,7 +27,6 @@ import java.io.InputStream;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.io.ChunkedInputStream;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.Request;
@@ -68,11 +67,11 @@ public class HttpClientTest {
 		System.out.println("Headers: "
 				+ (c.getResponseHeaderTime() - c.getRequestTime()));
 		System.out.println("Content: "
-				+ (c.getResponseBodyTime() - c.getResponseHeaderTime()));
+				+ (c.getResponseContentTime() - c.getResponseHeaderTime()));
 		System.out.write(c.getResponse().getMessage());
 	}
 
-	@Test
+	// @Test
 	public void testChunked() throws Exception {
 		HttpClient client = new HttpClient();
 		Request request = new Request();
@@ -86,7 +85,7 @@ public class HttpClientTest {
 		System.out.println("Headers: "
 				+ (c.getResponseHeaderTime() - c.getRequestTime()));
 		System.out.println("Content: "
-				+ (c.getResponseBodyTime() - c.getResponseHeaderTime()));
+				+ (c.getResponseContentTime() - c.getResponseHeaderTime()));
 		// System.out.write(c.getResponse().getMessage());
 		// System.out.print("<-The end");
 
