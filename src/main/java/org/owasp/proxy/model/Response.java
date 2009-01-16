@@ -25,14 +25,6 @@ import java.io.OutputStream;
 
 public class Response extends Message {
 
-	public Response() {
-		super();
-	}
-
-	public Response(int id) {
-		super(id);
-	}
-
 	public void setVersion(String version) throws MessageFormatException {
 		String[] parts = getStartParts();
 		if (parts.length < 1) {
