@@ -30,7 +30,13 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 				len = max - size();
 				overflow = true;
 			}
-			super.write(b, off, len);
+			try {
+				super.write(b, off, len);
+			} catch (OutOfMemoryError oome) {
+				overflow = true;
+				super.buf = new byte[0];
+				super.count = 0;
+			}
 		}
 	}
 
@@ -39,7 +45,13 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 		if (!overflow && size() >= max) {
 			overflow = true;
 		} else
-			super.write(b);
+			try {
+				super.write(b);
+			} catch (OutOfMemoryError oome) {
+				overflow = true;
+				super.buf = new byte[0];
+				super.count = 0;
+			}
 	}
 
 	public boolean hasOverflowed() {
