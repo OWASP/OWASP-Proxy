@@ -146,6 +146,10 @@ public class Listener {
 					ConnectionHandler ch = createConnectionHandler(accept);
 					ch.run();
 				} catch (IOException ioe) {
+					try {
+						accept.close();
+					} catch (IOException ignore) {
+					}
 					logger.severe("Error creating connection handler!"
 							+ ioe.getMessage());
 				}
