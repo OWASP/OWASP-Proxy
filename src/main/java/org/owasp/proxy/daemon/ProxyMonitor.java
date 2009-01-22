@@ -5,7 +5,7 @@ import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
-public class ProxyMonitor {
+public interface ProxyMonitor {
 
 	/**
 	 * Called when a request is received by the proxy. Changes can be made to
@@ -19,18 +19,7 @@ public class ProxyMonitor {
 	 *             if the request cannot be parsed
 	 */
 	public Response requestReceived(Request request)
-			throws MessageFormatException {
-		String connection = request.getHeader("Connection");
-		String version = request.getVersion();
-		if ("HTTP/1.1".equals(version) && connection != null) {
-			String[] headers = connection.split(" *, *");
-			for (int i = 0; i < headers.length; i++) {
-				request.deleteHeader(headers[i]);
-			}
-		}
-		request.deleteHeader("Proxy-Connection");
-		return null;
-	}
+			throws MessageFormatException;
 
 	/**
 	 * Called when an error is encountered while reading the request from the
@@ -44,9 +33,7 @@ public class ProxyMonitor {
 	 *             if the request couldn't be parsed
 	 */
 	public Response errorReadingRequest(Request request, Exception e)
-			throws MessageFormatException {
-		return null;
-	}
+			throws MessageFormatException;
 
 	/**
 	 * Called when the Response headers have been read from the server. The
@@ -70,9 +57,7 @@ public class ProxyMonitor {
 	 *             if either the request or response couldn't be parsed
 	 */
 	public boolean responseHeaderReceived(Conversation conversation)
-			throws MessageFormatException {
-		return true;
-	}
+			throws MessageFormatException;
 
 	/**
 	 * Called after the Response content has been received from the server. If
@@ -86,8 +71,7 @@ public class ProxyMonitor {
 	 *             if either the request or response couldn't be parsed
 	 */
 	public void responseContentReceived(Conversation conversation,
-			boolean streamed) throws MessageFormatException {
-	}
+			boolean streamed) throws MessageFormatException;
 
 	/**
 	 * Called in the event of an error occurring while reading the response
@@ -101,9 +85,7 @@ public class ProxyMonitor {
 	 *             if either the request or response couldn't be parsed
 	 */
 	public Response errorFetchingResponseHeader(Request request, Exception e)
-			throws MessageFormatException {
-		return null;
-	}
+			throws MessageFormatException;
 
 	/**
 	 * Called in the event of an error occurring while reading the response
@@ -117,16 +99,12 @@ public class ProxyMonitor {
 	 *             if either the request or response couldn't be parsed
 	 */
 	public Response errorFetchingResponseContent(Conversation conversation,
-			Exception e) throws MessageFormatException {
-		return null;
-	}
+			Exception e) throws MessageFormatException;
 
 	public void wroteResponseToBrowser(Conversation conversation)
-			throws MessageFormatException {
-	}
+			throws MessageFormatException;
 
 	public void errorWritingResponseToBrowser(Conversation conversation,
-			Exception e) throws MessageFormatException {
-	}
+			Exception e) throws MessageFormatException;
 
 }

@@ -8,7 +8,7 @@ import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
-public class LoggingProxyMonitor extends ProxyMonitor {
+public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
 	@Override
 	public Response errorReadingRequest(Request request, Exception e)
