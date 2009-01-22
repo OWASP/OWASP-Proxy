@@ -323,6 +323,14 @@ public class ConnectionHandler implements Runnable {
 					if (httpClient == null)
 						httpClient = clientFactory.createHttpClient();
 					conversation = httpClient.fetchResponseHeader(request);
+					String orig = conversation.getConnection();
+					StringBuilder connection = new StringBuilder();
+					connection.append("[");
+					connection.append(socket.getRemoteSocketAddress());
+					connection.append("->");
+					connection.append(socket.getLocalSocketAddress());
+					connection.append("]-[").append(orig).append("]");
+					conversation.setConnection(connection.toString());
 				} catch (IOException ioe) {
 					errorFetchingResponseHeader(request, ioe);
 					writeErrorResponse(new PrintStream(out), request, ioe);
