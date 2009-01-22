@@ -33,7 +33,6 @@ import java.util.logging.Logger;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
 import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
@@ -236,8 +235,7 @@ public class Listener {
 		l.setProxyMonitor(new LoggingProxyMonitor() {
 
 			@Override
-			public Response requestReceived(Request request)
-					throws MessageFormatException {
+			public Response requestReceived(Request request) {
 				Response ret = super.requestReceived(request);
 				// try {
 				// System.out.write(request.getMessage());
@@ -247,14 +245,13 @@ public class Listener {
 			}
 
 			@Override
-			public boolean responseHeaderReceived(Conversation conversation)
-					throws MessageFormatException {
+			public boolean responseHeaderReceived(Conversation conversation) {
 				return true;
 			}
 
 			@Override
 			public void responseContentReceived(Conversation conversation,
-					boolean streamed) throws MessageFormatException {
+					boolean streamed) {
 				// try {
 				// System.err.write(conversation.getResponse().getHeader());
 				// } catch (IOException ioe) {
@@ -262,8 +259,7 @@ public class Listener {
 			}
 
 			@Override
-			public void wroteResponseToBrowser(Conversation conversation)
-					throws MessageFormatException {
+			public void wroteResponseToBrowser(Conversation conversation) {
 				super.wroteResponseToBrowser(conversation);
 			}
 

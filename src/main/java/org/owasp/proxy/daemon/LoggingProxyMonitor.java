@@ -11,8 +11,7 @@ import org.owasp.proxy.model.Response;
 public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
 	@Override
-	public Response errorReadingRequest(Request request, Exception e)
-			throws MessageFormatException {
+	public Response errorReadingRequest(Request request, Exception e) {
 		try {
 			System.err.println("Error reading request: \n");
 			if (request != null)
@@ -25,8 +24,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	}
 
 	@Override
-	public Response errorFetchingResponseHeader(Request request, Exception e)
-			throws MessageFormatException {
+	public Response errorFetchingResponseHeader(Request request, Exception e) {
 		try {
 			System.err.println("Error fetching response header: \n");
 			System.err.write(request.getMessage());
@@ -38,7 +36,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
 	@Override
 	public Response errorFetchingResponseContent(Conversation conversation,
-			Exception e) throws MessageFormatException {
+			Exception e) {
 		try {
 			System.err.println("Error fetching response content: \n");
 			System.err.write(conversation.getRequest().getMessage());
@@ -53,7 +51,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
 	@Override
 	public void errorWritingResponseToBrowser(Conversation conversation,
-			Exception e) throws MessageFormatException {
+			Exception e) {
 		try {
 			System.err
 					.println("Error writing response to browser: \nRequest:\n");
@@ -66,8 +64,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	}
 
 	@Override
-	public void wroteResponseToBrowser(Conversation conversation)
-			throws MessageFormatException {
+	public void wroteResponseToBrowser(Conversation conversation) {
 		try {
 			int resp = conversation.getResponse().getMessage().length;
 			long time = conversation.getResponseContentTime()
