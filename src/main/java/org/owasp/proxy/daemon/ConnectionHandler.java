@@ -65,7 +65,7 @@ public class ConnectionHandler implements Runnable {
 	public ConnectionHandler(Socket accept) {
 		this.socket = accept;
 		try {
-			socket.setSoTimeout(0);
+			socket.setSoTimeout(60000);
 		} catch (SocketException se) {
 			se.printStackTrace();
 		}
@@ -314,7 +314,7 @@ public class ConnectionHandler implements Runnable {
 				// request may be null if a response has already been sent
 				// to the browser
 				// or if there was no Request to be read on the socket
-				// (closed)
+				// (closed or timed out)
 				if (request == null)
 					return;
 
