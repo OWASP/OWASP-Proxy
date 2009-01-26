@@ -74,6 +74,8 @@ public class Listener {
 
 	private int port;
 
+	private int socketTimeout = 60000;
+
 	private CertificateProvider certProvider = null;
 
 	private ProxyMonitor monitor;
@@ -127,8 +129,17 @@ public class Listener {
 		this.clientFactory = clientFactory;
 	}
 
+	public int getSocketTimeout() {
+		return socketTimeout;
+	}
+
+	public void setSocketTimeout(int timeout) {
+		this.socketTimeout = timeout;
+	}
+
 	protected ConnectionHandler createConnectionHandler(Socket socket)
 			throws IOException {
+		socket.setSoTimeout(socketTimeout);
 		ConnectionHandler ch = new ConnectionHandler(socket);
 		ch.setTarget(ssl, host, port);
 		ch.setProxyMonitor(monitor);

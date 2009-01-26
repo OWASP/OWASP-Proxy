@@ -42,6 +42,8 @@ public class TraceServer implements Runnable {
 
 	private boolean verbose = false;
 
+	private String version = "HTTP/1.0";
+
 	public TraceServer(int port) throws IOException {
 		try {
 			InetAddress address = InetAddress.getByAddress(new byte[] { 127, 0,
@@ -59,6 +61,10 @@ public class TraceServer implements Runnable {
 
 	public void setVerbose(boolean verbose) {
 		this.verbose = verbose;
+	}
+
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
 	public void run() {
@@ -156,7 +162,7 @@ public class TraceServer implements Runnable {
 						System.out.write(request.getMessage());
 
 					Response response = new Response();
-					response.setStartLine("HTTP/1.0 200 Ok");
+					response.setStartLine(version + " 200 Ok");
 					if (chunked) {
 						response.setHeader("Transfer-Encoding", "chunked");
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();

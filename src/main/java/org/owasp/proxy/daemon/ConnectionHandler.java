@@ -7,7 +7,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PushbackInputStream;
 import java.net.Socket;
-import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
@@ -64,11 +64,6 @@ public class ConnectionHandler implements Runnable {
 
 	public ConnectionHandler(Socket accept) {
 		this.socket = accept;
-		try {
-			socket.setSoTimeout(60000);
-		} catch (SocketException se) {
-			se.printStackTrace();
-		}
 	}
 
 	public void setTarget(boolean ssl, String host, int port) {
@@ -166,7 +161,17 @@ public class ConnectionHandler implements Runnable {
 			try {
 				while (!"".equals(in.readLine()))
 					;
-
+			} catch (SocketTimeoutException ste) {
+				byte[] headerBytes = copy.toByteArray();
+				if (headerBytes != null && headerBytes.length > 0) {
+					// connection closed while reading a new request
+					StringBuilder buff = new StringBuilder();
+					buff.append("Timeout reading request, got:\n");
+					buff.append(new String(headerBytes));
+					logger.warning(buff.toString());
+					throw ste;
+				}
+				return null;
 			} catch (IOException ioe) {
 				byte[] headerBytes = copy.toByteArray();
 				// connection closed while waiting for a new request
@@ -208,7 +213,7 @@ public class ConnectionHandler implements Runnable {
 						request.setResource(uri.getResource());
 					} catch (URISyntaxException use) {
 						throw new MessageFormatException(
-								"Couldn't parse resource as a UR", use);
+								"Couldn't parse resource as a URI", use);
 					}
 				} else {
 					String host = request.getHeader("Host");
@@ -303,7 +308,8 @@ public class ConnectionHandler implements Runnable {
 						sockIn = pbis;
 					}
 				} catch (IOException ioe) {
-					ioe.printStackTrace();
+					// unexpected end of stream (or socket timeout)
+					return;
 				}
 			}
 			boolean close;
@@ -387,16 +393,15 @@ public class ConnectionHandler implements Runnable {
 			logger.severe(mfe.getMessage());
 			mfe.printStackTrace();
 		} finally {
-			try {
-				if (!socket.isClosed())
+			if (!socket.isClosed())
+				try {
 					socket.close();
-			} catch (IOException ioe) {
-			}
+				} catch (IOException ignore) {
+				}
 			if (httpClient != null) {
 				try {
 					httpClient.close();
-				} catch (IOException ioe) {
-					// just eat the exception
+				} catch (IOException ignore) {
 				}
 			}
 		}

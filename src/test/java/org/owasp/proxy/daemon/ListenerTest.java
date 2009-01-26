@@ -20,12 +20,18 @@
 package org.owasp.proxy.daemon;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
+import java.net.Socket;
+import java.net.SocketAddress;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
 
@@ -143,6 +149,121 @@ public class ListenerTest {
 		l.stop();
 		// assertTrue("Listener didn't exit", l.isStopped());
 		// }
+	}
+
+	/*
+	 * Tests to make sure that the listener correctly closes idle sockets. This
+	 * test ensures that completely unused sockets get closed, e.g. the result
+	 * of "telnet proxy port" + doing nothing
+	 */
+	@Test
+	public void testInitialTimeout() throws Exception {
+		Listener l = new Listener(9998);
+		l.setSocketTimeout(1000);
+		ProxyMonitor pm = new LoggingProxyMonitor();
+		l.setProxyMonitor(pm);
+		l.start();
+
+		try {
+			SocketAddress addr = new InetSocketAddress("localhost", 9998);
+			Socket s = new Socket(Proxy.NO_PROXY);
+			s.connect(addr);
+			Thread.sleep(2500);
+			OutputStream os = s.getOutputStream();
+			os.write("GET http://localhost:9999/ HTTP/1.0\r\n\r\n".getBytes());
+			os.flush();
+			s.setSoTimeout(500);
+			InputStream is = s.getInputStream();
+			int got;
+			byte[] buff = new byte[1024];
+			try {
+				while ((got = is.read(buff)) > 0) {
+					System.out.write(buff, 0, got);
+				}
+			} catch (SocketTimeoutException expected) {
+			} catch (SocketException expected) {
+				return;
+			}
+			s.close();
+			fail("Should not get here if the socket was timed out correctly!");
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		} finally {
+			l.stop();
+			assertTrue("Listener didn't exit", l.isStopped());
+		}
+	}
+
+	/*
+	 * tests to make sure that idle sockets get closed. This test ensures that
+	 * "used" sockets get closed after the timeout period.
+	 */
+	@Test
+	public void testSecondTimeout() throws Exception {
+		ts.setVersion("HTTP/1.1");
+		Listener l = new Listener(9998);
+		l.setSocketTimeout(1000);
+		ProxyMonitor pm = new LoggingProxyMonitor();
+		l.setProxyMonitor(pm);
+		l.start();
+
+		try {
+			SocketAddress addr = new InetSocketAddress("localhost", 9998);
+			Socket s = new Socket(Proxy.NO_PROXY);
+			s.connect(addr);
+			OutputStream os = s.getOutputStream();
+			os
+					.write("GET http://localhost:9999/ HTTP/1.1\r\nHost: localhost\r\n\r\n"
+							.getBytes());
+			os.flush();
+			InputStream is = s.getInputStream();
+			s.setSoTimeout(500);
+			int got;
+			byte[] buff = new byte[1024];
+			try {
+				while ((got = is.read(buff)) > 0)
+					;
+				fail("Socket closed unexpectedly!");
+			} catch (SocketTimeoutException expected) {
+				System.out
+						.println("Finished reading the first response via timeout");
+			}
+			System.out.println("Submitting second request\n\n");
+			try {
+				Thread.sleep(2000);
+				os
+						.write("GET http://localhost:9999/ HTTP/1.1\r\nHost: localhost\r\n\r\n"
+								.getBytes());
+				os.flush();
+				try {
+					if ((got = is.read(buff)) > 0) {
+						System.out.write(buff, 0, got);
+						fail("Expected the socket to be closed");
+					} else {
+						return;
+					}
+				} catch (SocketTimeoutException unexpected) {
+					throw unexpected;
+				} catch (SocketException expected) {
+					System.err.println("Got expected socket exception: "
+							+ expected.getMessage());
+					return;
+				}
+				s.close();
+				fail("Should not get here if the socket was timed out correctly!");
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			} finally {
+				if (s != null && !s.isClosed())
+					try {
+						s.close();
+					} catch (IOException ignored) {
+					}
+			}
+		} finally {
+			l.stop();
+			assertTrue("Listener didn't exit", l.isStopped());
+		}
 	}
 
 }
