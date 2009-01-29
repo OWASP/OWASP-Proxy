@@ -4,6 +4,75 @@ import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
+/**
+ * ProxyMonitor implementations are notified of major events occurring within
+ * ConnectionHandler instances. Specifically, events relating to the lifecycle
+ * of requests and responses.
+ * 
+ * When a request is received from a client, the {@code
+ * ProxyMonitor#requestReceived(Request)} method is invoked with the details of
+ * the {@code Request}. ProxyMonitor implementations may process the request
+ * directly, and return a {@code Response} object containing a response to be
+ * returned to the client. In this case, no further calls into the ProxyMonitor
+ * will be made for that Request. Alternatively, the implementation may modify
+ * the {@code Request} as desired before it is submitted to the server.
+ * 
+ * If an Exception is thrown while reading the Request from the client, then the
+ * {@code ProxyMonitor#errorReadingRequest(Request, Exception)} method will be
+ * called. The Request object will contain any bytes which had been read from
+ * the Socket before the Exception was thrown. It is possible that no bytes were
+ * read. No further ProxyMonitor methods will be called for this Socket
+ * connection.
+ * 
+ * After the Request has been sent to the server, and the {@code Response}
+ * headers received, the {@code
+ * ProxyMonitor#responseHeaderReceived(Conversation)} method is invoked. This
+ * allows implementations to modify the Response headers, and to determine
+ * whether they <b>might</b> wish to modify the Response content. If there is a
+ * possibility that the ProxyMonitor may wish to modify the Response content,
+ * the implementation should return false to disable streaming of the Response
+ * content, otherwise the Response content will be streamed directly to the
+ * client as it is read from the server. This is good from a performance
+ * perspective, as it allows the client/browser to start processing the server
+ * response immediately, rather than having to wait for it to be completely
+ * buffered by the proxy before being written to the client. Any modification of
+ * the Response header in this method must be carefully considered to ensure
+ * that the headers and content still match, and can be correctly read by the
+ * client. Note that it is possible to modify the Response header, and still
+ * return true from this method, if only simple changes are made to the header,
+ * e.g. changing the Server: header.
+ * 
+ * If there is an Exception thrown while writing the Request to the server, or
+ * reading the Response headers, the {@code
+ * ProxyMonitor#errorFetchingResponseHeader(Request, Exception)} method is
+ * called. No further ProxyMonitor methods will be called for this Socket
+ * connection.
+ * 
+ * If the {@link #responseHeaderReceived(Conversation)} method returned false to
+ * disable streaming, the {@link #responseContentBuffered(Conversation)} method
+ * will be called when the Response content has been completely received from
+ * the server. Note that nothing has been written to the client yet at this
+ * point, and the entire Response may be modified.
+ * 
+ * If an Exception is thrown while reading the Response content from the server,
+ * the {@link #errorFetchingResponseContent(Conversation, Exception)} method
+ * will be invoked.
+ * 
+ * If the Response was streamed to the client, and there was no Exception thrown
+ * <em>reading</em> from the server, the
+ * {@link #wroteResponseToBrowser(Conversation)} method will be called. Note
+ * that if there is an Exception writing the Response to the client, no error
+ * will be raised, and the ProxyMonitor implementation will not be informed.
+ * 
+ * If the Response was buffered in the proxy before being written to the client,
+ * either the {@link #wroteResponseToBrowser(Conversation)} method will be
+ * called, or, in the event of an Exception during the write, the
+ * {@link #errorWritingResponseToBrowser(Conversation, Exception)} method will
+ * be called.
+ * 
+ * @author rogan
+ * 
+ */
 public interface ProxyMonitor {
 
 	/**
@@ -55,11 +124,8 @@ public interface ProxyMonitor {
 	 * version will be written to the client.
 	 * 
 	 * @param conversation
-	 * @param streamed
-	 *            true if the response has already been written to the client
 	 */
-	public void responseContentReceived(Conversation conversation,
-			boolean streamed);
+	public void responseContentBuffered(Conversation conversation);
 
 	/**
 	 * Called in the event of an error occurring while reading the response
@@ -88,5 +154,7 @@ public interface ProxyMonitor {
 
 	public void errorWritingResponseToBrowser(Conversation conversation,
 			Exception e);
+
+	public void conversationCompleted(Conversation conversation);
 
 }

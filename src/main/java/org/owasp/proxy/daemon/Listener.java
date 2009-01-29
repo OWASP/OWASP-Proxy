@@ -32,9 +32,6 @@ import java.util.logging.Logger;
 
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
 
 /**
  * This class implements an intercepting HTTP proxy, which can be customized to
@@ -243,38 +240,7 @@ public class Listener {
 	public static void main(String[] args) throws Exception {
 		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
 				0, 1 }), 9998);
-		l.setProxyMonitor(new LoggingProxyMonitor() {
-
-			@Override
-			public Response requestReceived(Request request) {
-				Response ret = super.requestReceived(request);
-				// try {
-				// System.out.write(request.getMessage());
-				// } catch (IOException ioe) {
-				// }
-				return ret;
-			}
-
-			@Override
-			public boolean responseHeaderReceived(Conversation conversation) {
-				return true;
-			}
-
-			@Override
-			public void responseContentReceived(Conversation conversation,
-					boolean streamed) {
-				// try {
-				// System.err.write(conversation.getResponse().getHeader());
-				// } catch (IOException ioe) {
-				// }
-			}
-
-			@Override
-			public void wroteResponseToBrowser(Conversation conversation) {
-				super.wroteResponseToBrowser(conversation);
-			}
-
-		});
+		l.setProxyMonitor(new LoggingProxyMonitor());
 		l.setCertificateProvider(new DefaultCertificateProvider());
 		l.start();
 

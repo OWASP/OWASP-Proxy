@@ -352,7 +352,6 @@ public class ConnectionHandler implements Runnable {
 						// message only contains headers at this point
 						out.write(conversation.getResponse().getMessage());
 						httpClient.fetchResponseContent(out);
-						responseContentReceived(conversation, stream);
 						wroteResponseToBrowser(conversation);
 					} catch (IOException ioe) {
 						errorFetchingResponseContent(conversation, ioe);
@@ -361,7 +360,7 @@ public class ConnectionHandler implements Runnable {
 				} else {
 					try {
 						httpClient.fetchResponseContent(null);
-						responseContentReceived(conversation, stream);
+						responseContentBuffered(conversation);
 					} catch (IOException ioe) {
 						errorFetchingResponseContent(conversation, ioe);
 						return;
@@ -374,6 +373,7 @@ public class ConnectionHandler implements Runnable {
 						return;
 					}
 				}
+				conversationCompleted(conversation);
 				String version = conversation.getResponse().getVersion();
 				if ("HTTP/1.1".equals(version)) {
 					close = false;
@@ -409,83 +409,91 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private Response errorReadingRequest(Request request, Exception e) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				return monitor.errorReadingRequest(request, e);
-		} catch (Exception e2) {
-			e2.printStackTrace();
-		}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
 		return null;
 	}
 
 	private Response requestReceived(Request request) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				return monitor.requestReceived(request);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		return null;
 	}
 
 	private Response errorFetchingResponseHeader(Request request, Exception e) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				return monitor.errorFetchingResponseHeader(request, e);
-		} catch (Exception e2) {
-			e2.printStackTrace();
-		}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
 		return null;
 	}
 
 	private Response errorFetchingResponseContent(Conversation conversation,
 			Exception e) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				return monitor.errorFetchingResponseContent(conversation, e);
-		} catch (Exception e2) {
-			e2.printStackTrace();
-		}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
 		return null;
 	}
 
 	private boolean responseHeaderReceived(Conversation conversation) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				return monitor.responseHeaderReceived(conversation);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		return true;
 	}
 
-	private void responseContentReceived(Conversation conversation,
-			boolean streamed) {
-		try {
-			if (monitor != null)
-				monitor.responseContentReceived(conversation, streamed);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+	private void responseContentBuffered(Conversation conversation) {
+		if (monitor != null)
+			try {
+				monitor.responseContentBuffered(conversation);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 	}
 
 	private void errorWritingResponseToBrowser(Conversation conversation,
 			Exception e) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				monitor.errorWritingResponseToBrowser(conversation, e);
-		} catch (Exception e2) {
-			e2.printStackTrace();
-		}
+			} catch (Exception e2) {
+				e2.printStackTrace();
+			}
 	}
 
 	private void wroteResponseToBrowser(Conversation conversation) {
-		try {
-			if (monitor != null)
+		if (monitor != null)
+			try {
 				monitor.wroteResponseToBrowser(conversation);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
+	private void conversationCompleted(Conversation conversation) {
+		if (monitor != null)
+			try {
+				monitor.conversationCompleted(conversation);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 	}
 
 }

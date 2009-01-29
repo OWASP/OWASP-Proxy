@@ -58,10 +58,9 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 	 * 
 	 * @see
 	 * org.owasp.proxy.daemon.ProxyMonitor#responseContentReceived(org.owasp
-	 * .proxy.model.Conversation, boolean)
+	 * .proxy.model.Conversation)
 	 */
-	public void responseContentReceived(Conversation conversation,
-			boolean streamed) {
+	public void responseContentBuffered(Conversation conversation) {
 	}
 
 	/*
@@ -106,6 +105,16 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 	 */
 	public void errorWritingResponseToBrowser(Conversation conversation,
 			Exception e) {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ProxyMonitor#conversationCompleted(org.owasp.proxy
+	 * .model.Conversation)
+	 */
+	public void conversationCompleted(Conversation conversation) {
 	}
 
 }

@@ -12,9 +12,6 @@ import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
 
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
 import org.owasp.proxy.socks.ProxyMessage;
 import org.owasp.proxy.socks.ServerAuthenticator;
 import org.owasp.proxy.socks.ServerAuthenticatorNone;
@@ -226,38 +223,7 @@ public class SocksListener extends Listener {
 	public static void main(String[] args) throws Exception {
 		Listener l = new SocksListener(InetAddress.getByAddress(new byte[] {
 				127, 0, 0, 1 }), 9997);
-		l.setProxyMonitor(new LoggingProxyMonitor() {
-
-			@Override
-			public Response requestReceived(Request request) {
-				Response ret = super.requestReceived(request);
-				try {
-					System.out.write(request.getMessage());
-				} catch (IOException ioe) {
-				}
-				return ret;
-			}
-
-			@Override
-			public boolean responseHeaderReceived(Conversation conversation) {
-				return true;
-			}
-
-			@Override
-			public void responseContentReceived(Conversation conversation,
-					boolean streamed) {
-				// try {
-				// System.err.write(conversation.getResponse().getHeader());
-				// } catch (IOException ioe) {
-				// }
-			}
-
-			@Override
-			public void wroteResponseToBrowser(Conversation conversation) {
-				super.wroteResponseToBrowser(conversation);
-			}
-
-		});
+		l.setProxyMonitor(new LoggingProxyMonitor());
 		l.setCertificateProvider(new DefaultCertificateProvider());
 		l.start();
 
