@@ -17,6 +17,30 @@
   		<scope>test</scope>
   		<optional>false</optional>
   	</dependency>
+  	<dependency>
+  		<groupId>org.springframework</groupId>
+  		<artifactId>spring-jdbc</artifactId>
+  		<version>2.5.6</version>
+  		<scope>compile</scope>
+  		<optional>true</optional>
+  		<exclusions>
+  			<exclusion>
+  				<artifactId>aopalliance</artifactId>
+  				<groupId>aopalliance</groupId>
+  			</exclusion>
+  			<exclusion>
+  				<artifactId>spring-context</artifactId>
+  				<groupId>org.springframework</groupId>
+  			</exclusion>
+  		</exclusions>
+  	</dependency>
+  	<dependency>
+  		<groupId>com.h2database</groupId>
+  		<artifactId>h2</artifactId>
+  		<version>1.1.106</version>
+  		<scope>test</scope>
+  		<optional>false</optional>
+  	</dependency>
   </dependencies>
   <inceptionYear>2008</inceptionYear>
   <developers>
