@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.util.Collection;
 
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
@@ -48,9 +49,12 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	private static final ParameterizedRowMapper<Response> RESPONSE_MAPPER = new ResponseMapper();
 	private static final ParameterizedRowMapper<ConversationSummary> CONVERSATIONSUMMARY_MAPPER = new ConversationSummaryMapper();
 	private static final ParameterizedRowMapper<Conversation> CONVERSATION_MAPPER = new ConversationMapper();
+	private static final ParameterizedRowMapper<Integer> ID_MAPPER = new IdMapper();
+
+	private final static String SELECT_CONVERSATIONS = "SELECT id FROM conversations WHERE id > :id ORDER BY id";
 
 	private final static String SELECT_SEQUENCE = "SELECT NEXT VALUE FOR ids";
-	
+
 	private final static String INSERT_REQUEST = "INSERT INTO requests (id, host, port, ssl) VALUES (:id, :host, :port, :ssl)";
 
 	private final static String INSERT_MESSAGE = "INSERT INTO MESSAGES (id, message, contentType, size) VALUES (:id, :message, :contentType, :size)";
@@ -77,7 +81,7 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 			+ "FROM conversations WHERE conversations.id = :id";
 
 	private final static String CREATE_SEQUENCE = "CREATE SEQUENCE ids";
-	
+
 	private final static String CREATE_MESSAGES = "CREATE TABLE messages ("
 			+ "id INTEGER NOT NULL," + "contentType VARCHAR(256), "
 			+ "size INTEGER, " + "message LONGVARBINARY NOT NULL" + ")";
@@ -103,7 +107,7 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	private int getNextId() {
 		return getJdbcTemplate().queryForInt(SELECT_SEQUENCE);
 	}
-	
+
 	public void createTables() {
 		JdbcTemplate template = getJdbcTemplate();
 		template.execute(CREATE_SEQUENCE);
@@ -112,10 +116,27 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 		template.execute(CREATE_CONVERSATIONS);
 	}
 
+	public Collection<Integer> listConversations() throws DataAccessException {
+		return listConversationsAfter(0);
+	}
+
+	public Collection<Integer> listConversationsAfter(int id)
+			throws DataAccessException {
+		try {
+			MapSqlParameterSource params = new MapSqlParameterSource();
+			params.addValue(ID, id, Types.INTEGER);
+			SimpleJdbcTemplate template = new SimpleJdbcTemplate(
+					getNamedParameterJdbcTemplate());
+			return template.query(SELECT_CONVERSATIONS, ID_MAPPER, params);
+		} catch (EmptyResultDataAccessException erdae) {
+			return null;
+		}
+	}
+
 	public void saveConversation(Conversation conversation)
 			throws DataAccessException {
 		conversation.setId(getNextId());
-		
+
 		Request request = conversation.getRequest();
 		saveRequest(request);
 
@@ -275,10 +296,10 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	}
 
 	public boolean deleteConversation(int id) throws DataAccessException {
-		
+
 		return false;
 	}
-	
+
 	private static class ConversationMapper implements
 			ParameterizedRowMapper<Conversation> {
 
@@ -379,4 +400,10 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 
 	}
 
+	private static class IdMapper implements ParameterizedRowMapper<Integer> {
+
+		public Integer mapRow(ResultSet rs, int rowNum) throws SQLException {
+			return Integer.valueOf(rs.getInt(ID));
+		}
+	}
 }
