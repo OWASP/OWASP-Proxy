@@ -86,5 +86,6 @@ public class ClientTest {
 		while ((got = is.read(buff)) > 0) {
 			System.out.write(buff, 0, got);
 		}
+		is.close();
 	}
 }

@@ -16,6 +16,7 @@ import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
+import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.jdbc.support.rowset.SqlRowSetMetaData;
@@ -43,7 +44,7 @@ public class JdbcConversationDAOTest {
 			dao.getJdbcTemplate().execute("DROP TABLE MESSAGES");
 			dao.getJdbcTemplate().execute("DROP TABLE REQUESTS");
 			dao.getJdbcTemplate().execute("DROP TABLE CONVERSATIONS");
-		} catch (Exception e) {
+		} catch (DataAccessException e) {
 			// e.printStackTrace();
 		}
 		dao.createTables();
