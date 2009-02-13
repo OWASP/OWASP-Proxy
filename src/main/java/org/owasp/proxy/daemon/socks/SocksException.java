@@ -1,4 +1,4 @@
-package org.owasp.proxy.socks;
+package org.owasp.proxy.daemon.socks;
 
 /**
  * Exception thrown by various socks classes to indicate errors with protocol or

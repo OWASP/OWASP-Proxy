@@ -1,4 +1,4 @@
-package org.owasp.proxy.socks;
+package org.owasp.proxy.daemon.socks;
 
 public class SocksConstants {
 

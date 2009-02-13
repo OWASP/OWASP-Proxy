@@ -12,13 +12,13 @@ import java.net.InetAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
 
-import org.owasp.proxy.socks.ProxyMessage;
-import org.owasp.proxy.socks.ServerAuthenticator;
-import org.owasp.proxy.socks.ServerAuthenticatorNone;
-import org.owasp.proxy.socks.Socks4Message;
-import org.owasp.proxy.socks.Socks5Message;
-import org.owasp.proxy.socks.SocksConstants;
-import org.owasp.proxy.socks.SocksException;
+import org.owasp.proxy.daemon.socks.ProxyMessage;
+import org.owasp.proxy.daemon.socks.ServerAuthenticator;
+import org.owasp.proxy.daemon.socks.ServerAuthenticatorNone;
+import org.owasp.proxy.daemon.socks.Socks4Message;
+import org.owasp.proxy.daemon.socks.Socks5Message;
+import org.owasp.proxy.daemon.socks.SocksConstants;
+import org.owasp.proxy.daemon.socks.SocksException;
 
 /**
  * SOCKS4 and SOCKS5 proxy, handles both protocols simultaneously. Implements
