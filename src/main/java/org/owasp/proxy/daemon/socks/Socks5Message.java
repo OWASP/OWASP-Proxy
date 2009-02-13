@@ -1,11 +1,13 @@
 package org.owasp.proxy.daemon.socks;
 
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.DataInputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import org.owasp.httpclient.AsciiString;
 
 /**
  * SOCKS5 request/response message.
@@ -199,7 +201,7 @@ public class Socks5Message extends ProxyMessage {
 			// System.out.println("Reading ATYP_DOMAINNAME");
 			addr = new byte[di.readUnsignedByte()];// Next byte shows the length
 			di.readFully(addr);
-			host = new String(addr);
+			host = AsciiString.create(addr);
 			break;
 		default:
 			throw (new SocksException(SocksConstants.SOCKS_JUST_ERROR));

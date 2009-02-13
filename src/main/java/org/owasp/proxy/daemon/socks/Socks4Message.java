@@ -1,7 +1,13 @@
 package org.owasp.proxy.daemon.socks;
 
-import java.io.*;
-import java.net.*;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
+import org.owasp.httpclient.AsciiString;
 
 /**
  * SOCKS4 Reply/Request message.
@@ -114,7 +120,7 @@ public class Socks4Message extends ProxyMessage {
 				userBytes[i] = (byte) b;
 				b = in.read();
 			}
-			user = new String(userBytes, 0, i);
+			user = AsciiString.create(userBytes, 0, i);
 		}
 	}
 

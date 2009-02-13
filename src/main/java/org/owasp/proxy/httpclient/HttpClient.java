@@ -39,6 +39,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.AddressResolver;
+import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.DefaultSSLContextSelector;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.SSLContextSelector;
@@ -335,7 +336,7 @@ public class HttpClient {
 					if (got > 0) {
 						System.err
 								.println("Unexpected data read from socket:\n\n"
-										+ new String(buff, 0, got));
+										+ AsciiString.create(buff, 0, got));
 						return false;
 					}
 				} catch (SocketTimeoutException e) {

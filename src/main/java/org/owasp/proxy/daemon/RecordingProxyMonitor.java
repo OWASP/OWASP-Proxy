@@ -4,6 +4,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.dao.ConversationDAO;
 import org.owasp.proxy.model.Conversation;
@@ -17,19 +18,24 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 	private static final Response ERR_400;
 	private static final Response ERR_404;
 	private static final Response ERR_500;
+	private static final byte[] SUCCESS_XML;
+	private static final byte[] SUCCESS_OCTET;
 
 	static {
 		ERR_400 = new Response();
-		ERR_400.setMessage("HTTP/1.0 400 Bad request\r\n\r\nBad request"
-				.getBytes());
+		ERR_400.setHeader("HTTP/1.0 400 Bad request\r\n\r\n".getBytes());
+		ERR_400.setContent("Bad request".getBytes());
 		ERR_404 = new Response();
-		ERR_404
-				.setMessage("HTTP/1.0 404 Resource not found\r\n\r\nResource not found"
-						.getBytes());
+		ERR_404.setHeader("HTTP/1.0 404 Resource not found\r\n\r\n".getBytes());
+		ERR_404.setContent("Resource not found".getBytes());
 		ERR_500 = new Response();
-		ERR_500
-				.setMessage("HTTP/1.0 500 Error processing request\r\n\r\nError processing request"
-						.getBytes());
+		ERR_500.setHeader("HTTP/1.0 500 Error processing request\r\n\r\n"
+				.getBytes());
+		ERR_500.setContent("Error processing request".getBytes());
+		SUCCESS_XML = AsciiString
+				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text/xml\r\n\r\n");
+		SUCCESS_OCTET = AsciiString
+				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: application/octet-stream\r\n");
 	}
 
 	private ConversationDAO dao;
@@ -126,8 +132,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 
 	private Response listConversations(int since) {
 		Iterator<Integer> it = dao.listConversationsAfter(since).iterator();
-		StringBuilder buff = new StringBuilder(
-				"HTTP/1.0 200 Ok\r\nContent-Type: text/xml\r\n\r\n");
+		StringBuilder buff = new StringBuilder();
 		buff.append("<conversations>");
 		while (it.hasNext()) {
 			buff.append("<conversation>").append(it.next()).append(
@@ -135,34 +140,35 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 		}
 		buff.append("</conversations>");
 		Response response = new Response();
-		response.setMessage(buff.toString().getBytes());
+		response.setHeader(SUCCESS_XML);
+		response.setContent(buff.toString().getBytes());
 		return response;
 	}
 
 	private Response getSummary(int id) {
 		ConversationSummary summary = dao.findConversationSummary(id);
-		StringBuilder buff = new StringBuilder(
-				"HTTP/1.0 200 Ok\r\nContent-Type: text/xml\r\n\r\n");
+		StringBuilder buff = new StringBuilder();
 		buff.append("<summaries>");
 		xml(buff, summary);
 		buff.append("</summaries>");
 		Response response = new Response();
-		response.setMessage(buff.toString().getBytes());
+		response.setHeader(SUCCESS_XML);
+		response.setContent(buff.toString().getBytes());
 		return response;
 	}
 
 	private Response getSummaries(int since) {
 		Iterator<Integer> ids = dao.listConversationsAfter(since).iterator();
 		Iterator<ConversationSummary> it = getConversationSummaries(ids);
-		StringBuilder buff = new StringBuilder(
-				"HTTP/1.0 200 Ok\r\nContent-Type: text/xml\r\n\r\n");
+		StringBuilder buff = new StringBuilder();
 		buff.append("<summaries>");
 		while (it.hasNext()) {
 			xml(buff, it.next());
 		}
 		buff.append("</summaries>");
 		Response response = new Response();
-		response.setMessage(buff.toString().getBytes());
+		response.setHeader(SUCCESS_XML);
+		response.setContent(buff.toString().getBytes());
 		return response;
 	}
 
@@ -211,7 +217,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 	}
 
 	private static String e(String s) {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		int len = (s == null ? -1 : s.length());
 
 		for (int i = 0; i < len; i++) {
@@ -238,9 +244,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 	private Response getRequest(int id) throws MessageFormatException {
 		Request r = dao.findRequest(id);
 		Response response = new Response();
-		response
-				.setHeader("HTTP/1.0 200 Ok\r\nContent-Type: application/octet-stream\r\n"
-						.getBytes());
+		response.setHeader(SUCCESS_OCTET);
 		response.setContent(r.getMessage());
 		return response;
 	}
@@ -248,9 +252,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 	private Response getResponse(int id) throws MessageFormatException {
 		Response r = dao.findResponse(id);
 		Response response = new Response();
-		response
-				.setHeader("HTTP/1.0 200 Ok\r\nContent-Type: application/octet-stream\r\n"
-						.getBytes());
+		response.setHeader(SUCCESS_OCTET);
 		response.setContent(r.getMessage());
 		return response;
 	}

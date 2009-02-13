@@ -131,7 +131,7 @@ public class CopyInputStream extends FilterInputStream {
 	 * @return the line that was read, WITHOUT the CR or CRLF
 	 */
 	public String readLine() throws IOException {
-		StringBuffer line = new StringBuffer();
+		StringBuilder line = new StringBuilder();
 		int i;
 		char c = 0x00;
 		i = read();

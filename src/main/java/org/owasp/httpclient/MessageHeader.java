@@ -1,6 +1,5 @@
 package org.owasp.httpclient;
 
-import java.io.UnsupportedEncodingException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -90,15 +89,10 @@ public class MessageHeader {
 			return null;
 		List<String> lines = new LinkedList<String>();
 		int sep, start = 0;
-		try {
-			while ((sep = findSeparator(header, separator, start)) > -1
-					&& sep > start) {
-				lines.add(new String(header, start, sep - start, "ASCII"));
-				start = sep + separator.length;
-			}
-		} catch (UnsupportedEncodingException e) {
-			// this should never happen
-			e.printStackTrace();
+		while ((sep = findSeparator(header, separator, start)) > -1
+				&& sep > start) {
+			lines.add(AsciiString.create(header, start, sep - start));
+			start = sep + separator.length;
 		}
 		return lines.toArray(new String[lines.size()]);
 	}
@@ -110,18 +104,13 @@ public class MessageHeader {
 	 */
 	protected void setHeaderLines(String[] lines, byte[] separator)
 			throws MessageFormatException {
-		try {
-			String sep = new String(separator, "ASCII");
-			StringBuilder buff = new StringBuilder();
-			for (int i = 0; i < lines.length; i++) {
-				buff.append(lines[i]).append(sep);
-			}
-			buff.append(sep);
-			setHeader(buff.toString().getBytes("ASCII"));
-		} catch (UnsupportedEncodingException e) {
-			// this should never happen
-			e.printStackTrace();
+		String sep = AsciiString.create(separator);
+		StringBuilder buff = new StringBuilder();
+		for (int i = 0; i < lines.length; i++) {
+			buff.append(lines[i]).append(sep);
 		}
+		buff.append(sep);
+		setHeader(AsciiString.getBytes(buff.toString()));
 	}
 
 	/**

@@ -26,7 +26,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-
 public class Client {
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {
@@ -125,7 +124,7 @@ public class Client {
 					if (got > 0) {
 						System.err
 								.println("Unexpected data read from socket:\n\n"
-										+ new String(buff, 0, got));
+										+ AsciiString.create(buff, 0, got));
 						socket.close();
 						return false;
 					}
@@ -262,7 +261,7 @@ public class Client {
 		String method = null;
 		for (int i = 0; i < header.length; i++) {
 			if (method == null && Character.isWhitespace(header[i])) {
-				method = new String(header, 0, i - 1);
+				method = AsciiString.create(header, 0, i - 1);
 			}
 			if (method != null && !Character.isWhitespace(header[i])
 					&& resourceStart == -1) {
@@ -330,9 +329,9 @@ public class Client {
 			header.write(i);
 		if (i == -1)
 			throw new IOException("Unexpected end of stream reading header");
-		MessageHeader mh = new MessageHeader();
-		mh.setHeader(header.toByteArray());
-		String status = mh.getStartLine().substring(9, 12);
+		ResponseHeader rh = new ResponseHeader();
+		rh.setHeader(header.toByteArray());
+		String status = rh.getStatus();
 		if (status.equals("100")) {
 			state = State.RESPONSE_CONTINUE;
 		} else {
@@ -341,8 +340,8 @@ public class Client {
 					|| !expectResponseContent) {
 				responseContent = NO_CONTENT;
 			} else {
-				String transferCoding = mh.getHeader("Transfer-Coding");
-				String contentLength = mh.getHeader("Content-Length");
+				String transferCoding = rh.getHeader("Transfer-Coding");
+				String contentLength = rh.getHeader("Content-Length");
 				if (transferCoding != null
 						&& transferCoding.trim().equalsIgnoreCase("chunked")) {
 					is = new ChunkedInputStream(is, true);
@@ -361,7 +360,7 @@ public class Client {
 				responseContent = is;
 			}
 		}
-		return header.toByteArray();
+		return rh.getHeader();
 	}
 
 	public InputStream getResponseContent() throws IOException {

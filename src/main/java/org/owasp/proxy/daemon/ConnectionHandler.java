@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
@@ -169,7 +170,7 @@ public class ConnectionHandler implements Runnable {
 					// connection closed while reading a new request
 					StringBuilder buff = new StringBuilder();
 					buff.append("Timeout reading request, got:\n");
-					buff.append(new String(headerBytes));
+					buff.append(AsciiString.create(headerBytes));
 					logger.warning(buff.toString());
 					throw ste;
 				}

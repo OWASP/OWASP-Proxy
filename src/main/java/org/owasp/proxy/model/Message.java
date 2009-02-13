@@ -27,6 +27,7 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
+import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.ChunkedInputStream;
 import org.owasp.httpclient.FixedLengthInputStream;
 import org.owasp.httpclient.MessageFormatException;
@@ -239,7 +240,8 @@ public class Message extends MessageHeader {
 
 	@Override
 	public String toString() {
-		return new String(getHeader()) + new String(getContent());
+		return AsciiString.create(getHeader())
+				+ AsciiString.create(getContent());
 	}
 
 	public static boolean flushContent(Message message, InputStream in,

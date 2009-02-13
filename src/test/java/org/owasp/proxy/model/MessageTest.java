@@ -28,6 +28,7 @@ import static org.junit.Assert.fail;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
 
@@ -62,8 +63,8 @@ public class MessageTest {
 	@Test
 	public void testGetSetMessage() throws Exception {
 		Message m = new Message();
-		m.setMessage((get + CRLFCRLF).getBytes("ASCII"));
-		String s = new String(m.getMessage(), "ASCII");
+		m.setMessage(AsciiString.getBytes(get + CRLFCRLF));
+		String s = AsciiString.create(m.getMessage());
 		assertEquals(get + CRLFCRLF, s);
 	}
 
@@ -73,8 +74,8 @@ public class MessageTest {
 	@Test
 	public void testGetHeader() throws Exception {
 		Message m = new Message();
-		m.setMessage((post + CRLFCRLF + content).getBytes("ASCII"));
-		assertEquals(post + CRLFCRLF, new String(m.getHeader(), "ASCII"));
+		m.setMessage(AsciiString.getBytes(post + CRLFCRLF + content));
+		assertEquals(post + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
@@ -83,8 +84,8 @@ public class MessageTest {
 	@Test
 	public void testSetHeaderByteArray() throws Exception {
 		Message m = new Message();
-		m.setHeader((get + CRLFCRLF).getBytes("ASCII"));
-		assertEquals(get + CRLFCRLF, new String(m.getHeader(), "ASCII"));
+		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
+		assertEquals(get + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
@@ -93,8 +94,8 @@ public class MessageTest {
 	@Test
 	public void testGetContent() throws Exception {
 		Message m = new Message();
-		m.setMessage((post + CRLFCRLF + content).getBytes("ASCII"));
-		assertEquals(content, new String(m.getContent(), "ASCII"));
+		m.setMessage(AsciiString.getBytes(post + CRLFCRLF + content));
+		assertEquals(content, AsciiString.create(m.getContent()));
 	}
 
 	/**
@@ -103,10 +104,10 @@ public class MessageTest {
 	@Test
 	public void testSetContent() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
-		m.setContent(content.getBytes("ASCII"));
-		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(),
-				"ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
+		m.setContent(AsciiString.getBytes(content));
+		assertEquals(post + CRLFCRLF + content, AsciiString.create(m
+				.getMessage()));
 	}
 
 	/**
@@ -115,10 +116,10 @@ public class MessageTest {
 	@Test
 	public void testGetFirstLine() throws Exception {
 		Message m = new Message();
-		m.setHeader((get + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
 		assertEquals(get, m.getStartLine());
 		m = new Message();
-		m.setHeader((get3 + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(get3 + CRLFCRLF));
 		assertEquals(get, m.getStartLine());
 	}
 
@@ -130,7 +131,7 @@ public class MessageTest {
 	public void testSetFirstLine() throws Exception {
 		Message m = new Message();
 		m.setStartLine(get);
-		assertEquals(get + CRLFCRLF, new String(m.getHeader(), "ASCII"));
+		assertEquals(get + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
@@ -139,7 +140,7 @@ public class MessageTest {
 	@Test
 	public void testGetHeaders() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals(post, m.getStartLine() + CRLF
 				+ NamedValue.join(m.getHeaders(), CRLF));
 	}
@@ -164,7 +165,7 @@ public class MessageTest {
 		}
 		m.setStartLine(first);
 		m.setHeaders(h);
-		assertEquals(post + CRLFCRLF, new String(m.getHeader(), "ASCII"));
+		assertEquals(post + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
@@ -174,7 +175,7 @@ public class MessageTest {
 	@Test
 	public void testGetHeaderString() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		assertEquals("a=b", m.getHeader("cookie"));
 	}
@@ -187,7 +188,7 @@ public class MessageTest {
 	@Test
 	public void testSetHeaderStringString() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.setHeader("Cookie", "a=c");
 		assertEquals("a=c", m.getHeader("cookie"));
 	}
@@ -200,7 +201,7 @@ public class MessageTest {
 	@Test
 	public void testAddHeader() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.addHeader("Cookie", "b=c");
 		NamedValue[] headers = m.getHeaders();
 		boolean found = false;
@@ -224,7 +225,7 @@ public class MessageTest {
 	@Test
 	public void testDeleteHeader() throws Exception {
 		Message m = new Message();
-		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		m.deleteHeader("cookie");
 		assertEquals(null, m.getHeader("cookie"));
