@@ -3,6 +3,7 @@ package org.owasp.proxy.dao;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.util.Arrays;
 
@@ -38,7 +39,7 @@ public class JdbcConversationDAOTest {
 	}
 
 	@Before
-	public void setUp() throws Exception {
+	public void setUp() {
 		try {
 			dao.getJdbcTemplate().execute("DROP SEQUENCE ids");
 			dao.getJdbcTemplate().execute("DROP TABLE MESSAGES");
@@ -51,7 +52,7 @@ public class JdbcConversationDAOTest {
 	}
 
 	@After
-	public void tearDown() throws Exception {
+	public void tearDown() {
 		dump(dao.getJdbcTemplate().queryForRowSet("SELECT * FROM messages"));
 		dump(dao.getJdbcTemplate().queryForRowSet("SELECT * FROM requests"));
 		dump(dao.getJdbcTemplate()
@@ -82,6 +83,15 @@ public class JdbcConversationDAOTest {
 
 		compare(c.getRequest(), c2.getRequest());
 		compare(c.getResponse(), c2.getResponse());
+
+		if (dao.deleteConversation(cid)) {
+			assertEquals(null, dao.findConversation(cid));
+			assertEquals(null, dao.findConversationSummary(cid));
+			assertEquals(null, dao.findRequest(c.getRequest().getId()));
+			assertEquals(null, dao.findResponse(c.getResponse().getId()));
+		} else {
+			fail("Failed to delete the conversation");
+		}
 	}
 
 	@Test

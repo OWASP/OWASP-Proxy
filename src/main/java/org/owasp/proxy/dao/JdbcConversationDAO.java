@@ -205,12 +205,16 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 
 	public ConversationSummary findConversationSummary(int id)
 			throws DataAccessException {
-		MapSqlParameterSource params = new MapSqlParameterSource();
-		params.addValue(ID, id, Types.INTEGER);
-		SimpleJdbcTemplate template = new SimpleJdbcTemplate(
-				getNamedParameterJdbcTemplate());
-		return template.queryForObject(SELECT_CONVERSATION_SUMMARY,
-				CONVERSATIONSUMMARY_MAPPER, params);
+		try {
+			MapSqlParameterSource params = new MapSqlParameterSource();
+			params.addValue(ID, id, Types.INTEGER);
+			SimpleJdbcTemplate template = new SimpleJdbcTemplate(
+					getNamedParameterJdbcTemplate());
+			return template.queryForObject(SELECT_CONVERSATION_SUMMARY,
+					CONVERSATIONSUMMARY_MAPPER, params);
+		} catch (EmptyResultDataAccessException erdae) {
+			return null;
+		}
 	}
 
 	public Request findRequest(int id) throws DataAccessException {
