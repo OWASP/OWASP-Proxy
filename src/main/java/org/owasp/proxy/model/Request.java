@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.owasp.httpclient.MessageFormatException;
+
+
 public class Request extends Message {
 
 	private boolean ssl = false;

@@ -3,8 +3,8 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.io.PrintStream;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
@@ -14,8 +14,11 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	public Response errorReadingRequest(Request request, Exception e) {
 		try {
 			System.err.println("Error reading request: \n");
-			if (request != null)
-				System.err.write(request.getMessage());
+			if (request != null) {
+				System.err.write(request.getHeader());
+				if (request.getContent() != null)
+					System.err.write(request.getContent());
+			}
 			e.printStackTrace(new PrintStream(System.err));
 		} catch (IOException ioe) {
 		}
@@ -27,7 +30,9 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	public Response errorFetchingResponseHeader(Request request, Exception e) {
 		try {
 			System.err.println("Error fetching response header: \n");
-			System.err.write(request.getMessage());
+			System.err.write(request.getHeader());
+			if (request.getContent() != null)
+				System.err.write(request.getContent());
 			e.printStackTrace(new PrintStream(System.err));
 		} catch (IOException ioe) {
 		}
@@ -39,9 +44,11 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 			Exception e) {
 		try {
 			System.err.println("Error fetching response content: \n");
-			System.err.write(conversation.getRequest().getMessage());
+			System.err.write(conversation.getRequest().getHeader());
+			if (conversation.getRequest().getContent() != null)
+				System.err.write(conversation.getRequest().getContent());
 			System.err.println();
-			System.err.write(conversation.getResponse().getMessage());
+			System.err.write(conversation.getResponse().getHeader());
 			System.err.println();
 			e.printStackTrace(new PrintStream(System.err));
 		} catch (IOException ioe) {
@@ -55,9 +62,13 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 		try {
 			System.err
 					.println("Error writing response to browser: \nRequest:\n");
-			System.err.write(conversation.getRequest().getMessage());
+			System.err.write(conversation.getRequest().getHeader());
+			if (conversation.getRequest().getContent() != null)
+				System.err.write(conversation.getRequest().getContent());
 			System.err.println("Response: \n");
-			System.err.write(conversation.getResponse().getMessage());
+			System.err.write(conversation.getResponse().getHeader());
+			if (conversation.getResponse().getContent() != null)
+				System.err.write(conversation.getResponse().getContent());
 			e.printStackTrace(new PrintStream(System.err));
 		} catch (IOException ioe) {
 		}
@@ -66,7 +77,9 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	@Override
 	public void wroteResponseToBrowser(Conversation conversation) {
 		try {
-			int resp = conversation.getResponse().getMessage().length;
+			int resp = 0;
+			if (conversation.getResponse().getContent() != null)
+				resp = conversation.getResponse().getContent().length;
 			long time = conversation.getResponseContentTime()
 					- conversation.getRequestTime();
 

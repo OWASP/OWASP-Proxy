@@ -1,5 +1,7 @@
 package org.owasp.proxy.model;
 
+import org.owasp.httpclient.MessageFormatException;
+
 
 public class ConversationSummary {
 

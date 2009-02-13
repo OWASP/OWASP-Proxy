@@ -17,22 +17,19 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.httpclient;
+package org.owasp.httpclient;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.httpclient.ChunkedInputStream;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
 import org.owasp.proxy.test.TraceServer;
 
-public class HttpClientTest {
+public class ClientTest {
 
 	private static TraceServer ts = null;
 
@@ -55,45 +52,38 @@ public class HttpClientTest {
 
 	@Test
 	public void testFetchResponse() throws Exception {
-		HttpClient client = new HttpClient();
-		Request request = new Request();
-		request.setSsl(false);
-		request.setHost("localhost");
-		request.setPort(9999);
-		request
-				.setHeader("GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n"
-						.getBytes());
-		Conversation c = client.fetchResponse(request);
-		System.out.println("Headers: "
-				+ (c.getResponseHeaderTime() - c.getRequestTime()));
-		System.out.println("Content: "
-				+ (c.getResponseContentTime() - c.getResponseHeaderTime()));
-		System.out.write(c.getResponse().getMessage());
+		Client client = new Client();
+		client.connect("localhost", 9999, false);
+		String request = "GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n";
+		client.sendRequestHeader(request.getBytes());
+		byte[] header = client.getResponseHeader();
+		System.out.println("Header length: " + header.length);
+		int got, read = 0;
+		byte[] buff = new byte[1024];
+		InputStream is = client.getResponseContent();
+		while ((got = is.read(buff)) > 0)
+			read = read + got;
+		assertEquals(request.length(), read);
 	}
 
-	// @Test
+	@Test
 	public void testChunked() throws Exception {
-		HttpClient client = new HttpClient();
-		Request request = new Request();
-		request.setSsl(false);
-		request.setHost("www.google.co.za");
-		request.setPort(80);
-		request
-				.setStartLine("GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1");
-		request.addHeader("Host", "www.google.co.za");
-		Conversation c = client.fetchResponse(request);
-		System.out.println("Headers: "
-				+ (c.getResponseHeaderTime() - c.getRequestTime()));
-		System.out.println("Content: "
-				+ (c.getResponseContentTime() - c.getResponseHeaderTime()));
-		// System.out.write(c.getResponse().getMessage());
-		// System.out.print("<-The end");
+		Client client = new Client();
+		client.connect("www.google.co.za", 80, false);
+		String request = "GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1\r\n"
+				+ "Host : www.google.co.za\r\n\r\n";
+		client.sendRequestHeader(request.getBytes());
+		byte[] responseHeader = client.getResponseHeader();
+		System.out.write(responseHeader);
+		MessageHeader mh = new MessageHeader();
+		mh.setHeader(responseHeader);
+		InputStream is = client.getResponseContent();
+		if ("chunked".equalsIgnoreCase(mh.getHeader("Transfer-Encoding")))
+			is = new ChunkedInputStream(is);
 
-		InputStream in = new ChunkedInputStream(new ByteArrayInputStream(c
-				.getResponse().getContent()));
 		byte[] buff = new byte[1024];
 		int got;
-		while ((got = in.read(buff)) > 0) {
+		while ((got = is.read(buff)) > 0) {
 			System.out.write(buff, 0, got);
 		}
 	}

@@ -158,8 +158,11 @@ public class TraceServer implements Runnable {
 					if (Request.flushContent(request, in, null))
 						request.setMessage(copy.toByteArray());
 
-					if (verbose)
-						System.out.write(request.getMessage());
+					if (verbose) {
+						System.out.write(request.getHeader());
+						if (request.getContent() != null)
+							System.out.write(request.getContent());
+					}
 
 					Response response = new Response();
 					response.setStartLine(version + " 200 Ok");
@@ -177,7 +180,9 @@ public class TraceServer implements Runnable {
 					if (verbose)
 						System.out.write(response.getMessage());
 
-					out.write(response.getMessage());
+					out.write(response.getHeader());
+					if (response.getContent() != null)
+						out.write(response.getContent());
 					out.flush();
 
 					String connection = request.getHeader("Connection");

@@ -17,19 +17,21 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.io;
+package org.owasp.httpclient;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.owasp.proxy.io.ChunkedInputStream;
 import org.owasp.proxy.io.ChunkedOutputStream;
 
 public class ChunkedInputStreamTest {
@@ -108,5 +110,20 @@ public class ChunkedInputStreamTest {
 			}
 			total = total + got;
 		}
+	}
+
+	@Test
+	public void testRaw() throws Exception {
+		ByteArrayInputStream bais = new ByteArrayInputStream(sample.getBytes());
+		ChunkedInputStream raw = new ChunkedInputStream(bais, true);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		byte[] buff = new byte[4];
+		int got;
+		while ((got = raw.read(buff)) > -1)
+			baos.write(buff, 0, got);
+		byte[] result = baos.toByteArray();
+		System.out.println(new String(result));
+		assertEquals(sample.length(), result.length);
+		assertTrue(Arrays.equals(sample.getBytes(), result));
 	}
 }

@@ -4,10 +4,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.dao.ConversationDAO;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 import org.springframework.dao.DataAccessException;

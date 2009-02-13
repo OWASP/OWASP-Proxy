@@ -17,7 +17,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.model;
+package org.owasp.httpclient;
 
 public class MessageFormatException extends Exception {
 

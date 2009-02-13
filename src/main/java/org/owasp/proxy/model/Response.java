@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import org.owasp.httpclient.MessageFormatException;
+
+
 public class Response extends Message {
 
 	public void setVersion(String version) throws MessageFormatException {

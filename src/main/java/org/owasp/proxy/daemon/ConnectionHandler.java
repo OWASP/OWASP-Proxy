@@ -14,13 +14,13 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.SocketWrapper;
 import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 import org.owasp.proxy.model.URI;
@@ -97,7 +97,9 @@ public class ConnectionHandler implements Runnable {
 		try {
 			out.write(ERROR_HEADER.getBytes());
 			out.write(ERROR_MESSAGE1.getBytes());
-			out.write(request.getMessage());
+			out.write(request.getHeader());
+			if (request.getContent() != null)
+				out.write(request.getContent());
 			out.write(ERROR_MESSAGE2.getBytes());
 			e.printStackTrace(out);
 			out.write(ERROR_MESSAGE3.getBytes());
@@ -253,7 +255,9 @@ public class ConnectionHandler implements Runnable {
 		}
 		if (response != null) {
 			try {
-				out.write(response.getMessage());
+				out.write(response.getHeader());
+				if (response.getContent() != null)
+					out.write(response.getContent());
 			} catch (IOException ioe) {
 				// just eat it
 			}
@@ -350,7 +354,7 @@ public class ConnectionHandler implements Runnable {
 				if (stream) {
 					try {
 						// message only contains headers at this point
-						out.write(conversation.getResponse().getMessage());
+						out.write(conversation.getResponse().getHeader());
 						httpClient.fetchResponseContent(out);
 						wroteResponseToBrowser(conversation);
 					} catch (IOException ioe) {
@@ -366,7 +370,9 @@ public class ConnectionHandler implements Runnable {
 						return;
 					}
 					try {
-						out.write(conversation.getResponse().getMessage());
+						out.write(conversation.getResponse().getHeader());
+						if (conversation.getResponse().getContent() != null)
+							out.write(conversation.getResponse().getContent());
 						wroteResponseToBrowser(conversation);
 					} catch (IOException ioe) {
 						errorWritingResponseToBrowser(conversation, ioe);

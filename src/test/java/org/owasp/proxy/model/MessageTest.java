@@ -22,19 +22,24 @@
  */
 package org.owasp.proxy.model;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.owasp.proxy.model.Message;
-import org.owasp.proxy.model.MessageFormatException;
-import org.owasp.proxy.model.NamedValue;
+import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.NamedValue;
 
 /**
  * @author Rogan Dawes
  * 
  */
 public class MessageTest {
+
+	private String CRLF = "\r\n";
+
+	private String CRLFCRLF = CRLF + CRLF;
 
 	private String get = "GET / HTTP/1.0";
 
@@ -43,10 +48,6 @@ public class MessageTest {
 	private String post = "POST / HTTP1.0\r\nHost: localhost\r\nCookie: a=b\r\nContent-Length: 10";
 
 	String content = "1234567890";
-
-	private String CRLF = "\r\n";
-
-	private String CRLFCRLF = CRLF + CRLF;
 
 	/**
 	 * @throws java.lang.Exception
@@ -67,26 +68,13 @@ public class MessageTest {
 	}
 
 	/**
-	 * Test method for
-	 * {@link org.owasp.proxy.model.Message#setMessage(byte[], byte[], byte[])}.
-	 */
-	@Test
-	public void testSetMessageByteArrayByteArrayByteArray() throws Exception {
-		Message m = new Message();
-		m.setMessage(post.getBytes("ASCII"), CRLFCRLF.getBytes("ASCII"),
-				content.getBytes("ASCII"));
-		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(),
-				"ASCII"));
-	}
-
-	/**
 	 * Test method for {@link org.owasp.proxy.model.Message#getHeader()}.
 	 */
 	@Test
 	public void testGetHeader() throws Exception {
 		Message m = new Message();
 		m.setMessage((post + CRLFCRLF + content).getBytes("ASCII"));
-		assertEquals(post, new String(m.getHeader(), "ASCII"));
+		assertEquals(post + CRLFCRLF, new String(m.getHeader(), "ASCII"));
 	}
 
 	/**
@@ -95,8 +83,8 @@ public class MessageTest {
 	@Test
 	public void testSetHeaderByteArray() throws Exception {
 		Message m = new Message();
-		m.setHeader(get.getBytes("ASCII"));
-		assertEquals(get + CRLFCRLF, new String(m.getMessage(), "ASCII"));
+		m.setHeader((get + CRLFCRLF).getBytes("ASCII"));
+		assertEquals(get + CRLFCRLF, new String(m.getHeader(), "ASCII"));
 	}
 
 	/**
@@ -115,41 +103,10 @@ public class MessageTest {
 	@Test
 	public void testSetContent() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		m.setContent(content.getBytes("ASCII"));
 		assertEquals(post + CRLFCRLF + content, new String(m.getMessage(),
 				"ASCII"));
-	}
-
-	/**
-	 * Test method for
-	 * {@link org.owasp.proxy.model.Message#getHeaderLines(byte[])}.
-	 */
-	@Test
-	public void testGetHeaderLines() throws Exception {
-		Message m = new Message();
-		m.setMessage((post + CRLFCRLF + content).getBytes("ASCII"));
-		String[] lines = m.getHeaderLines(CRLF.getBytes("ASCII"));
-		StringBuilder b = new StringBuilder();
-		for (int i = 0; i < lines.length; i++) {
-			b.append(lines[i]);
-			if (i < lines.length - 1)
-				b.append(CRLF);
-		}
-		assertEquals(post, b.toString());
-	}
-
-	/**
-	 * Test method for
-	 * {@link org.owasp.proxy.model.Message#setHeaderLines(java.lang.String[], byte[])}
-	 * .
-	 */
-	@Test
-	public void testSetHeaderLines() throws Exception {
-		String[] lines = get3.split("CRLF");
-		Message m = new Message();
-		m.setHeaderLines(lines, CRLF.getBytes("ASCII"));
-		assertEquals(get3, new String(m.getHeader(), "ASCII"));
 	}
 
 	/**
@@ -158,10 +115,10 @@ public class MessageTest {
 	@Test
 	public void testGetFirstLine() throws Exception {
 		Message m = new Message();
-		m.setHeader(get.getBytes("ASCII"));
+		m.setHeader((get + CRLFCRLF).getBytes("ASCII"));
 		assertEquals(get, m.getStartLine());
 		m = new Message();
-		m.setHeader(get3.getBytes("ASCII"));
+		m.setHeader((get3 + CRLFCRLF).getBytes("ASCII"));
 		assertEquals(get, m.getStartLine());
 	}
 
@@ -173,7 +130,7 @@ public class MessageTest {
 	public void testSetFirstLine() throws Exception {
 		Message m = new Message();
 		m.setStartLine(get);
-		assertEquals(get, new String(m.getHeader(), "ASCII"));
+		assertEquals(get + CRLFCRLF, new String(m.getHeader(), "ASCII"));
 	}
 
 	/**
@@ -182,14 +139,14 @@ public class MessageTest {
 	@Test
 	public void testGetHeaders() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		assertEquals(post, m.getStartLine() + CRLF
 				+ NamedValue.join(m.getHeaders(), CRLF));
 	}
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.proxy.model.Message#setHeaders(org.owasp.proxy.model.NamedValue[])}
+	 * {@link org.owasp.proxy.model.Message#setHeaders(org.owasp.httpclient.NamedValue[])}
 	 * .
 	 */
 	@Test
@@ -207,7 +164,7 @@ public class MessageTest {
 		}
 		m.setStartLine(first);
 		m.setHeaders(h);
-		assertEquals(post, new String(m.getHeader(), "ASCII"));
+		assertEquals(post + CRLFCRLF, new String(m.getHeader(), "ASCII"));
 	}
 
 	/**
@@ -217,7 +174,7 @@ public class MessageTest {
 	@Test
 	public void testGetHeaderString() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		assertEquals("a=b", m.getHeader("cookie"));
 	}
@@ -230,7 +187,7 @@ public class MessageTest {
 	@Test
 	public void testSetHeaderStringString() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		m.setHeader("Cookie", "a=c");
 		assertEquals("a=c", m.getHeader("cookie"));
 	}
@@ -243,7 +200,7 @@ public class MessageTest {
 	@Test
 	public void testAddHeader() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		m.addHeader("Cookie", "b=c");
 		NamedValue[] headers = m.getHeaders();
 		boolean found = false;
@@ -267,7 +224,7 @@ public class MessageTest {
 	@Test
 	public void testDeleteHeader() throws Exception {
 		Message m = new Message();
-		m.setHeader(post.getBytes("ASCII"));
+		m.setHeader((post + CRLFCRLF).getBytes("ASCII"));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		m.deleteHeader("cookie");
 		assertEquals(null, m.getHeader("cookie"));

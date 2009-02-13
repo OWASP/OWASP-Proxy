@@ -11,10 +11,9 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.proxy.dao.JdbcConversationDAO;
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -45,11 +44,11 @@ public class JdbcConversationDAOTest {
 			dao.getJdbcTemplate().execute("DROP TABLE REQUESTS");
 			dao.getJdbcTemplate().execute("DROP TABLE CONVERSATIONS");
 		} catch (Exception e) {
-//			e.printStackTrace();
+			// e.printStackTrace();
 		}
 		dao.createTables();
 	}
-	
+
 	@After
 	public void tearDown() throws Exception {
 		dump(dao.getJdbcTemplate().queryForRowSet("SELECT * FROM messages"));
@@ -57,7 +56,7 @@ public class JdbcConversationDAOTest {
 		dump(dao.getJdbcTemplate()
 				.queryForRowSet("SELECT * FROM conversations"));
 	}
-	
+
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 		dao.getJdbcTemplate().execute("SHUTDOWN");
@@ -69,17 +68,17 @@ public class JdbcConversationDAOTest {
 		assertNull(c);
 
 		c = constructConversation();
-		
+
 		dao.saveConversation(c);
-		
+
 		int cid = c.getId();
-		
+
 		ConversationSummary cs = dao.findConversationSummary(cid);
 		compare(cs, c);
-		
+
 		Conversation c2 = dao.findConversation(cid);
 		compare(cs, c2);
-		
+
 		compare(c.getRequest(), c2.getRequest());
 		compare(c.getResponse(), c2.getResponse());
 	}
@@ -117,7 +116,7 @@ public class JdbcConversationDAOTest {
 
 		Response r2 = dao.findResponse(r.getId());
 		compare(r, r2);
-		
+
 		System.out.println(r2);
 	}
 
@@ -140,7 +139,7 @@ public class JdbcConversationDAOTest {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private Conversation constructConversation() {
 		Conversation c = new Conversation();
 		c.setRequestTime(System.currentTimeMillis());
@@ -151,7 +150,7 @@ public class JdbcConversationDAOTest {
 		c.setConnection("connection-");
 		return c;
 	}
-	
+
 	private Request constructRequest() {
 		Request r = new Request();
 		r.setMessage("GET / HTTP/1.0\r\n\r\n".getBytes());
@@ -160,15 +159,16 @@ public class JdbcConversationDAOTest {
 		r.setSsl(false);
 		return r;
 	}
-	
+
 	private Response constructResponse() {
 		Response r = new Response();
 		r.setMessage(("HTTP/1.0 200 Ok blah\r\n"
 				+ "Content-Type: text\r\n\r\ncontent").getBytes());
 		return r;
 	}
-	
-	private void compare(ConversationSummary cs, Conversation c) throws MessageFormatException {
+
+	private void compare(ConversationSummary cs, Conversation c)
+			throws MessageFormatException {
 		assertTrue(cs.getId() == c.getId());
 		assertTrue(cs.getRequestTime() == c.getRequestTime());
 		assertTrue(cs.getResponseHeaderTime() == c.getResponseHeaderTime());
@@ -177,35 +177,45 @@ public class JdbcConversationDAOTest {
 		compare(cs, c.getRequest());
 		compare(cs, c.getResponse());
 	}
-	
-	private void compare(ConversationSummary cs, Request request) throws MessageFormatException {
+
+	private void compare(ConversationSummary cs, Request request)
+			throws MessageFormatException {
 		assertEquals(cs.getHost(), request.getHost());
 		assertTrue(cs.getPort() == request.getPort());
 		assertTrue(cs.isSsl() == request.isSsl());
 		assertEquals(cs.getRequestMethod(), request.getMethod());
 		assertEquals(cs.getRequestResource(), request.getResource());
-		assertEquals(cs.getRequestContentType(),request.getHeader("Content-Type"));
-		assertTrue(cs.getRequestContentSize() == 0 ? request.getContent() == null || request.getContent().length == 0 : cs.getRequestContentSize() == request.getContent().length);
+		assertEquals(cs.getRequestContentType(), request
+				.getHeader("Content-Type"));
+		assertTrue(cs.getRequestContentSize() == 0 ? request.getContent() == null
+				|| request.getContent().length == 0
+				: cs.getRequestContentSize() == request.getContent().length);
 	}
 
-	private void compare(ConversationSummary cs, Response response) throws MessageFormatException {
+	private void compare(ConversationSummary cs, Response response)
+			throws MessageFormatException {
 		assertEquals(cs.getResponseStatus(), response.getStatus());
 		assertEquals(cs.getResponseReason(), response.getReason());
-		assertEquals(cs.getResponseContentType(), response.getHeader("Content-Type"));
-		assertTrue(cs.getResponseContentSize() == 0 ? response.getContent() == null || response.getContent().length == 0 : cs.getResponseContentSize() == response.getContent().length);
+		assertEquals(cs.getResponseContentType(), response
+				.getHeader("Content-Type"));
+		assertTrue(cs.getResponseContentSize() == 0 ? response.getContent() == null
+				|| response.getContent().length == 0
+				: cs.getResponseContentSize() == response.getContent().length);
 	}
-	
+
 	private void compare(Request r1, Request r2) {
-		assertTrue(Arrays.equals(r1.getMessage(), r2.getMessage()));
+		assertTrue(Arrays.equals(r1.getHeader(), r2.getHeader()));
+		assertTrue(Arrays.equals(r1.getContent(), r2.getContent()));
 		assertEquals(r1.getHost(), r2.getHost());
 		assertEquals(r1.getPort(), r2.getPort());
 		assertEquals(r1.isSsl(), r2.isSsl());
 		assertEquals(r1.getId(), r2.getId());
 	}
-	
+
 	private void compare(Response r1, Response r2) {
-		assertTrue(Arrays.equals(r1.getMessage(), r2.getMessage()));
+		assertTrue(Arrays.equals(r1.getHeader(), r2.getHeader()));
+		assertTrue(Arrays.equals(r1.getContent(), r2.getContent()));
 		assertEquals(r1.getId(), r2.getId());
 	}
-	
+
 }

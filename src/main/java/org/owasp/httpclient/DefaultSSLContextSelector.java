@@ -1,4 +1,4 @@
-package org.owasp.proxy.httpclient;
+package org.owasp.httpclient;
 
 import java.net.InetSocketAddress;
 import java.security.KeyManagementException;

@@ -23,7 +23,7 @@
  * Created on May 12, 2003, 11:10 PM
  */
 
-package org.owasp.proxy.io;
+package org.owasp.httpclient;
 
 import java.io.IOException;
 import java.io.InputStream;

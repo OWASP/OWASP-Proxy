@@ -6,10 +6,10 @@ import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.Collection;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
 import org.owasp.proxy.model.Message;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 import org.springframework.dao.DataAccessException;
@@ -42,7 +42,8 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	private static final String PORT = "port";
 	private static final String HOST = "host";
 	private static final String ID = "id";
-	private static final String MESSAGE = "message";
+	private static final String HEADER = "header";
+	private static final String CONTENT = "content";
 	private static final String CONNECTION = "connection";
 
 	private static final ParameterizedRowMapper<Request> REQUEST_MAPPER = new RequestMapper();
@@ -57,15 +58,15 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 
 	private final static String INSERT_REQUEST = "INSERT INTO requests (id, host, port, ssl) VALUES (:id, :host, :port, :ssl)";
 
-	private final static String INSERT_MESSAGE = "INSERT INTO MESSAGES (id, message, contentType, size) VALUES (:id, :message, :contentType, :size)";
+	private final static String INSERT_MESSAGE = "INSERT INTO MESSAGES (id, header, content, contentType, size) VALUES (:id, :header, :content, :contentType, :size)";
 
-	private final static String SELECT_REQUEST = "SELECT requests.id AS id, host, port, ssl, message FROM requests, messages WHERE requests.id = messages.id AND messages.id = :id";
+	private final static String SELECT_REQUEST = "SELECT requests.id AS id, host, port, ssl, header, content FROM requests, messages WHERE requests.id = messages.id AND messages.id = :id";
 
-	private final static String SELECT_RESPONSE = "SELECT id, message FROM messages WHERE id = :id";
+	private final static String SELECT_RESPONSE = "SELECT id, header, content FROM messages WHERE id = :id";
 
-	private final static String SELECT_REQUEST_BY_CONVERSATION = "SELECT requests.id AS id, host, port, ssl, message FROM conversations, requests, messages WHERE requests.id = messages.id AND messages.id = conversations.requestId AND conversations.id = :id";
+	private final static String SELECT_REQUEST_BY_CONVERSATION = "SELECT requests.id AS id, host, port, ssl, header, content FROM conversations, requests, messages WHERE requests.id = messages.id AND messages.id = conversations.requestId AND conversations.id = :id";
 
-	private final static String SELECT_RESPONSE_BY_CONVERSATION = "SELECT messages.id AS ID, message FROM conversations, messages WHERE conversations.responseId = messages.id AND conversations.id = :id";
+	private final static String SELECT_RESPONSE_BY_CONVERSATION = "SELECT messages.id AS ID, header, content FROM conversations, messages WHERE conversations.responseId = messages.id AND conversations.id = :id";
 
 	private final static String INSERT_CONVERSATION = "INSERT INTO conversations (id, requestId, responseId, requestMethod, requestResource, responseStatus, responseReason, requestTime, responseHeaderTime, responseContentTime, connection) VALUES (:id, :requestId, :responseId, :requestMethod, :requestResource, :responseStatus, :responseReason, :requestTime, :responseHeaderTime, :responseContentTime, :connection)";
 
@@ -84,7 +85,8 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 
 	private final static String CREATE_MESSAGES = "CREATE TABLE messages ("
 			+ "id INTEGER NOT NULL," + "contentType VARCHAR(256), "
-			+ "size INTEGER, " + "message LONGVARBINARY NOT NULL" + ")";
+			+ "size INTEGER, " + "header LONGVARBINARY NOT NULL,"
+			+ "content LONGVARBINARY NOT NULL" + ")";
 
 	private final static String CREATE_REQUESTS = "CREATE TABLE requests ("
 			+ "id INTEGER NOT NULL," + "host VARCHAR(255) NOT NULL,"
@@ -284,14 +286,11 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 		} catch (MessageFormatException mfe) {
 			params.addValue(CONTENT_TYPE, null, Types.LONGVARCHAR);
 		}
-		try {
-			byte[] content = message.getContent();
-			params.addValue(SIZE, content == null ? 0 : content.length,
-					Types.INTEGER);
-		} catch (MessageFormatException mfe) {
-			params.addValue(SIZE, 0, Types.INTEGER);
-		}
-		params.addValue(MESSAGE, message.getMessage(), Types.VARBINARY);
+		byte[] content = message.getContent();
+		params.addValue(SIZE, content == null ? 0 : content.length,
+				Types.INTEGER);
+		params.addValue(HEADER, message.getHeader(), Types.LONGVARBINARY);
+		params.addValue(CONTENT, message.getContent(), Types.LONGVARBINARY);
 		getNamedParameterJdbcTemplate().update(INSERT_MESSAGE, params);
 	}
 
@@ -380,7 +379,8 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 			request.setHost(host);
 			request.setPort(port);
 			request.setSsl(ssl);
-			request.setMessage(rs.getBytes(MESSAGE));
+			request.setHeader(rs.getBytes(HEADER));
+			request.setContent(rs.getBytes(CONTENT));
 			return request;
 		}
 
@@ -394,7 +394,8 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 
 			Response response = new Response();
 			response.setId(id);
-			response.setMessage(rs.getBytes(MESSAGE));
+			response.setHeader(rs.getBytes(HEADER));
+			response.setContent(rs.getBytes(CONTENT));
 			return response;
 		}
 

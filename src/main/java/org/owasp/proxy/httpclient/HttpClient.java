@@ -38,11 +38,14 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.httpclient.AddressResolver;
+import org.owasp.httpclient.DefaultSSLContextSelector;
+import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.SizeLimitedByteArrayOutputStream;
 import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.MessageFormatException;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 
@@ -78,7 +81,7 @@ public class HttpClient {
 
 	private Conversation conversation = null;
 
-	private Resolver resolver;
+	private AddressResolver resolver;
 
 	public void setSSLContextSelector(SSLContextSelector contextSelector) {
 		this.contextSelector = contextSelector;
@@ -88,7 +91,7 @@ public class HttpClient {
 		this.proxySelector = proxySelector;
 	}
 
-	public void setResolver(Resolver resolver) {
+	public void setResolver(AddressResolver resolver) {
 		this.resolver = resolver;
 	}
 
@@ -370,7 +373,9 @@ public class HttpClient {
 		request.setStartLine("CONNECT " + target.getHostName() + ":"
 				+ target.getPort() + " HTTP/1.0");
 		long requestTime = System.currentTimeMillis();
-		out.write(request.getMessage());
+		out.write(request.getHeader());
+		if (request.getContent() != null)
+			out.write(request.getContent());
 		out.flush();
 		ByteArrayOutputStream copy = new ByteArrayOutputStream();
 		CopyInputStream in = new CopyInputStream(socket.getInputStream(), copy);
@@ -409,7 +414,9 @@ public class HttpClient {
 		if (!direct) {
 			writeProxy(out, conversation.getRequest());
 		} else {
-			out.write(conversation.getRequest().getMessage());
+			out.write(conversation.getRequest().getHeader());
+			if (conversation.getRequest().getContent() != null)
+				out.write(conversation.getRequest().getContent());
 		}
 		out.flush();
 	}
@@ -461,26 +468,28 @@ public class HttpClient {
 			throws MessageFormatException, IOException {
 		int resourceStart = -1;
 		boolean method = true;
-		byte[] message = request.getMessage();
-		for (int i = 0; i < message.length; i++) {
-			if (method && Character.isWhitespace(message[i])) {
+		byte[] header = request.getHeader();
+		for (int i = 0; i < header.length; i++) {
+			if (method && Character.isWhitespace(header[i])) {
 				method = false;
 			}
-			if (!method && !Character.isWhitespace(message[i])
+			if (!method && !Character.isWhitespace(header[i])
 					&& resourceStart == -1) {
 				resourceStart = i;
 				break;
 			}
-			if (message[i] == 0x0d || message[i] == 0x0a)
+			if (header[i] == 0x0d || header[i] == 0x0a)
 				throw new MessageFormatException(
 						"Encountered CR or LF when parsing the URI!");
 		}
 		if (resourceStart > 0) {
 			BufferedOutputStream bos = new BufferedOutputStream(out);
-			bos.write(message, 0, resourceStart);
+			bos.write(header, 0, resourceStart);
 			bos.write(constructUri(request.isSsl(), request.getHost(),
 					request.getPort()).toString().getBytes());
-			bos.write(message, resourceStart, message.length - resourceStart);
+			bos.write(header, resourceStart, header.length - resourceStart);
+			if (request.getContent() != null)
+				bos.write(request.getContent());
 			bos.flush();
 		} else {
 			throw new MessageFormatException("Couldn't parse the URI!");

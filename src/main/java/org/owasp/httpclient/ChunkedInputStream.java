@@ -17,11 +17,13 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.io;
+package org.owasp.httpclient;
 
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import org.owasp.httpclient.util.CircularByteBuffer;
 
 /**
  * 
@@ -29,15 +31,39 @@ import java.io.InputStream;
  */
 public class ChunkedInputStream extends FilterInputStream {
 
-	private byte[] chunk = null;
+	private boolean raw = false;
 
-	private int start = 0;
+	private boolean eof = false;
 
-	private int size = 0;
+	private byte[] b = new byte[1024];
+
+	private CircularByteBuffer buffer = new CircularByteBuffer(1024);
 
 	public ChunkedInputStream(InputStream in) throws IOException {
 		super(in);
 		readChunk();
+	}
+
+	/**
+	 * Running with raw = true returns the individual chunks, but still shows
+	 * eof when the last chunk has been read, rather than continuing into the
+	 * next message
+	 * 
+	 * @param in
+	 * @param raw
+	 * @throws IOException
+	 */
+	public ChunkedInputStream(InputStream in, boolean raw) throws IOException {
+		super(in);
+		this.raw = raw;
+		readChunk();
+	}
+
+	private int addRaw(int i) {
+		if (raw && i != -1) {
+			buffer.add((byte) i);
+		}
+		return i;
 	}
 
 	private void readChunk() throws IOException {
@@ -46,28 +72,27 @@ public class ChunkedInputStream extends FilterInputStream {
 			int semi = line.indexOf(';');
 			if (semi > -1)
 				line = line.substring(0, semi);
-			size = Integer.parseInt(line.trim(), 16);
-			if (chunk == null || size > chunk.length)
-				chunk = new byte[size];
-			int read = 0;
-			while (read < size) {
-				int got = in.read(chunk, read, size - read);
-				if (got > 0) {
-					read = read + got;
-				} else if (read == 0) {
-				} else {
-					continue;
-				}
+			int size = Integer.parseInt(line.trim(), 16);
+			int got, read = 0;
+			while (read < size
+					&& (got = in.read(b, 0, Math.min(b.length, size - read))) > 0) {
+				buffer.add(b, 0, got);
+				read = read + got;
 			}
+			if (read < size)
+				throw new IOException(
+						"Unexpected end of stream reading a chunk of " + size);
 			if (size > 0) {
 				// read the trailing line feed after the chunk body,
 				// but before the next chunk size
-				readCRLF();
+				if (!"".equals(line = readLine()))
+					throw new IOException(
+							"Unexpected characters reading the trailing CRLF : "
+									+ line);
 			} else {
-				chunk = null; // enable GC
 				discardTrailer();
+				eof = true;
 			}
-			start = 0;
 		} catch (NumberFormatException nfe) {
 			IOException ioe = new IOException("Error parsing chunk size from '"
 					+ line);
@@ -77,16 +102,14 @@ public class ChunkedInputStream extends FilterInputStream {
 	}
 
 	public int read() throws IOException {
-		if (size == 0) {
-			return -1;
-		}
-		if (start == size) {
+		if (buffer == null || buffer.length() == 0) {
+			if (eof)
+				return -1;
 			readChunk();
 		}
-		if (size == 0) {
+		if (buffer == null || buffer.length() == 0)
 			return -1;
-		}
-		return chunk[start++];
+		return buffer.remove();
 	}
 
 	public int read(byte[] b) throws IOException {
@@ -94,56 +117,35 @@ public class ChunkedInputStream extends FilterInputStream {
 	}
 
 	public int read(byte[] b, int off, int len) throws IOException {
-		if (size == 0) {
-			return -1;
-		}
-		if (start == size) {
+		if (buffer == null || buffer.length() == 0) {
+			if (eof)
+				return -1;
 			readChunk();
 		}
-		if (size == 0) {
+		if (buffer == null || buffer.length() == 0)
 			return -1;
-		}
-		if (len > available())
-			len = available();
-		System.arraycopy(chunk, start, b, off, len);
-		start += len;
-		return len;
+		return buffer.remove(b, off, len);
 	}
 
 	public int available() throws IOException {
-		return size - start;
+		return buffer == null ? 0 : buffer.length();
 	}
 
 	public boolean markSupported() {
 		return false;
 	}
 
-	/**
-	 * Read the CRLF terminator.
-	 * 
-	 * @throws IOException
-	 *             If an IO error occurs.
-	 */
-	private void readCRLF() throws IOException {
-		int cr = in.read();
-		int lf = in.read();
-		if ((cr != '\r') || (lf != '\n')) {
-			throw new IOException("CRLF expected at end of chunk: " + cr + "/"
-					+ lf);
-		}
-	}
-
 	private String readLine() throws IOException {
 		StringBuilder line = new StringBuilder();
-		int i = in.read();
+		int i = addRaw(in.read());
 		while (i > -1 && i != '\r' && i != '\n') {
 			line = line.append((char) (i & 0xFF));
-			i = in.read();
+			i = addRaw(in.read());
 		}
 		if (i == '\n') {
 			throw new IOException("Unexpected LF, was expecting a CR first");
 		} else if (i == '\r') {
-			i = in.read();
+			i = addRaw(in.read());
 			if (i != '\n')
 				throw new IOException("Unexpected character "
 						+ Integer.toHexString(i) + ", was expecting 0x0A");
@@ -159,6 +161,7 @@ public class ChunkedInputStream extends FilterInputStream {
 	 */
 	private void discardTrailer() throws IOException {
 		while (!"".equals(readLine()))
-			System.err.println("t");
+			;
 	}
+
 }

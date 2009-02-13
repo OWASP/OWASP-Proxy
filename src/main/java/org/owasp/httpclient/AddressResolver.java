@@ -1,9 +1,9 @@
-package org.owasp.proxy.httpclient;
+package org.owasp.httpclient;
 
 import java.io.IOException;
 import java.net.InetAddress;
 
-public interface Resolver {
+public interface AddressResolver {
 
 	InetAddress getAddress(String host) throws IOException;
 
