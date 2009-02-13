@@ -81,6 +81,12 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	private final static String SELECT_CONVERSATION = "SELECT id, requestTime, responseHeaderTime, responseContentTime, connection "
 			+ "FROM conversations WHERE conversations.id = :id";
 
+	private final static String DELETE_REQUEST = "DELETE FROM requests WHERE id = :id";
+
+	private final static String DELETE_MESSAGE = "DELETE FROM messages WHERE id = :id";
+
+	private final static String DELETE_SUMMARY = "DELETE FROM conversations WHERE id = :id";
+
 	private final static String CREATE_SEQUENCE = "CREATE SEQUENCE ids";
 
 	private final static String CREATE_MESSAGES = "CREATE TABLE messages ("
@@ -290,12 +296,52 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 		params.addValue(SIZE, content == null ? 0 : content.length,
 				Types.INTEGER);
 		params.addValue(HEADER, message.getHeader(), Types.LONGVARBINARY);
-		params.addValue(CONTENT, message.getContent(), Types.LONGVARBINARY);
+		params.addValue(CONTENT, content, Types.LONGVARBINARY);
 		getNamedParameterJdbcTemplate().update(INSERT_MESSAGE, params);
 	}
 
-	public boolean deleteConversation(int id) throws DataAccessException {
+	public boolean deleteRequest(int id) throws DataAccessException {
+		try {
+			MapSqlParameterSource params = new MapSqlParameterSource();
+			params.addValue(ID, id, Types.INTEGER);
+			getNamedParameterJdbcTemplate().update(DELETE_REQUEST, params);
+			getNamedParameterJdbcTemplate().update(DELETE_MESSAGE, params);
+			return true;
+		} catch (DataAccessException dae) {
+			return false;
+		}
+	}
 
+	public boolean deleteResponse(int id) throws DataAccessException {
+		try {
+			MapSqlParameterSource params = new MapSqlParameterSource();
+			params.addValue(ID, id, Types.INTEGER);
+			getNamedParameterJdbcTemplate().update(DELETE_MESSAGE, params);
+			return true;
+		} catch (DataAccessException dae) {
+			return false;
+		}
+	}
+
+	public boolean deleteConversation(int id) throws DataAccessException {
+		try {
+			Conversation conversation = findConversation(id);
+			if (conversation == null)
+				return false;
+			int requestId = conversation.getRequest().getId();
+			int responseId = conversation.getResponse().getId();
+			boolean result = deleteRequest(requestId);
+			result = result && deleteResponse(responseId);
+			try {
+				MapSqlParameterSource params = new MapSqlParameterSource();
+				params.addValue(ID, id, Types.INTEGER);
+				getNamedParameterJdbcTemplate().update(DELETE_SUMMARY, params);
+			} catch (DataAccessException dae) {
+				return false;
+			}
+			return result;
+		} catch (DataAccessException dae) {
+		}
 		return false;
 	}
 

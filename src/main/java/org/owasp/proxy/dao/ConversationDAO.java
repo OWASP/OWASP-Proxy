@@ -30,6 +30,10 @@ public interface ConversationDAO {
 
 	void saveResponse(Response response) throws DataAccessException;
 
+	boolean deleteRequest(int id) throws DataAccessException;
+
+	boolean deleteResponse(int id) throws DataAccessException;
+
 	boolean deleteConversation(int id) throws DataAccessException;
 
 }
