@@ -297,9 +297,11 @@ public class Client {
 			throw new IllegalStateException(
 					"Ilegal state. Can't send request content when state is "
 							+ state);
-		OutputStream os = socket.getOutputStream();
-		os.write(content);
-		os.flush();
+		if (content != null) {
+			OutputStream os = socket.getOutputStream();
+			os.write(content);
+			os.flush();
+		}
 		state = State.REQUEST_CONTENT_SENT;
 	}
 
