@@ -4,6 +4,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.owasp.httpclient.util.AsciiString;
+import org.owasp.httpclient.util.MessageUtils;
 
 /**
  * The MessageHeader class is the base class for the HTTP Message, Request and
@@ -74,33 +75,6 @@ public interface MessageHeader {
 		}
 
 		/**
-		 * @param bytes
-		 * @param separator
-		 * @param start
-		 * @return
-		 */
-		protected int findSeparator(byte[] bytes, byte[] separator, int start) {
-			if (bytes == null)
-				throw new NullPointerException("array is null");
-			if (bytes.length - start < separator.length)
-				return -1;
-			int sep = start;
-			int i = 0;
-			while (sep <= bytes.length - separator.length
-					&& i < separator.length) {
-				if (bytes[sep + i] == separator[i]) {
-					i++;
-				} else {
-					i = 0;
-					sep++;
-				}
-			}
-			if (i == separator.length)
-				return sep;
-			return -1;
-		}
-
-		/**
 		 * @param separator
 		 * @return
 		 * @throws MessageFormatException
@@ -111,7 +85,7 @@ public interface MessageHeader {
 				return null;
 			List<String> lines = new LinkedList<String>();
 			int sep, start = 0;
-			while ((sep = findSeparator(header, separator, start)) > -1
+			while ((sep = MessageUtils.findSeparator(header, separator, start)) > -1
 					&& sep > start) {
 				lines.add(AsciiString.create(header, start, sep - start));
 				start = sep + separator.length;

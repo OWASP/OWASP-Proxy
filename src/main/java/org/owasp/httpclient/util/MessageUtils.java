@@ -18,6 +18,32 @@ import org.owasp.httpclient.io.FixedLengthInputStream;
 public class MessageUtils {
 
 	/**
+	 * @param bytes
+	 * @param separator
+	 * @param start
+	 * @return
+	 */
+	public static int findSeparator(byte[] bytes, byte[] separator, int start) {
+		if (bytes == null)
+			throw new NullPointerException("array is null");
+		if (bytes.length - start < separator.length)
+			return -1;
+		int sep = start;
+		int i = 0;
+		while (sep <= bytes.length - separator.length && i < separator.length) {
+			if (bytes[sep + i] == separator[i]) {
+				i++;
+			} else {
+				i = 0;
+				sep++;
+			}
+		}
+		if (i == separator.length)
+			return sep;
+		return -1;
+	}
+
+	/**
 	 * @param content
 	 * @param codings
 	 * @return
