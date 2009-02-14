@@ -26,6 +26,7 @@ import java.io.InputStream;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.proxy.test.TraceServer;
@@ -67,7 +68,8 @@ public class ClientTest {
 		assertEquals(request.length(), read);
 	}
 
-	// @Test
+	@Test
+	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
 		Client client = new Client();
 		client.connect("www.google.co.za", 80, false);

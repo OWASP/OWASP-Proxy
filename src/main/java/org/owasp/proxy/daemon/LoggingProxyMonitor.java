@@ -1,12 +1,15 @@
 package org.owasp.proxy.daemon;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
+import org.owasp.httpclient.Request;
+import org.owasp.httpclient.Response;
+import org.owasp.httpclient.ResponseHeader;
 
 public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
@@ -27,7 +30,8 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	}
 
 	@Override
-	public Response errorFetchingResponseHeader(Request request, Exception e) {
+	public Response errorReadingResponse(Request request,
+			ResponseHeader header, Exception e) {
 		try {
 			System.err.println("Error fetching response header: \n");
 			System.err.write(request.getHeader());
@@ -40,64 +44,60 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 	}
 
 	@Override
-	public Response errorFetchingResponseContent(Conversation conversation,
-			Exception e) {
+	public void responseReceived(Request request, ResponseHeader header,
+			InputStream responseContent, OutputStream client) {
 		try {
-			System.err.println("Error fetching response content: \n");
-			System.err.write(conversation.getRequest().getHeader());
-			if (conversation.getRequest().getContent() != null)
-				System.err.write(conversation.getRequest().getContent());
-			System.err.println();
-			System.err.write(conversation.getResponse().getHeader());
-			System.err.println();
-			e.printStackTrace(new PrintStream(System.err));
-		} catch (IOException ioe) {
-		}
-		return null;
-	}
+			long start = System.currentTimeMillis();
 
-	@Override
-	public void errorWritingResponseToBrowser(Conversation conversation,
-			Exception e) {
-		try {
-			System.err
-					.println("Error writing response to browser: \nRequest:\n");
-			System.err.write(conversation.getRequest().getHeader());
-			if (conversation.getRequest().getContent() != null)
-				System.err.write(conversation.getRequest().getContent());
-			System.err.println("Response: \n");
-			System.err.write(conversation.getResponse().getHeader());
-			if (conversation.getResponse().getContent() != null)
-				System.err.write(conversation.getResponse().getContent());
-			e.printStackTrace(new PrintStream(System.err));
-		} catch (IOException ioe) {
-		}
-	}
+			CountingInputStream cis = new CountingInputStream(responseContent);
+			super.responseReceived(request, header, cis, client);
 
-	@Override
-	public void wroteResponseToBrowser(Conversation conversation) {
-		try {
-			int resp = 0;
-			if (conversation.getResponse().getContent() != null)
-				resp = conversation.getResponse().getContent().length;
-			long time = conversation.getResponseContentTime()
-					- conversation.getRequestTime();
+			long time = System.currentTimeMillis() - start;
+			if (time == 0)
+				time = 1;
+			int size = cis.getBytes();
 
-			Request request = conversation.getRequest();
 			StringBuilder buff = new StringBuilder();
 			buff.append(request.getMethod()).append(" ");
 			buff.append(request.isSsl() ? "ssl " : "");
 			buff.append(request.getHost()).append(":")
 					.append(request.getPort());
 			buff.append(request.getResource()).append(" ");
-			buff.append(conversation.getResponse().getStatus()).append(" - ")
-					.append(resp);
+			buff.append(header.getStatus()).append(" - ").append(size);
 			buff.append(" bytes in ").append(time).append("(").append(
-					resp / (time * 1000));
+					size / (time * 1000));
 			buff.append(" bps)");
 			System.out.println(buff.toString());
 		} catch (MessageFormatException mfe) {
 		}
 	}
 
+	private static class CountingInputStream extends FilterInputStream {
+
+		int bytes = 0;
+
+		public CountingInputStream(InputStream in) {
+			super(in);
+		}
+
+		@Override
+		public int read() throws IOException {
+			int result = super.read();
+			if (result != -1)
+				bytes++;
+			return result;
+		}
+
+		@Override
+		public int read(byte[] b, int off, int len) throws IOException {
+			int result = super.read(b, off, len);
+			if (result != -1)
+				bytes += result;
+			return result;
+		}
+
+		public int getBytes() {
+			return bytes;
+		}
+	}
 }

@@ -57,8 +57,8 @@ import org.owasp.proxy.httpclient.HttpClientFactory;
  * 
  * Observing and influencing the proxy is accomplished through the ProxyMonitor.
  * 
- * @see Listener#setProxyMonitor(ProxyMonitor)
- * @see ProxyMonitor
+ * @see Listener#setProxyMonitor(BufferedProxyMonitor)
+ * @see BufferedProxyMonitor
  * 
  * @author Rogan Dawes
  * 

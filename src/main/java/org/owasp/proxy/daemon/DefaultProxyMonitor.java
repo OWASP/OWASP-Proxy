@@ -1,19 +1,27 @@
 package org.owasp.proxy.daemon;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
+import org.owasp.httpclient.Request;
+import org.owasp.httpclient.Response;
+import org.owasp.httpclient.ResponseHeader;
 
 public class DefaultProxyMonitor implements ProxyMonitor {
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#requestReceived(org.owasp.proxy.model
-	 * .Request)
-	 */
+	public Response errorReadingRequest(Request request, Exception e) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	public Response errorReadingResponse(Request request,
+			ResponseHeader header, Exception e) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 	public Response requestReceived(Request request) {
 		try {
 			String connection = request.getHeader("Connection");
@@ -31,90 +39,21 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 		return null;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#errorReadingRequest(org.owasp.proxy
-	 * .model.Request, java.lang.Exception)
-	 */
-	public Response errorReadingRequest(Request request, Exception e) {
-		return null;
+	public void requestSent(Request request) {
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#responseHeaderReceived(org.owasp.
-	 * proxy.model.Conversation)
-	 */
-	public boolean responseHeaderReceived(Conversation conversation) {
-		return true;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#responseContentReceived(org.owasp
-	 * .proxy.model.Conversation)
-	 */
-	public void responseContentBuffered(Conversation conversation) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#errorFetchingResponseHeader(org.owasp
-	 * .proxy.model.Request, java.lang.Exception)
-	 */
-	public Response errorFetchingResponseHeader(Request request, Exception e) {
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#errorFetchingResponseContent(org.
-	 * owasp.proxy.model.Conversation, java.lang.Exception)
-	 */
-	public Response errorFetchingResponseContent(Conversation conversation,
-			Exception e) {
-		return null;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#wroteResponseToBrowser(org.owasp.
-	 * proxy.model.Conversation)
-	 */
-	public void wroteResponseToBrowser(Conversation conversation) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#errorWritingResponseToBrowser(org
-	 * .owasp.proxy.model.Conversation, java.lang.Exception)
-	 */
-	public void errorWritingResponseToBrowser(Conversation conversation,
-			Exception e) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#conversationCompleted(org.owasp.proxy
-	 * .model.Conversation)
-	 */
-	public void conversationCompleted(Conversation conversation) {
+	public void responseReceived(Request request, ResponseHeader header,
+			InputStream responseContent, OutputStream client) {
+		try {
+			client.write(header.getHeader());
+			byte[] buff = new byte[1024];
+			int got;
+			while ((got = responseContent.read(buff)) > -1)
+				client.write(buff, 0, got);
+			client.flush();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
 	}
 
 }

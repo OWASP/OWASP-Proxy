@@ -7,7 +7,6 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PushbackInputStream;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.util.logging.Logger;
 
@@ -15,16 +14,15 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.util.AsciiString;
+import org.owasp.httpclient.Request;
+import org.owasp.httpclient.Response;
+import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.SocketWrapper;
-import org.owasp.proxy.model.Conversation;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
 import org.owasp.proxy.model.URI;
 
 public class ConnectionHandler implements Runnable {
@@ -94,20 +92,16 @@ public class ConnectionHandler implements Runnable {
 		return sslsock;
 	}
 
-	private void writeErrorResponse(PrintStream out, Request request,
-			Exception e) {
-		try {
-			out.write(ERROR_HEADER.getBytes());
-			out.write(ERROR_MESSAGE1.getBytes());
-			out.write(request.getHeader());
-			if (request.getContent() != null)
-				out.write(request.getContent());
-			out.write(ERROR_MESSAGE2.getBytes());
-			e.printStackTrace(out);
-			out.write(ERROR_MESSAGE3.getBytes());
-		} catch (IOException ioe) {
-			// just eat it
-		}
+	private void writeErrorResponse(OutputStream out, Request request,
+			Exception e) throws IOException {
+		out.write(ERROR_HEADER.getBytes());
+		out.write(ERROR_MESSAGE1.getBytes());
+		out.write(request.getHeader());
+		if (request.getContent() != null)
+			out.write(request.getContent());
+		out.write(ERROR_MESSAGE2.getBytes());
+		e.printStackTrace(new PrintStream(out));
+		out.write(ERROR_MESSAGE3.getBytes());
 	}
 
 	private SSLSocketFactory getSocketFactory(String host, int port)
@@ -154,121 +148,38 @@ public class ConnectionHandler implements Runnable {
 		}
 	}
 
-	private Request readRequest(CopyInputStream in, ByteArrayOutputStream copy,
-			OutputStream out) {
-		Request request = null;
-		Response response = null;
+	private void readRequest(Request request, CopyInputStream in,
+			ByteArrayOutputStream copy, OutputStream out) throws IOException,
+			MessageFormatException {
+		// read the whole header.
 		try {
-			// read the whole header.
-			// The exact data read can be obtained from the
-			// BytearrayInputStream defined above
-			try {
-				while (!"".equals(in.readLine()))
-					;
-			} catch (SocketTimeoutException ste) {
-				byte[] headerBytes = copy.toByteArray();
-				if (headerBytes != null && headerBytes.length > 0) {
-					// connection closed while reading a new request
-					StringBuilder buff = new StringBuilder();
-					buff.append("Timeout reading request, got:\n");
-					buff.append(AsciiString.create(headerBytes));
-					logger.warning(buff.toString());
-					throw ste;
-				}
-				return null;
-			} catch (IOException ioe) {
-				byte[] headerBytes = copy.toByteArray();
-				// connection closed while waiting for a new request
-				if (headerBytes == null || headerBytes.length == 0)
-					return null;
-				throw ioe;
-			}
-
+			while (!"".equals(in.readLine()))
+				;
+		} catch (IOException e) {
 			byte[] headerBytes = copy.toByteArray();
-
-			// empty request line, connection closed?
 			if (headerBytes == null || headerBytes.length == 0)
-				return null;
-
-			request = new Request();
+				return;
 			request.setHeader(headerBytes);
-			headerBytes = null;
-
-			// Get the request content (if any) from the stream,
-			copy.reset();
-			if (MessageUtils.expectContent(request)
-					&& MessageUtils.flushContent(request, in))
-				request.setContent(copy.toByteArray());
-
-			// clear the stream copy
-			copy.reset();
-
-			if (targetHost != null) {
-				request.setSsl(targetSsl);
-				request.setHost(targetHost);
-				request.setPort(targetPort);
-			} else if (!"CONNECT".equals(request.getMethod())) {
-				String resource = request.getResource();
-				int css = resource.indexOf("://");
-				if (css > 3 && css < 6) {
-					try {
-						URI uri = new URI(resource);
-						request.setSsl("https".equals(uri.getScheme()));
-						request.setHost(uri.getHost());
-						request.setPort(uri.getPort());
-						request.setResource(uri.getResource());
-					} catch (URISyntaxException use) {
-						throw new MessageFormatException(
-								"Couldn't parse resource as a URI", use);
-					}
-				} else {
-					String host = request.getHeader("Host");
-					if (host == null)
-						throw new MessageFormatException(
-								"Couldn't determine target scheme/host/port");
-					request.setSsl(socket instanceof SSLSocket);
-					int colon = host.indexOf(':');
-					if (colon > -1) {
-						try {
-							request.setHost(host.substring(0, colon));
-							int port = Integer.parseInt(host.substring(
-									colon + 1).trim());
-							request.setPort(port);
-						} catch (NumberFormatException nfe) {
-							throw new MessageFormatException(
-									"Couldn't parse target port from Host: header",
-									nfe);
-						}
-					} else {
-						request.setHost(host);
-						request.setPort(targetSsl ? 443 : 80);
-					}
-				}
-			}
-
-			response = requestReceived(request);
-
-			if (response == null && request.getMethod().equals("CONNECT")) {
-				doConnect(out, request);
-				return null;
-			}
-		} catch (IOException ioe) {
-			response = errorReadingRequest(request, ioe);
-		} catch (MessageFormatException mfe) {
-			response = errorReadingRequest(request, mfe);
+			throw e;
 		}
-		if (response != null) {
-			try {
-				out.write(response.getHeader());
-				if (response.getContent() != null)
-					out.write(response.getContent());
-			} catch (IOException ioe) {
-				// just eat it
-			}
-			return null;
-		} else {
-			return request;
-		}
+
+		byte[] headerBytes = copy.toByteArray();
+
+		// empty request line, connection closed?
+		if (headerBytes == null || headerBytes.length == 0)
+			return;
+
+		request.setHeader(headerBytes);
+		headerBytes = null;
+
+		// Get the request content (if any) from the stream,
+		copy.reset();
+		if (MessageUtils.expectContent(request)
+				&& MessageUtils.flushContent(request, in))
+			request.setContent(copy.toByteArray());
+
+		// clear the stream copy
+		copy.reset();
 	}
 
 	private boolean isSSL(byte[] sniff, int len) {
@@ -276,6 +187,41 @@ public class ConnectionHandler implements Runnable {
 			if (sniff[i] == 0x03)
 				return true;
 		return false;
+	}
+
+	private void extractTargetFromResource(Request request)
+			throws MessageFormatException {
+		String resource = request.getResource();
+		try {
+			URI uri = new URI(resource);
+			request.setSsl("https".equals(uri.getScheme()));
+			request.setHost(uri.getHost());
+			request.setPort(uri.getPort());
+			request.setResource(uri.getResource());
+		} catch (URISyntaxException use) {
+			throw new MessageFormatException(
+					"Couldn't parse resource as a URI", use);
+		}
+	}
+
+	private void extractTargetFromHost(Request request)
+			throws MessageFormatException {
+		String host = request.getHeader("Host");
+		request.setSsl(socket instanceof SSLSocket);
+		int colon = host.indexOf(':');
+		if (colon > -1) {
+			try {
+				request.setHost(host.substring(0, colon));
+				int port = Integer.parseInt(host.substring(colon + 1).trim());
+				request.setPort(port);
+			} catch (NumberFormatException nfe) {
+				throw new MessageFormatException(
+						"Couldn't parse target port from Host: header", nfe);
+			}
+		} else {
+			request.setHost(host);
+			request.setPort(request.isSsl() ? 443 : 80);
+		}
 	}
 
 	public void run() {
@@ -321,18 +267,56 @@ public class ConnectionHandler implements Runnable {
 				}
 			}
 			boolean close;
+			String version = null, connection = null;
 			do {
 				ByteArrayOutputStream copy = new ByteArrayOutputStream();
 				CopyInputStream in = new CopyInputStream(sockIn, copy);
-				Request request = readRequest(in, copy, out);
-				// request may be null if a response has already been sent
-				// to the browser
+				Request request = new Request.Impl();
+				try {
+					readRequest(request, in, copy, out);
+					Response response = requestReceived(request);
+					if (response != null) {
+						out.write(response.getHeader());
+						if (response.getContent() != null)
+							out.write(response.getContent());
+						out.flush();
+						return;
+						// FIXME no support for connection keep alive when
+						// using custom responses??
+					}
+				} catch (Exception e) {
+					Response response = errorReadingRequest(request, e);
+					if (response == null) {
+						writeErrorResponse(out, request, e);
+					} else {
+						out.write(response.getHeader());
+						if (response.getContent() != null)
+							out.write(response.getContent());
+					}
+					out.flush();
+					return;
+				}
+				// request header may be null if a response has already been
+				// sent to the browser
 				// or if there was no Request to be read on the socket
 				// (closed or timed out)
-				if (request == null)
+				if (request.getHeader() == null)
 					return;
 
-				Conversation conversation = new Conversation();
+				// handle SSL requests, or find out where to connect to
+				if ("CONNECT".equals(request.getMethod())) {
+					doConnect(out, request);
+					return;
+				} else if (!request.getResource().startsWith("/")) {
+					extractTargetFromResource(request);
+				} else if (targetHost != null) {
+					request.setHost(targetHost);
+					request.setPort(targetPort);
+					request.setSsl(targetSsl);
+				} else if (request.getHeader("Host") != null) {
+					extractTargetFromHost(request);
+				}
+
 				try {
 					if (httpClient == null)
 						httpClient = clientFactory.createHttpClient();
@@ -341,95 +325,42 @@ public class ConnectionHandler implements Runnable {
 
 					httpClient.sendRequestHeader(request.getHeader());
 					httpClient.sendRequestContent(request.getContent());
-					conversation.setRequest(request);
-					conversation.setRequestTime(System.currentTimeMillis());
+
+					requestSent(request);
 
 					byte[] responseHeader = httpClient.getResponseHeader();
-					Response response = new Response();
-					response.setHeader(responseHeader);
-					conversation.setResponse(response);
-					conversation.setResponseHeaderTime(System
-							.currentTimeMillis());
+					ResponseHeader header = new ResponseHeader.Impl();
+					header.setHeader(responseHeader);
 
-					String orig = httpClient.getConnection();
-					StringBuilder connection = new StringBuilder();
-					connection.append("[");
-					connection.append(socket.getRemoteSocketAddress());
-					connection.append("->");
-					connection.append(socket.getLocalSocketAddress());
-					connection.append("]-[").append(orig).append("]");
-					conversation.setConnection(connection.toString());
-				} catch (IOException ioe) {
-					errorFetchingResponseHeader(request, ioe);
-					writeErrorResponse(new PrintStream(out), request, ioe);
-					return;
-				} catch (MessageFormatException mfe) {
-					errorFetchingResponseHeader(request, mfe);
-					writeErrorResponse(new PrintStream(out), request, mfe);
+					version = header.getVersion();
+					connection = header.getHeader("Connection");
+					// String orig = httpClient.getConnection();
+					// StringBuilder connection = new StringBuilder();
+					// connection.append("[");
+					// connection.append(socket.getRemoteSocketAddress());
+					// connection.append("->");
+					// connection.append(socket.getLocalSocketAddress());
+					// connection.append("]-[").append(orig).append("]");
+					InputStream content = httpClient.getResponseContent();
+					responseReceived(request, header, content, out);
+					out.flush();
+				} catch (Exception e) {
+					Response response = errorReadingResponse(request, null, e);
+					if (response == null) {
+						writeErrorResponse(out, request, e);
+					} else {
+						out.write(response.getHeader());
+						if (response.getContent() != null)
+							out.write(response.getContent());
+					}
+					out.flush();
 					return;
 				}
-				boolean stream = responseHeaderReceived(conversation);
-				if (stream) {
-					try {
-						// message only contains headers at this point
-						out.write(conversation.getResponse().getHeader());
-						copy.reset();
-						InputStream responseContent = httpClient
-								.getResponseContent();
-						responseContent = new CopyInputStream(responseContent,
-								new OutputStream[] { copy, out });
-						byte[] buff = new byte[1024];
-						while (responseContent.read(buff) > -1)
-							;
-						conversation.getResponse().setContent(
-								copy.toByteArray());
-						copy.reset();
-						conversation.setResponseContentTime(System
-								.currentTimeMillis());
-						wroteResponseToBrowser(conversation);
-					} catch (IOException ioe) {
-						errorFetchingResponseContent(conversation, ioe);
-						return;
-					}
-				} else {
-					try {
-						copy.reset();
-						InputStream responseContent = httpClient
-								.getResponseContent();
-						responseContent = new CopyInputStream(responseContent,
-								copy);
-						byte[] buff = new byte[1024];
-						while (responseContent.read(buff) > -1)
-							;
-						conversation.getResponse().setContent(
-								copy.toByteArray());
-						copy.reset();
-						conversation.setResponseContentTime(System
-								.currentTimeMillis());
-						responseContentBuffered(conversation);
-					} catch (IOException ioe) {
-						errorFetchingResponseContent(conversation, ioe);
-						return;
-					}
-					try {
-						out.write(conversation.getResponse().getHeader());
-						if (conversation.getResponse().getContent() != null)
-							out.write(conversation.getResponse().getContent());
-						wroteResponseToBrowser(conversation);
-					} catch (IOException ioe) {
-						errorWritingResponseToBrowser(conversation, ioe);
-						return;
-					}
-				}
-				conversationCompleted(conversation);
-				String version = conversation.getResponse().getVersion();
 				if ("HTTP/1.1".equals(version)) {
 					close = false;
 				} else {
 					close = true;
 				}
-				String connection = conversation.getResponse().getHeader(
-						"Connection");
 				if ("close".equals(connection)) {
 					close = true;
 				} else if ("Keep-Alive".equalsIgnoreCase(connection)) {
@@ -437,6 +368,8 @@ public class ConnectionHandler implements Runnable {
 				}
 				copy = null;
 			} while (!close);
+		} catch (IOException ioe) {
+			logger.info(ioe.getMessage());
 		} catch (MessageFormatException mfe) {
 			logger.severe(mfe.getMessage());
 			mfe.printStackTrace();
@@ -476,69 +409,31 @@ public class ConnectionHandler implements Runnable {
 		return null;
 	}
 
-	private Response errorFetchingResponseHeader(Request request, Exception e) {
+	private void requestSent(Request request) {
 		if (monitor != null)
 			try {
-				return monitor.errorFetchingResponseHeader(request, e);
+				monitor.requestSent(request);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
+	private Response errorReadingResponse(Request request,
+			ResponseHeader header, Exception e) {
+		if (monitor != null)
+			try {
+				return monitor.errorReadingResponse(request, header, e);
 			} catch (Exception e2) {
 				e2.printStackTrace();
 			}
 		return null;
 	}
 
-	private Response errorFetchingResponseContent(Conversation conversation,
-			Exception e) {
+	private void responseReceived(Request request, ResponseHeader header,
+			InputStream content, OutputStream client) {
 		if (monitor != null)
 			try {
-				return monitor.errorFetchingResponseContent(conversation, e);
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
-		return null;
-	}
-
-	private boolean responseHeaderReceived(Conversation conversation) {
-		if (monitor != null)
-			try {
-				return monitor.responseHeaderReceived(conversation);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		return true;
-	}
-
-	private void responseContentBuffered(Conversation conversation) {
-		if (monitor != null)
-			try {
-				monitor.responseContentBuffered(conversation);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	}
-
-	private void errorWritingResponseToBrowser(Conversation conversation,
-			Exception e) {
-		if (monitor != null)
-			try {
-				monitor.errorWritingResponseToBrowser(conversation, e);
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
-	}
-
-	private void wroteResponseToBrowser(Conversation conversation) {
-		if (monitor != null)
-			try {
-				monitor.wroteResponseToBrowser(conversation);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	}
-
-	private void conversationCompleted(Conversation conversation) {
-		if (monitor != null)
-			try {
-				monitor.conversationCompleted(conversation);
+				monitor.responseReceived(request, header, content, client);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}

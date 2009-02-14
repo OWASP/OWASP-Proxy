@@ -14,7 +14,7 @@ import org.owasp.proxy.model.Request;
 import org.owasp.proxy.model.Response;
 import org.springframework.dao.DataAccessException;
 
-public class RecordingProxyMonitor extends DefaultProxyMonitor {
+public class RecordingProxyMonitor implements BufferedProxyMonitor {
 
 	private static final Response ERR_400;
 	private static final Response ERR_404;
@@ -48,17 +48,14 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 		this.host = host;
 	}
 
-	@Override
 	public Response requestReceived(Request request) {
 		if (!host.equals(request.getHost()))
-			return super.requestReceived(request);
+			return null;
 		return handleRequest(request);
 	}
 
-	@Override
 	public void conversationCompleted(Conversation conversation) {
 		recordConversation(conversation);
-		super.conversationCompleted(conversation);
 	}
 
 	private void recordConversation(Conversation conversation) {
@@ -257,4 +254,32 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 		response.setContent(MessageUtils.getMessage(r));
 		return response;
 	}
+
+	public Response errorFetchingResponseContent(Conversation conversation,
+			Exception e) {
+		return null;
+	}
+
+	public Response errorFetchingResponseHeader(Request request, Exception e) {
+		return null;
+	}
+
+	public Response errorReadingRequest(Request request, Exception e) {
+		return null;
+	}
+
+	public void errorWritingResponseToBrowser(Conversation conversation,
+			Exception e) {
+	}
+
+	public void responseContentBuffered(Conversation conversation) {
+	}
+
+	public boolean responseHeaderReceived(Conversation conversation) {
+		return true;
+	}
+
+	public void wroteResponseToBrowser(Conversation conversation) {
+	}
+
 }
