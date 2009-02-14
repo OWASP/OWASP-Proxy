@@ -332,12 +332,26 @@ public class ConnectionHandler implements Runnable {
 				if (request == null)
 					return;
 
-				Conversation conversation = null;
+				Conversation conversation = new Conversation();
 				try {
 					if (httpClient == null)
 						httpClient = clientFactory.createHttpClient();
-					conversation = httpClient.fetchResponseHeader(request);
-					String orig = conversation.getConnection();
+					httpClient.connect(request.getHost(), request.getPort(),
+							request.isSsl());
+
+					httpClient.sendRequestHeader(request.getHeader());
+					httpClient.sendRequestContent(request.getContent());
+					conversation.setRequest(request);
+					conversation.setRequestTime(System.currentTimeMillis());
+
+					byte[] responseHeader = httpClient.getResponseHeader();
+					Response response = new Response();
+					response.setHeader(responseHeader);
+					conversation.setResponse(response);
+					conversation.setResponseHeaderTime(System
+							.currentTimeMillis());
+
+					String orig = httpClient.getConnection();
 					StringBuilder connection = new StringBuilder();
 					connection.append("[");
 					connection.append(socket.getRemoteSocketAddress());
@@ -359,7 +373,19 @@ public class ConnectionHandler implements Runnable {
 					try {
 						// message only contains headers at this point
 						out.write(conversation.getResponse().getHeader());
-						httpClient.fetchResponseContent(out);
+						copy.reset();
+						InputStream responseContent = httpClient
+								.getResponseContent();
+						responseContent = new CopyInputStream(responseContent,
+								new OutputStream[] { copy, out });
+						byte[] buff = new byte[1024];
+						while (responseContent.read(buff) > -1)
+							;
+						conversation.getResponse().setContent(
+								copy.toByteArray());
+						copy.reset();
+						conversation.setResponseContentTime(System
+								.currentTimeMillis());
 						wroteResponseToBrowser(conversation);
 					} catch (IOException ioe) {
 						errorFetchingResponseContent(conversation, ioe);
@@ -367,7 +393,19 @@ public class ConnectionHandler implements Runnable {
 					}
 				} else {
 					try {
-						httpClient.fetchResponseContent(null);
+						copy.reset();
+						InputStream responseContent = httpClient
+								.getResponseContent();
+						responseContent = new CopyInputStream(responseContent,
+								copy);
+						byte[] buff = new byte[1024];
+						while (responseContent.read(buff) > -1)
+							;
+						conversation.getResponse().setContent(
+								copy.toByteArray());
+						copy.reset();
+						conversation.setResponseContentTime(System
+								.currentTimeMillis());
 						responseContentBuffered(conversation);
 					} catch (IOException ioe) {
 						errorFetchingResponseContent(conversation, ioe);
@@ -410,7 +448,7 @@ public class ConnectionHandler implements Runnable {
 				}
 			if (httpClient != null) {
 				try {
-					httpClient.close();
+					httpClient.disconnect();
 				} catch (IOException ignore) {
 				}
 			}
