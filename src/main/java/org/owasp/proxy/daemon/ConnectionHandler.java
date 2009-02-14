@@ -225,6 +225,8 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	public void run() {
+		connectionFromClient(socket);
+
 		if (clientFactory == null)
 			clientFactory = new DefaultHttpClientFactory();
 		try {
@@ -322,6 +324,7 @@ public class ConnectionHandler implements Runnable {
 						httpClient = clientFactory.createHttpClient();
 					httpClient.connect(request.getHost(), request.getPort(),
 							request.isSsl());
+					connectedToServer(httpClient.getSocket());
 
 					httpClient.sendRequestHeader(request.getHeader());
 					httpClient.sendRequestContent(request.getContent());
@@ -334,13 +337,7 @@ public class ConnectionHandler implements Runnable {
 
 					version = header.getVersion();
 					connection = header.getHeader("Connection");
-					// String orig = httpClient.getConnection();
-					// StringBuilder connection = new StringBuilder();
-					// connection.append("[");
-					// connection.append(socket.getRemoteSocketAddress());
-					// connection.append("->");
-					// connection.append(socket.getLocalSocketAddress());
-					// connection.append("]-[").append(orig).append("]");
+
 					InputStream content = httpClient.getResponseContent();
 					responseReceived(request, header, content, out);
 					out.flush();
@@ -399,6 +396,24 @@ public class ConnectionHandler implements Runnable {
 		return null;
 	}
 
+	private void connectionFromClient(Socket socket) {
+		if (monitor != null)
+			try {
+				monitor.connectionFromClient(socket);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
+	private void connectedToServer(Socket socket) {
+		if (monitor != null)
+			try {
+				monitor.connectedToServer(socket);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+	}
+
 	private Response requestReceived(Request request) {
 		if (monitor != null)
 			try {
@@ -430,13 +445,20 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private void responseReceived(Request request, ResponseHeader header,
-			InputStream content, OutputStream client) {
-		if (monitor != null)
+			InputStream content, OutputStream client) throws IOException {
+		if (monitor != null) {
 			try {
 				monitor.responseReceived(request, header, content, client);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+		} else {
+			client.write(header.getHeader());
+			byte[] buff = new byte[1024];
+			int got;
+			while ((got = content.read(buff)) > -1)
+				client.write(buff, 0, got);
+		}
 	}
 
 }

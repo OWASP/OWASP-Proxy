@@ -1,13 +1,22 @@
 package org.owasp.proxy.daemon;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
 import org.owasp.httpclient.ResponseHeader;
 
 public interface ProxyMonitor {
+
+	/**
+	 * Called when a connection is made to the proxy that is being monitored
+	 * 
+	 * @param socket
+	 */
+	void connectionFromClient(Socket socket);
 
 	/**
 	 * Called when the complete request has been read from the server.
@@ -30,6 +39,13 @@ public interface ProxyMonitor {
 	 */
 	Response errorReadingRequest(Request request, Exception e);
 
+	/**
+	 * called when the proxy has made a connection to the server
+	 * 
+	 * @param socket
+	 */
+	void connectedToServer(Socket socket);
+
 	void requestSent(Request request);
 
 	/**
@@ -50,7 +66,8 @@ public interface ProxyMonitor {
 	 *            an OutputStream connected to the client
 	 */
 	void responseReceived(Request request, ResponseHeader header,
-			InputStream responseContent, OutputStream client);
+			InputStream responseContent, OutputStream client)
+			throws IOException;
 
 	/**
 	 * called in the event of an exception while reading the response headers

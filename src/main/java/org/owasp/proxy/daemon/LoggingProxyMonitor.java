@@ -45,7 +45,8 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
 	@Override
 	public void responseReceived(Request request, ResponseHeader header,
-			InputStream responseContent, OutputStream client) {
+			InputStream responseContent, OutputStream client)
+			throws IOException {
 		try {
 			long start = System.currentTimeMillis();
 

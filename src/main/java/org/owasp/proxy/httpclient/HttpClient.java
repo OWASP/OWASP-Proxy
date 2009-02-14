@@ -3,6 +3,7 @@ package org.owasp.proxy.httpclient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.Socket;
 import java.net.SocketAddress;
 
 import org.owasp.proxy.daemon.Listener;
@@ -31,9 +32,8 @@ public class HttpClient extends org.owasp.httpclient.Client {
 		}
 	}
 
-	public String getConnection() {
-		return socket.getLocalSocketAddress().toString() + "->"
-				+ socket.getRemoteSocketAddress().toString();
+	public Socket getSocket() {
+		return socket;
 	}
 
 }

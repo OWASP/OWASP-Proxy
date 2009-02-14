@@ -3,6 +3,7 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
@@ -43,17 +44,32 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 	}
 
 	public void responseReceived(Request request, ResponseHeader header,
-			InputStream responseContent, OutputStream client) {
-		try {
-			client.write(header.getHeader());
-			byte[] buff = new byte[1024];
-			int got;
-			while ((got = responseContent.read(buff)) > -1)
-				client.write(buff, 0, got);
-			client.flush();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
+			InputStream responseContent, OutputStream client)
+			throws IOException {
+		client.write(header.getHeader());
+		byte[] buff = new byte[1024];
+		int got;
+		while ((got = responseContent.read(buff)) > -1)
+			client.write(buff, 0, got);
+		client.flush();
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ProxyMonitor#connectedToServer(java.net.Socket)
+	 */
+	public void connectedToServer(Socket socket) {
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ProxyMonitor#connectionFromClient(java.net.Socket)
+	 */
+	public void connectionFromClient(Socket socket) {
 	}
 
 }

@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.Socket;
 
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
@@ -12,6 +13,8 @@ import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.model.Conversation;
 
 public class BufferedProxyMonitorAdapter implements ProxyMonitor {
+
+	private ThreadLocal<Conversation> conversation = new ThreadLocal<Conversation>();
 
 	private BufferedProxyMonitor monitor;
 
@@ -45,15 +48,17 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 	}
 
 	public void requestSent(Request request) {
-
+		Conversation c = conversation.get();
+		c.setRequestTime(System.currentTimeMillis());
 	}
 
 	public void responseReceived(Request request, ResponseHeader header,
-			InputStream responseContent, OutputStream client) {
+			InputStream responseContent, OutputStream client)
+			throws IOException {
 		org.owasp.proxy.model.Request r = new org.owasp.proxy.model.Request();
 		copy(request, r);
-		Conversation c = new Conversation(); // FIXME save the conversation from
-		// call to call
+		Conversation c = conversation.get();
+		c.setResponseHeaderTime(System.currentTimeMillis());
 		c.setRequest(r);
 		org.owasp.proxy.model.Response resp = new org.owasp.proxy.model.Response();
 		resp.setHeader(header.getHeader());
@@ -70,6 +75,7 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 				while (in.read(buff) > -1)
 					;
 				resp.setContent(copy.toByteArray());
+				c.setResponseContentTime(System.currentTimeMillis());
 				monitor.wroteResponseToBrowser(c);
 			} catch (IOException ioe) {
 				monitor.errorFetchingResponseContent(c, ioe);
@@ -83,6 +89,7 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 					;
 				resp.setContent(copy.toByteArray());
 				monitor.responseContentBuffered(c);
+				c.setResponseContentTime(System.currentTimeMillis());
 				try {
 					client.write(resp.getHeader());
 					client.write(resp.getContent());
@@ -103,4 +110,39 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 		b.setHeader(a.getHeader());
 		b.setContent(a.getContent());
 	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ProxyMonitor#connectedToServer(java.net.Socket)
+	 */
+	public void connectedToServer(Socket socket) {
+		Conversation c = conversation.get();
+		String orig = c.getConnection();
+		StringBuilder connection = new StringBuilder();
+		connection.append("[").append(orig).append("]-[");
+		connection.append(socket.getRemoteSocketAddress());
+		connection.append("->");
+		connection.append(socket.getLocalSocketAddress());
+		connection.append("]");
+		c.setConnection(connection.toString());
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ProxyMonitor#connectionFromClient(java.net.Socket)
+	 */
+	public void connectionFromClient(Socket socket) {
+		Conversation c = new Conversation();
+		StringBuilder connection = new StringBuilder();
+		connection.append(socket.getRemoteSocketAddress());
+		connection.append("->");
+		connection.append(socket.getLocalSocketAddress());
+		c.setConnection(connection.toString());
+		conversation.set(c);
+	}
+
 }
