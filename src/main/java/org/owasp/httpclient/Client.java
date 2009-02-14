@@ -165,8 +165,6 @@ public class Client {
 	}
 
 	public void connect(String host, int port, boolean ssl) throws IOException {
-		if (state != State.DISCONNECTED)
-			disconnect();
 		if (host == null)
 			throw new IllegalArgumentException(
 					"Host is not set, don't know where to connect to!");
@@ -185,7 +183,9 @@ public class Client {
 		List<Proxy> proxies = getProxySelector().select(uri);
 
 		if (isConnected(target)) {
-			return;
+			if (state == State.RESPONSE_CONTENT_READ)
+				return;
+			disconnect();
 		} else if (socket != null && !socket.isClosed()) {
 			try {
 				socket.close();
