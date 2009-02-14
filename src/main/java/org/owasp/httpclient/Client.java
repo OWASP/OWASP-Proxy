@@ -94,8 +94,7 @@ public class Client {
 		return state;
 	}
 
-	protected boolean checkLoop(SocketAddress target) {
-		return false;
+	protected void checkLoop(SocketAddress target) throws IOException {
 	}
 
 	private URI constructUri(boolean ssl, String host, int port)
