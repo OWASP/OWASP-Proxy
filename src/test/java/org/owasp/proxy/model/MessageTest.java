@@ -28,9 +28,9 @@ import static org.junit.Assert.fail;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
+import org.owasp.httpclient.util.AsciiString;
 
 /**
  * @author Rogan Dawes
@@ -63,8 +63,8 @@ public class MessageTest {
 	@Test
 	public void testGetSetMessage() throws Exception {
 		Message m = new Message();
-		m.setMessage(AsciiString.getBytes(get + CRLFCRLF));
-		String s = AsciiString.create(m.getMessage());
+		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
+		String s = AsciiString.create(m.getHeader());
 		assertEquals(get + CRLFCRLF, s);
 	}
 
@@ -74,7 +74,8 @@ public class MessageTest {
 	@Test
 	public void testGetHeader() throws Exception {
 		Message m = new Message();
-		m.setMessage(AsciiString.getBytes(post + CRLFCRLF + content));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
+		m.setContent(AsciiString.getBytes(content));
 		assertEquals(post + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
@@ -94,7 +95,8 @@ public class MessageTest {
 	@Test
 	public void testGetContent() throws Exception {
 		Message m = new Message();
-		m.setMessage(AsciiString.getBytes(post + CRLFCRLF + content));
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
+		m.setContent(AsciiString.getBytes(content));
 		assertEquals(content, AsciiString.create(m.getContent()));
 	}
 
@@ -106,8 +108,8 @@ public class MessageTest {
 		Message m = new Message();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.setContent(AsciiString.getBytes(content));
-		assertEquals(post + CRLFCRLF + content, AsciiString.create(m
-				.getMessage()));
+		assertEquals(post + CRLFCRLF, AsciiString.create(m.getHeader()));
+		assertEquals(content, AsciiString.create(m.getContent()));
 	}
 
 	/**

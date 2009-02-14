@@ -23,7 +23,7 @@
  * Created on May 12, 2003, 11:10 PM
  */
 
-package org.owasp.httpclient;
+package org.owasp.httpclient.io;
 
 import java.io.IOException;
 import java.io.InputStream;

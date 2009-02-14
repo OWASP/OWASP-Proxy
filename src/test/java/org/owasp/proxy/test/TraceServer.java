@@ -155,8 +155,9 @@ public class TraceServer implements Runnable {
 					}
 
 					// Get the request content (if any) from the stream,
+					copy.reset();
 					if (Request.flushContent(request, in, null))
-						request.setMessage(copy.toByteArray());
+						request.setContent(copy.toByteArray());
 
 					if (verbose) {
 						System.out.write(request.getHeader());
@@ -171,14 +172,19 @@ public class TraceServer implements Runnable {
 						ByteArrayOutputStream baos = new ByteArrayOutputStream();
 						ChunkedOutputStream cos = new ChunkedOutputStream(baos,
 								16);
-						cos.write(request.getMessage());
+						cos.write(request.getHeader());
+						if (request.getContent() != null)
+							out.write(request.getContent());
 						cos.close();
 						response.setContent(baos.toByteArray());
 					} else {
 						response.setContent(request.getMessage());
 					}
-					if (verbose)
-						System.out.write(response.getMessage());
+					if (verbose) {
+						System.out.write(response.getHeader());
+						if (response.getContent() != null)
+							System.out.write(response.getContent());
+					}
 
 					out.write(response.getHeader());
 					if (response.getContent() != null)

@@ -27,7 +27,7 @@ import java.io.InputStream;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.httpclient.ChunkedInputStream;
+import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.Request;
 import org.owasp.proxy.test.TraceServer;
@@ -68,7 +68,8 @@ public class HttpClientTest {
 				+ (c.getResponseHeaderTime() - c.getRequestTime()));
 		System.out.println("Content: "
 				+ (c.getResponseContentTime() - c.getResponseHeaderTime()));
-		System.out.write(c.getResponse().getMessage());
+		System.out.write(c.getResponse().getHeader());
+		System.out.write(c.getResponse().getContent());
 	}
 
 	// @Test

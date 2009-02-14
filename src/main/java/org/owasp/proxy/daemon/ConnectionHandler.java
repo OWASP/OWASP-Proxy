@@ -14,8 +14,8 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
@@ -190,12 +190,13 @@ public class ConnectionHandler implements Runnable {
 				return null;
 
 			request = new Request();
-			request.setMessage(headerBytes);
+			request.setHeader(headerBytes);
 			headerBytes = null;
 
 			// Get the request content (if any) from the stream,
+			copy.reset();
 			if (Request.flushContent(request, in))
-				request.setMessage(copy.toByteArray());
+				request.setContent(copy.toByteArray());
 
 			// clear the stream copy
 			copy.reset();

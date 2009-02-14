@@ -4,8 +4,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.dao.ConversationDAO;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;

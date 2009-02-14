@@ -26,6 +26,10 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.httpclient.io.ChunkedInputStream;
+import org.owasp.httpclient.io.FixedLengthInputStream;
+import org.owasp.httpclient.util.AsciiString;
+
 public class Client {
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {

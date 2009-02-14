@@ -13,6 +13,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
 import org.owasp.proxy.model.Request;
@@ -164,7 +165,7 @@ public class JdbcConversationDAOTest {
 
 	private Request constructRequest() {
 		Request r = new Request();
-		r.setMessage("GET / HTTP/1.0\r\n\r\n".getBytes());
+		r.setHeader(AsciiString.getBytes("GET / HTTP/1.0\r\n\r\n"));
 		r.setHost("localhost");
 		r.setPort(80);
 		r.setSsl(false);
@@ -173,8 +174,9 @@ public class JdbcConversationDAOTest {
 
 	private Response constructResponse() {
 		Response r = new Response();
-		r.setMessage(("HTTP/1.0 200 Ok blah\r\n"
-				+ "Content-Type: text\r\n\r\ncontent").getBytes());
+		r.setHeader(AsciiString.getBytes("HTTP/1.0 200 Ok blah\r\n"
+				+ "Content-Type: text\r\n\r\n"));
+		r.setContent(AsciiString.getBytes("content"));
 		return r;
 	}
 

@@ -39,10 +39,10 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.AddressResolver;
-import org.owasp.httpclient.AsciiString;
 import org.owasp.httpclient.DefaultSSLContextSelector;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.SSLContextSelector;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.SizeLimitedByteArrayOutputStream;
@@ -385,7 +385,8 @@ public class HttpClient {
 
 		long responseHeaderTime = System.currentTimeMillis();
 		Response response = new Response();
-		response.setMessage(copy.toByteArray());
+		response.setHeader(copy.toByteArray());
+		copy.reset();
 		if (!"200".equals(response.getStatus())) {
 			conversation.setRequest(request);
 			conversation.setRequestTime(requestTime);
@@ -393,7 +394,8 @@ public class HttpClient {
 			conversation.setResponseHeaderTime(responseHeaderTime);
 			if (Response.flushContent(request.getMethod(), response, in)) {
 				conversation.setResponseContentTime(System.currentTimeMillis());
-				response.setMessage(copy.toByteArray());
+				response.setContent(copy.toByteArray());
+				copy.reset();
 				conversation.setResponse(response);
 			}
 			socket.close();
@@ -437,14 +439,14 @@ public class HttpClient {
 		}
 
 		Response response = new Response();
-		response.setMessage(copy.toByteArray());
+		response.setHeader(copy.toByteArray());
 
 		if ("100".equals(response.getStatus())) { // 100 Continue, expect
 			// another set of headers
 			// read the next header
 			while (!"".equals(in.readLine()))
 				System.err.println("'");
-			response.setMessage(copy.toByteArray());
+			response.setHeader(copy.toByteArray());
 		}
 
 		conversation.setResponse(response);

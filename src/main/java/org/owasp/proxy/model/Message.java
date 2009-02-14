@@ -27,11 +27,11 @@ import java.io.OutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-import org.owasp.httpclient.AsciiString;
-import org.owasp.httpclient.ChunkedInputStream;
-import org.owasp.httpclient.FixedLengthInputStream;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MessageHeader;
+import org.owasp.httpclient.io.ChunkedInputStream;
+import org.owasp.httpclient.io.FixedLengthInputStream;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.io.ChunkedOutputStream;
 
 /**
@@ -48,8 +48,6 @@ import org.owasp.proxy.io.ChunkedOutputStream;
 public class Message extends MessageHeader {
 
 	private int id = -1;
-
-	private static byte[] CRLFCRLF = new byte[] { 0x0D, 0x0A, 0x0D, 0x0A };
 
 	private byte[] content = null;
 
@@ -78,54 +76,6 @@ public class Message extends MessageHeader {
 		}
 		return header;
 	}
-
-	/**
-	 * @param message
-	 */
-	public void setMessage(byte[] message) {
-		if (message == null || message.length == 0) {
-			setHeader(null);
-			setContent(null);
-		} else {
-			int sep = findSeparator(message, CRLFCRLF, 0);
-			if (sep != -1 && sep < message.length) {
-				byte[] header = new byte[sep + 4];
-				System.arraycopy(message, 0, header, 0, sep + 4);
-				byte[] content = new byte[message.length - (sep + 4)];
-				System.arraycopy(message, sep + 4, content, 0, content.length);
-				setHeader(header);
-				setContent(content);
-			} else {
-				setHeader(message);
-			}
-		}
-	}
-
-	//
-	// public void setMessage(byte[] message, byte[] separator) {
-	// this.message = message;
-	// this.separator = separator;
-	// clearCaches();
-	// }
-	//
-	// /**
-	// * @param header
-	// * @param separator
-	// * @param content
-	// */
-	// public void setMessage(byte[] header, byte[] separator, byte[] content) {
-	// byte[] message = new byte[header.length + separator.length
-	// + (content == null ? 0 : content.length)];
-	// System.arraycopy(header, 0, message, 0, header.length);
-	// System
-	// .arraycopy(separator, 0, message, header.length,
-	// separator.length);
-	// if (content != null)
-	// System.arraycopy(content, 0, message, header.length
-	// + separator.length, content.length);
-	// setMessage(message, separator);
-	// }
-	//
 
 	/**
 	 * @return

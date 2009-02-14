@@ -32,6 +32,7 @@ import java.util.Arrays;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.proxy.io.ChunkedOutputStream;
 
 public class ChunkedInputStreamTest {

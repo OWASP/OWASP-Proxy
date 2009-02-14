@@ -3,6 +3,8 @@ package org.owasp.httpclient;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.owasp.httpclient.util.AsciiString;
+
 /**
  * The MessageHeader class is the base class for the HTTP Message, Request and
  * Response classes.

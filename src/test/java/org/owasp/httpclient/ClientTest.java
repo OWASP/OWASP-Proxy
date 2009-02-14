@@ -27,6 +27,7 @@ import java.io.InputStream;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.proxy.test.TraceServer;
 
 public class ClientTest {
