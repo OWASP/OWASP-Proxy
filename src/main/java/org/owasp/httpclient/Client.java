@@ -57,7 +57,7 @@ public class Client {
 
 	private AddressResolver resolver = null;
 
-	private Socket socket = null;
+	protected Socket socket = null;
 
 	private InetSocketAddress target = null;
 
