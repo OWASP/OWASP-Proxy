@@ -16,6 +16,7 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.util.AsciiString;
+import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
@@ -195,7 +196,8 @@ public class ConnectionHandler implements Runnable {
 
 			// Get the request content (if any) from the stream,
 			copy.reset();
-			if (Request.flushContent(request, in))
+			if (MessageUtils.expectContent(request)
+					&& MessageUtils.flushContent(request, in))
 				request.setContent(copy.toByteArray());
 
 			// clear the stream copy

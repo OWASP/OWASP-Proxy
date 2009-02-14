@@ -33,7 +33,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.owasp.httpclient.io.ChunkedInputStream;
-import org.owasp.proxy.io.ChunkedOutputStream;
+import org.owasp.httpclient.io.ChunkedOutputStream;
 
 public class ChunkedInputStreamTest {
 

@@ -6,6 +6,7 @@ import java.util.List;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.util.AsciiString;
+import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.dao.ConversationDAO;
 import org.owasp.proxy.model.Conversation;
 import org.owasp.proxy.model.ConversationSummary;
@@ -245,7 +246,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 		Request r = dao.findRequest(id);
 		Response response = new Response();
 		response.setHeader(SUCCESS_OCTET);
-		response.setContent(r.getMessage());
+		response.setContent(MessageUtils.getMessage(r));
 		return response;
 	}
 
@@ -253,7 +254,7 @@ public class RecordingProxyMonitor extends DefaultProxyMonitor {
 		Response r = dao.findResponse(id);
 		Response response = new Response();
 		response.setHeader(SUCCESS_OCTET);
-		response.setContent(r.getMessage());
+		response.setContent(MessageUtils.getMessage(r));
 		return response;
 	}
 }

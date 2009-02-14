@@ -92,7 +92,7 @@ public class JdbcConversationDAO extends NamedParameterJdbcDaoSupport implements
 	private final static String CREATE_MESSAGES = "CREATE TABLE messages ("
 			+ "id INTEGER NOT NULL," + "contentType VARCHAR(256), "
 			+ "size INTEGER, " + "header LONGVARBINARY NOT NULL,"
-			+ "content LONGVARBINARY NOT NULL" + ")";
+			+ "content LONGVARBINARY" + ")";
 
 	private final static String CREATE_REQUESTS = "CREATE TABLE requests ("
 			+ "id INTEGER NOT NULL," + "host VARCHAR(255) NOT NULL,"

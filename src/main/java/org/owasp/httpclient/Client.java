@@ -333,7 +333,7 @@ public class Client {
 			header.write(i);
 		if (i == -1)
 			throw new IOException("Unexpected end of stream reading header");
-		ResponseHeader rh = new ResponseHeader();
+		ResponseHeader.Impl rh = new ResponseHeader.Impl();
 		rh.setHeader(header.toByteArray());
 		String status = rh.getStatus();
 		if (status.equals("100")) {

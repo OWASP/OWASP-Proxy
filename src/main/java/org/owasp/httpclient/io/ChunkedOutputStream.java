@@ -17,7 +17,7 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.io;
+package org.owasp.httpclient.io;
 
 import java.io.OutputStream;
 import java.io.FilterOutputStream;

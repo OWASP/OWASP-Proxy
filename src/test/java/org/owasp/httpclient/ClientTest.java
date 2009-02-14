@@ -67,7 +67,7 @@ public class ClientTest {
 		assertEquals(request.length(), read);
 	}
 
-	@Test
+	// @Test
 	public void testChunked() throws Exception {
 		Client client = new Client();
 		client.connect("www.google.co.za", 80, false);
@@ -76,7 +76,7 @@ public class ClientTest {
 		client.sendRequestHeader(request.getBytes());
 		byte[] responseHeader = client.getResponseHeader();
 		System.out.write(responseHeader);
-		MessageHeader mh = new MessageHeader();
+		MessageHeader mh = new MessageHeader.Impl();
 		mh.setHeader(responseHeader);
 		InputStream is = client.getResponseContent();
 		if ("chunked".equalsIgnoreCase(mh.getHeader("Transfer-Encoding")))

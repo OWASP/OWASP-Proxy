@@ -43,6 +43,7 @@ import org.owasp.httpclient.DefaultSSLContextSelector;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.httpclient.util.AsciiString;
+import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.SizeLimitedByteArrayOutputStream;
@@ -392,7 +393,8 @@ public class HttpClient {
 			conversation.setRequestTime(requestTime);
 			conversation.setResponse(response);
 			conversation.setResponseHeaderTime(responseHeaderTime);
-			if (Response.flushContent(request.getMethod(), response, in)) {
+			if (MessageUtils.expectContent(request, response)
+					&& MessageUtils.flushContent(response, in)) {
 				conversation.setResponseContentTime(System.currentTimeMillis());
 				response.setContent(copy.toByteArray());
 				copy.reset();
@@ -455,9 +457,10 @@ public class HttpClient {
 
 	private void readResponseBody() throws MessageFormatException, IOException {
 		copy = new SizeLimitedByteArrayOutputStream(maxResponseSize);
+		Request request = conversation.getRequest();
 		Response response = conversation.getResponse();
-		if (Response.flushContent(conversation.getRequest().getMethod(),
-				response, in)) {
+		if (MessageUtils.expectContent(request, response)
+				&& MessageUtils.flushContent(response, in)) {
 			conversation.setResponseContentTime(System.currentTimeMillis());
 			if (!copy.hasOverflowed()) {
 				response.setContent(copy.toByteArray());

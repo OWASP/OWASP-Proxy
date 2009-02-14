@@ -29,10 +29,11 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import org.owasp.proxy.io.ChunkedOutputStream;
+import org.owasp.httpclient.Request;
+import org.owasp.httpclient.Response;
+import org.owasp.httpclient.io.ChunkedOutputStream;
+import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.io.CopyInputStream;
-import org.owasp.proxy.model.Request;
-import org.owasp.proxy.model.Response;
 
 public class TraceServer implements Runnable {
 
@@ -150,13 +151,14 @@ public class TraceServer implements Runnable {
 						if (headerBytes == null || headerBytes.length == 0)
 							return;
 
-						request = new Request();
+						request = new Request.Impl();
 						request.setHeader(headerBytes);
 					}
 
 					// Get the request content (if any) from the stream,
 					copy.reset();
-					if (Request.flushContent(request, in, null))
+					if (MessageUtils.expectContent(request)
+							&& MessageUtils.flushContent(request, in))
 						request.setContent(copy.toByteArray());
 
 					if (verbose) {
@@ -165,7 +167,7 @@ public class TraceServer implements Runnable {
 							System.out.write(request.getContent());
 					}
 
-					Response response = new Response();
+					Response response = new Response.Impl();
 					response.setStartLine(version + " 200 Ok");
 					if (chunked) {
 						response.setHeader("Transfer-Encoding", "chunked");
@@ -178,7 +180,7 @@ public class TraceServer implements Runnable {
 						cos.close();
 						response.setContent(baos.toByteArray());
 					} else {
-						response.setContent(request.getMessage());
+						response.setContent(MessageUtils.getMessage(request));
 					}
 					if (verbose) {
 						System.out.write(response.getHeader());

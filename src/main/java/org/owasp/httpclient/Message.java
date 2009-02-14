@@ -17,19 +17,29 @@
  *  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-package org.owasp.proxy.model;
+package org.owasp.httpclient;
 
-public class Response extends org.owasp.httpclient.Response.Impl implements
-		Message {
+/**
+ * Finally, there are two methods that operate on the content, processing it
+ * according to the Content-Encoding and Transfer-Encoding headers:
+ * <ul>
+ * <li>getEntity()</li>
+ * <li>setEntity(byte[])</li>
+ * </ul>
+ * 
+ * @author Rogan Dawes
+ * 
+ */
+public interface Message extends MessageHeader {
 
-	private int id;
+	/**
+	 * @return
+	 */
+	byte[] getContent();
 
-	public void setId(int id) {
-		this.id = id;
-	}
-
-	public int getId() {
-		return id;
-	}
+	/**
+	 * @param content
+	 */
+	void setContent(byte[] content);
 
 }
