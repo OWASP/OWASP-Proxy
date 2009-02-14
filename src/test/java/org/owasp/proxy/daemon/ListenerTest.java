@@ -37,6 +37,7 @@ import java.net.URLConnection;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.owasp.proxy.test.TraceServer;
 
@@ -126,6 +127,7 @@ public class ListenerTest {
 	}
 
 	@Test
+	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
 		Listener l = new Listener(9998);
