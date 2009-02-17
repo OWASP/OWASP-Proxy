@@ -40,6 +40,8 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 	}
 
 	public Response requestReceived(Request request) {
+		Conversation c = new Conversation();
+		conversation.set(c);
 		org.owasp.proxy.model.Request r = new org.owasp.proxy.model.Request();
 		copy(request, r);
 		Response response = monitor.requestReceived(r);
@@ -115,34 +117,9 @@ public class BufferedProxyMonitorAdapter implements ProxyMonitor {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#connectedToServer(java.net.Socket)
-	 */
-	public void connectedToServer(Socket socket) {
-		Conversation c = conversation.get();
-		String orig = c.getConnection();
-		StringBuilder connection = new StringBuilder();
-		connection.append("[").append(orig).append("]-[");
-		connection.append(socket.getRemoteSocketAddress());
-		connection.append("->");
-		connection.append(socket.getLocalSocketAddress());
-		connection.append("]");
-		c.setConnection(connection.toString());
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
 	 * org.owasp.proxy.daemon.ProxyMonitor#connectionFromClient(java.net.Socket)
 	 */
 	public void connectionFromClient(Socket socket) {
-		Conversation c = new Conversation();
-		StringBuilder connection = new StringBuilder();
-		connection.append(socket.getRemoteSocketAddress());
-		connection.append("->");
-		connection.append(socket.getLocalSocketAddress());
-		c.setConnection(connection.toString());
-		conversation.set(c);
 	}
 
 }

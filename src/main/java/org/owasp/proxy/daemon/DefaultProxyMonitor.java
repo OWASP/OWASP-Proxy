@@ -58,15 +58,6 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 	 * (non-Javadoc)
 	 * 
 	 * @see
-	 * org.owasp.proxy.daemon.ProxyMonitor#connectedToServer(java.net.Socket)
-	 */
-	public void connectedToServer(Socket socket) {
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
 	 * org.owasp.proxy.daemon.ProxyMonitor#connectionFromClient(java.net.Socket)
 	 */
 	public void connectionFromClient(Socket socket) {

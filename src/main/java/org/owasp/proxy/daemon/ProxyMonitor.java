@@ -12,7 +12,8 @@ import org.owasp.httpclient.ResponseHeader;
 public interface ProxyMonitor {
 
 	/**
-	 * Called when a connection is made to the proxy that is being monitored
+	 * Called when a connection is made to the proxy that is being monitored. If
+	 * the connection is not permitted, the socket may be closed by the monitor.
 	 * 
 	 * @param socket
 	 */
@@ -38,13 +39,6 @@ public interface ProxyMonitor {
 	 *         default error response
 	 */
 	Response errorReadingRequest(Request request, Exception e);
-
-	/**
-	 * called when the proxy has made a connection to the server
-	 * 
-	 * @param socket
-	 */
-	void connectedToServer(Socket socket);
 
 	void requestSent(Request request);
 

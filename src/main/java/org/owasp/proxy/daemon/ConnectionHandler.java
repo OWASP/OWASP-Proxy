@@ -17,6 +17,7 @@ import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
 import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
@@ -27,21 +28,27 @@ import org.owasp.proxy.model.URI;
 
 public class ConnectionHandler implements Runnable {
 
-	private final static String NO_CERTIFICATE_HEADER = "HTTP/1.0 503 Service unavailable"
-			+ " - SSL server certificate not available\r\n\r\n";
+	private final static byte[] NO_CERTIFICATE_HEADER = AsciiString
+			.getBytes("HTTP/1.0 503 Service unavailable"
+					+ " - SSL server certificate not available\r\n\r\n");
 
-	private final static String NO_CERTIFICATE_MESSAGE = "There is no SSL server certificate available for use";
+	private final static byte[] NO_CERTIFICATE_MESSAGE = AsciiString
+			.getBytes("There is no SSL server certificate available for use");
 
-	private final static String ERROR_HEADER = "HTTP/1.0 500 OWASP Proxy Error\r\n"
-			+ "Content-Type: text/html\r\nConnection: close\r\n\r\n";
+	private final static byte[] ERROR_HEADER = AsciiString
+			.getBytes("HTTP/1.0 500 OWASP Proxy Error\r\n"
+					+ "Content-Type: text/html\r\nConnection: close\r\n\r\n");
 
-	private final static String ERROR_MESSAGE1 = "<html><head><title>OWASP Proxy Error</title></head>"
-			+ "<body><h1>OWASP Proxy Error</h1>"
-			+ "OWASP Proxy encountered an error fetching the following request : <br/><pre>";
+	private final static byte[] ERROR_MESSAGE1 = AsciiString
+			.getBytes("<html><head><title>OWASP Proxy Error</title></head>"
+					+ "<body><h1>OWASP Proxy Error</h1>"
+					+ "OWASP Proxy encountered an error fetching the following request : <br/><pre>");
 
-	private final static String ERROR_MESSAGE2 = "</pre><br/>The error was: <br/><pre>";
+	private final static byte[] ERROR_MESSAGE2 = AsciiString
+			.getBytes("</pre><br/>The error was: <br/><pre>");
 
-	private final static String ERROR_MESSAGE3 = "</pre></body></html>";
+	private final static byte[] ERROR_MESSAGE3 = AsciiString
+			.getBytes("</pre></body></html>");
 
 	private final static Logger logger = Logger
 			.getLogger(ConnectionHandler.class.toString());
@@ -94,14 +101,14 @@ public class ConnectionHandler implements Runnable {
 
 	private void writeErrorResponse(OutputStream out, Request request,
 			Exception e) throws IOException {
-		out.write(ERROR_HEADER.getBytes());
-		out.write(ERROR_MESSAGE1.getBytes());
+		out.write(ERROR_HEADER);
+		out.write(ERROR_MESSAGE1);
 		out.write(request.getHeader());
 		if (request.getContent() != null)
 			out.write(request.getContent());
-		out.write(ERROR_MESSAGE2.getBytes());
+		out.write(ERROR_MESSAGE2);
 		e.printStackTrace(new PrintStream(out));
-		out.write(ERROR_MESSAGE3.getBytes());
+		out.write(ERROR_MESSAGE3);
 	}
 
 	private SSLSocketFactory getSocketFactory(String host, int port)
@@ -131,8 +138,8 @@ public class ConnectionHandler implements Runnable {
 		}
 		SSLSocketFactory socketFactory = getSocketFactory(host, port);
 		if (socketFactory == null) {
-			out.write(NO_CERTIFICATE_HEADER.getBytes());
-			out.write(NO_CERTIFICATE_MESSAGE.getBytes());
+			out.write(NO_CERTIFICATE_HEADER);
+			out.write(NO_CERTIFICATE_MESSAGE);
 			out.flush();
 		} else {
 			out.write("HTTP/1.0 200 Ok\r\n\r\n".getBytes());
@@ -324,7 +331,6 @@ public class ConnectionHandler implements Runnable {
 						httpClient = clientFactory.createHttpClient();
 					httpClient.connect(request.getHost(), request.getPort(),
 							request.isSsl());
-					connectedToServer(httpClient.getSocket());
 
 					httpClient.sendRequestHeader(request.getHeader());
 					httpClient.sendRequestContent(request.getContent());
@@ -400,15 +406,6 @@ public class ConnectionHandler implements Runnable {
 		if (monitor != null)
 			try {
 				monitor.connectionFromClient(socket);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-	}
-
-	private void connectedToServer(Socket socket) {
-		if (monitor != null)
-			try {
-				monitor.connectedToServer(socket);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
