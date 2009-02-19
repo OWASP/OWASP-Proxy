@@ -1,7 +1,8 @@
 package org.owasp.proxy.model;
 
 import org.owasp.httpclient.MessageFormatException;
-
+import org.owasp.httpclient.Request;
+import org.owasp.httpclient.Response;
 
 public class ConversationSummary {
 
@@ -16,18 +17,7 @@ public class ConversationSummary {
 
 	private long requestTime, responseHeaderTime, responseContentTime;
 
-	public ConversationSummary() {}
-	
-	public ConversationSummary(Conversation conversation)
-			throws MessageFormatException {
-		id = conversation.getId();
-		requestTime = conversation.getRequestTime();
-		responseHeaderTime = conversation.getResponseHeaderTime();
-		responseContentTime = conversation.getResponseContentTime();
-		connection = conversation.getConnection();
-		
-		summarizeRequest(conversation.getRequest());
-		summarizeResponse(conversation.getResponse());
+	public ConversationSummary() {
 	}
 
 	public void summarizeRequest(Request request) throws MessageFormatException {
@@ -41,15 +31,16 @@ public class ConversationSummary {
 		byte[] content = request.getContent();
 		requestContentSize = content == null ? 0 : content.length;
 	}
-	
-	public void summarizeResponse(Response response) throws MessageFormatException {
+
+	public void summarizeResponse(Response response)
+			throws MessageFormatException {
 		responseStatus = response.getStatus();
 		responseReason = response.getReason();
 		responseContentType = response.getHeader("Content-Type");
 		byte[] content = response.getContent();
 		responseContentSize = content == null ? 0 : content.length;
 	}
-	
+
 	public long getId() {
 		return id;
 	}

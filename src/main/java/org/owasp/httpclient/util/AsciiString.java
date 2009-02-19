@@ -5,6 +5,8 @@ import java.io.UnsupportedEncodingException;
 public class AsciiString {
 
 	public static String create(byte[] buff) {
+		if (buff == null)
+			return "";
 		try {
 			return new String(buff, "ASCII");
 		} catch (UnsupportedEncodingException uee) {
@@ -14,6 +16,8 @@ public class AsciiString {
 	}
 
 	public static String create(byte[] buff, int off, int len) {
+		if (buff == null)
+			return "";
 		try {
 			return new String(buff, off, len, "ASCII");
 		} catch (UnsupportedEncodingException uee) {

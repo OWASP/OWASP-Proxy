@@ -2,6 +2,18 @@ package org.owasp.httpclient;
 
 public interface RequestHeader extends MessageHeader {
 
+	void setHost(String host);
+
+	String getHost();
+
+	void setPort(int port);
+
+	int getPort();
+
+	void setSsl(boolean ssl);
+
+	boolean isSsl();
+
 	void setMethod(String method) throws MessageFormatException;
 
 	String getMethod() throws MessageFormatException;
@@ -14,7 +26,38 @@ public interface RequestHeader extends MessageHeader {
 
 	String getVersion() throws MessageFormatException;
 
-	public static class Impl extends MessageHeader.Impl {
+	public static class Impl extends MessageHeader.Impl implements
+			RequestHeader {
+
+		private String host;
+
+		private int port;
+
+		private boolean ssl;
+
+		public String getHost() {
+			return host;
+		}
+
+		public void setHost(String host) {
+			this.host = host;
+		}
+
+		public int getPort() {
+			return port;
+		}
+
+		public void setPort(int port) {
+			this.port = port;
+		}
+
+		public boolean isSsl() {
+			return ssl;
+		}
+
+		public void setSsl(boolean ssl) {
+			this.ssl = ssl;
+		}
 
 		@Override
 		protected String[] getStartParts() throws MessageFormatException {
@@ -94,6 +137,12 @@ public interface RequestHeader extends MessageHeader {
 			if (parts.length < 3)
 				return null;
 			return "".equals(parts[2]) ? null : parts[2];
+		}
+
+		@Override
+		public String toString() {
+			return ssl ? "SSL " : "" + host + ":" + port + "\n"
+					+ super.toString();
 		}
 	}
 }

@@ -29,6 +29,10 @@ import org.owasp.httpclient.util.MessageUtils;
  */
 public interface MessageHeader {
 
+	void setId(int id);
+
+	int getId();
+
 	void setHeader(byte[] header);
 
 	byte[] getHeader();
@@ -53,7 +57,17 @@ public interface MessageHeader {
 
 		private static final byte[] CRLF = { '\r', '\n' };
 
+		private int id = -1;
+
 		private byte[] header = null;
+
+		public void setId(int id) {
+			this.id = id;
+		}
+
+		public int getId() {
+			return id;
+		}
 
 		public void setHeader(byte[] header) {
 			this.header = header;
@@ -279,5 +293,11 @@ public interface MessageHeader {
 				}
 			return null;
 		}
+
+		@Override
+		public String toString() {
+			return AsciiString.create(header);
+		}
+
 	}
 }

@@ -1,6 +1,5 @@
 package org.owasp.proxy.daemon;
 
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,6 +9,7 @@ import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
 import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.io.CountingInputStream;
 
 public class LoggingProxyMonitor extends DefaultProxyMonitor {
 
@@ -56,7 +56,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 			long time = System.currentTimeMillis() - start;
 			if (time == 0)
 				time = 1;
-			int size = cis.getBytes();
+			int size = cis.getCount();
 
 			StringBuilder buff = new StringBuilder();
 			buff.append(request.getMethod()).append(" ");
@@ -73,32 +73,4 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 		}
 	}
 
-	private static class CountingInputStream extends FilterInputStream {
-
-		int bytes = 0;
-
-		public CountingInputStream(InputStream in) {
-			super(in);
-		}
-
-		@Override
-		public int read() throws IOException {
-			int result = super.read();
-			if (result != -1)
-				bytes++;
-			return result;
-		}
-
-		@Override
-		public int read(byte[] b, int off, int len) throws IOException {
-			int result = super.read(b, off, len);
-			if (result != -1)
-				bytes += result;
-			return result;
-		}
-
-		public int getBytes() {
-			return bytes;
-		}
-	}
 }
