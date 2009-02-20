@@ -65,7 +65,7 @@ public interface RequestHeader extends MessageHeader {
 			if (parts.length == 3 && parts[2] != null
 					&& parts[2].matches(" \t"))
 				throw new MessageFormatException(
-						"HTTP Version may not contain whitespace");
+						"HTTP Version may not contain whitespace", header);
 			return parts;
 		}
 
@@ -111,7 +111,7 @@ public interface RequestHeader extends MessageHeader {
 		public void setVersion(String version) throws MessageFormatException {
 			if (version != null && version.matches(" \t"))
 				throw new MessageFormatException(
-						"HTTP version may not contain whitespace");
+						"HTTP version may not contain whitespace", header);
 			String[] parts = getStartParts();
 			if (parts.length < 3) {
 				String[] p = new String[3];

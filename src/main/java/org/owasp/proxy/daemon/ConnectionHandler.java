@@ -124,17 +124,17 @@ public class ConnectionHandler implements Runnable {
 		int colon = resource.indexOf(':');
 		if (colon == -1)
 			throw new MessageFormatException("Malformed CONNECT line : '"
-					+ resource + "'");
+					+ resource + "'", request.getHeader());
 		String host = resource.substring(0, colon);
 		if (host.length() == 0)
 			throw new MessageFormatException("Malformed CONNECT line : '"
-					+ resource + "'");
+					+ resource + "'", request.getHeader());
 		int port;
 		try {
 			port = Integer.parseInt(resource.substring(colon + 1));
 		} catch (NumberFormatException nfe) {
 			throw new MessageFormatException("Malformed CONNECT line : '"
-					+ resource + "'");
+					+ resource + "'", request.getHeader());
 		}
 		SSLSocketFactory socketFactory = getSocketFactory(host, port);
 		if (socketFactory == null) {

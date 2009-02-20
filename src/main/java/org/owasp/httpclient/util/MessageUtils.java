@@ -67,7 +67,7 @@ public class MessageUtils {
 					// nothing to do
 				} else
 					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i]);
+							+ algos[i], header.getHeader());
 			}
 			return content;
 		} catch (IOException ioe) {
@@ -99,7 +99,7 @@ public class MessageUtils {
 					// nothing to do
 				} else
 					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i]);
+							+ algos[i], header.getHeader());
 			}
 			return content;
 		} catch (IOException ioe) {

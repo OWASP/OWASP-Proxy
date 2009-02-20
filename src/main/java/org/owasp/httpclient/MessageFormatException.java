@@ -26,16 +26,28 @@ public class MessageFormatException extends Exception {
 	 */
 	private static final long serialVersionUID = -2215306096234406521L;
 
+	private byte[] header = null;
+
 	public MessageFormatException(String message) {
 		super(message);
 	}
 
-	public MessageFormatException(Throwable cause) {
-		super(cause);
+	public MessageFormatException(String message, byte[] header) {
+		super(message);
+		this.header = header;
 	}
 
 	public MessageFormatException(String message, Throwable cause) {
 		super(message, cause);
+	}
+
+	public MessageFormatException(String message, Throwable cause, byte[] header) {
+		super(message, cause);
+		this.header = header;
+	}
+
+	public byte[] getHeader() {
+		return header;
 	}
 
 }

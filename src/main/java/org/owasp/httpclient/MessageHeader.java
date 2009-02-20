@@ -59,7 +59,7 @@ public interface MessageHeader {
 
 		private int id = -1;
 
-		private byte[] header = null;
+		protected byte[] header = null;
 
 		public void setId(int id) {
 			this.id = id;
@@ -198,7 +198,8 @@ public interface MessageHeader {
 			lines[0] = getStartLine();
 			if (lines[0] == null)
 				throw new MessageFormatException(
-						"No start line found, can't set headers without one!");
+						"No start line found, can't set headers without one!",
+						header);
 			if (headers != null)
 				for (int i = 0; i < headers.length; i++) {
 					lines[i + 1] = headers[i].toString();

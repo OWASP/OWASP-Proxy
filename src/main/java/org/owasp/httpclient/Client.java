@@ -273,7 +273,7 @@ public class Client {
 			}
 			if (header[i] == '\r' || header[i] == '\n')
 				throw new MessageFormatException(
-						"Encountered CR or LF when parsing the URI!");
+						"Encountered CR or LF when parsing the URI!", header);
 		}
 		expectResponseContent = !"HEAD".equals(method);
 		if (!direct) {
@@ -283,7 +283,8 @@ public class Client {
 						.getPort()).getBytes());
 				os.write(header, resourceStart, header.length - resourceStart);
 			} else {
-				throw new MessageFormatException("Couldn't parse the URI!");
+				throw new MessageFormatException("Couldn't parse the URI!",
+						header);
 			}
 		} else {
 			os.write(header);
