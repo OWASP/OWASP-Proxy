@@ -53,6 +53,7 @@ public class DefaultCertificateProvider implements CertificateProvider {
 	public SSLSocketFactory getSocketFactory(String host, int port)
 			throws IOException {
 		if (sslSocketFactory == null) {
+			throw new NullPointerException("sslSocketFactory is null!");
 		}
 		return sslSocketFactory;
 	}
