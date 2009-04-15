@@ -8,6 +8,7 @@ import java.io.PrintStream;
 import java.io.PushbackInputStream;
 import java.net.Socket;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
 import javax.net.ssl.SSLSocket;
@@ -113,8 +114,12 @@ public class ConnectionHandler implements Runnable {
 
 	private SSLSocketFactory getSocketFactory(String host, int port)
 			throws IOException {
-		if (certProvider != null)
-			return certProvider.getSocketFactory(host, port);
+		try {
+			if (certProvider != null)
+				return certProvider.getSocketFactory(host, port);
+		} catch (GeneralSecurityException gse) {
+			gse.printStackTrace();
+		}
 		return null;
 	}
 

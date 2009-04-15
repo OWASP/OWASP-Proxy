@@ -2,12 +2,8 @@ package org.owasp.proxy.daemon;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.KeyManagementException;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.UnrecoverableKeyException;
-import java.security.cert.CertificateException;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
@@ -17,16 +13,13 @@ public class DefaultCertificateProvider implements CertificateProvider {
 
 	private SSLSocketFactory sslSocketFactory = null;
 
-	public DefaultCertificateProvider() throws KeyStoreException,
-			CertificateException, NoSuchAlgorithmException, IOException,
-			UnrecoverableKeyException, KeyManagementException {
+	public DefaultCertificateProvider() throws GeneralSecurityException,
+			IOException {
 		this(null, "password", "password");
 	}
 
 	public DefaultCertificateProvider(String resource, String storePassword,
-			String keyPassword) throws KeyStoreException, CertificateException,
-			NoSuchAlgorithmException, IOException, UnrecoverableKeyException,
-			KeyManagementException {
+			String keyPassword) throws GeneralSecurityException, IOException {
 		if (resource == null) {
 			resource = getClass().getPackage().getName().replace('.', '/')
 					+ "/server.p12";
