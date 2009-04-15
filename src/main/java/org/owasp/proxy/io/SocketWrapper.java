@@ -64,7 +64,7 @@ public class SocketWrapper extends Socket {
 	}
 
 	@Override
-	public InputStream getInputStream() throws IOException {
+	public InputStream getInputStream() {
 		return is;
 	}
 
@@ -94,7 +94,7 @@ public class SocketWrapper extends Socket {
 	}
 
 	@Override
-	public OutputStream getOutputStream() throws IOException {
+	public OutputStream getOutputStream() {
 		return os;
 	}
 
