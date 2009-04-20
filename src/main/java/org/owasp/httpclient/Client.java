@@ -254,7 +254,7 @@ public class Client {
 
 	public void sendRequestHeader(byte[] header) throws IOException,
 			MessageFormatException {
-		if (state != State.CONNECTED)
+		if (state != State.CONNECTED && state != State.RESPONSE_CONTENT_READ)
 			throw new IllegalStateException(
 					"Illegal state. Can't send request headers when state is "
 							+ state);
