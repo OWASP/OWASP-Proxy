@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PushbackInputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
@@ -56,40 +57,19 @@ public class ConnectionHandler implements Runnable {
 
 	private Socket socket;
 
+	private Configuration config;
+
 	private boolean targetSsl = false;
-
-	private String targetHost = null;
-
-	private int targetPort = -1;
 
 	private HttpClient httpClient = null;
 
-	private ProxyMonitor monitor;
-
-	private CertificateProvider certProvider = null;
-
-	private HttpClientFactory clientFactory;
-
-	public ConnectionHandler(Socket accept) {
+	public ConnectionHandler(Socket accept, Configuration config) {
 		this.socket = accept;
+		this.config = config;
 	}
 
-	public void setTarget(boolean ssl, String host, int port) {
-		this.targetSsl = ssl;
-		this.targetHost = host;
-		this.targetPort = port;
-	}
-
-	public void setProxyMonitor(ProxyMonitor monitor) {
-		this.monitor = monitor;
-	}
-
-	public void setCertificateProvider(CertificateProvider certProvider) {
-		this.certProvider = certProvider;
-	}
-
-	public void setHttpClientFactory(HttpClientFactory clientFactory) {
-		this.clientFactory = clientFactory;
+	public Configuration getConfiguration() {
+		return config;
 	}
 
 	private Socket negotiateSSL(SSLSocketFactory factory, Socket socket)
@@ -112,11 +92,13 @@ public class ConnectionHandler implements Runnable {
 		out.write(ERROR_MESSAGE3);
 	}
 
-	private SSLSocketFactory getSocketFactory(String host, int port)
+	private SSLSocketFactory getSocketFactory(InetSocketAddress target)
 			throws IOException {
 		try {
+			CertificateProvider certProvider = config.getCertificateProvider();
 			if (certProvider != null)
-				return certProvider.getSocketFactory(host, port);
+				return certProvider.getSocketFactory(target.getHostName(),
+						target.getPort());
 		} catch (GeneralSecurityException gse) {
 			gse.printStackTrace();
 		}
@@ -141,7 +123,9 @@ public class ConnectionHandler implements Runnable {
 			throw new MessageFormatException("Malformed CONNECT line : '"
 					+ resource + "'", request.getHeader());
 		}
-		SSLSocketFactory socketFactory = getSocketFactory(host, port);
+		InetSocketAddress target = InetSocketAddress.createUnresolved(host,
+				port);
+		SSLSocketFactory socketFactory = getSocketFactory(target);
 		if (socketFactory == null) {
 			out.write(NO_CERTIFICATE_HEADER);
 			out.write(NO_CERTIFICATE_MESSAGE);
@@ -154,8 +138,7 @@ public class ConnectionHandler implements Runnable {
 			// connection as an SSL connection
 			socket = negotiateSSL(socketFactory, socket);
 			targetSsl = true;
-			targetHost = host;
-			targetPort = port;
+			config.setTarget(target);
 			run();
 		}
 	}
@@ -239,6 +222,7 @@ public class ConnectionHandler implements Runnable {
 	public void run() {
 		connectionFromClient(socket);
 
+		HttpClientFactory clientFactory = config.getHttpClientFactory();
 		if (clientFactory == null)
 			clientFactory = new DefaultHttpClientFactory();
 		try {
@@ -262,8 +246,8 @@ public class ConnectionHandler implements Runnable {
 					int got = pbis.read(sslsniff);
 					pbis.unread(sslsniff, 0, got);
 					if (isSSL(sslsniff, got)) {
-						SSLSocketFactory factory = getSocketFactory(targetHost,
-								targetPort);
+						SSLSocketFactory factory = getSocketFactory(config
+								.getTarget());
 						if (factory == null)
 							return;
 						SocketWrapper wrapper = new SocketWrapper(socket, pbis,
@@ -323,9 +307,10 @@ public class ConnectionHandler implements Runnable {
 					return;
 				} else if (!request.getResource().startsWith("/")) {
 					extractTargetFromResource(request);
-				} else if (targetHost != null) {
-					request.setHost(targetHost);
-					request.setPort(targetPort);
+				} else if (config.getTarget() != null) {
+					InetSocketAddress target = config.getTarget();
+					request.setHost(target.getHostName());
+					request.setPort(target.getPort());
 					request.setSsl(targetSsl);
 				} else if (request.getHeader("Host") != null) {
 					extractTargetFromHost(request);
@@ -398,6 +383,7 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private Response errorReadingRequest(Request request, Exception e) {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null)
 			try {
 				return monitor.errorReadingRequest(request, e);
@@ -408,6 +394,7 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private void connectionFromClient(Socket socket) {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null)
 			try {
 				monitor.connectionFromClient(socket);
@@ -417,6 +404,7 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private Response requestReceived(Request request) {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null)
 			try {
 				return monitor.requestReceived(request);
@@ -427,6 +415,7 @@ public class ConnectionHandler implements Runnable {
 	}
 
 	private void requestSent(Request request) {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null)
 			try {
 				monitor.requestSent(request);
@@ -437,6 +426,7 @@ public class ConnectionHandler implements Runnable {
 
 	private Response errorReadingResponse(Request request,
 			ResponseHeader header, Exception e) {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null)
 			try {
 				return monitor.errorReadingResponse(request, header, e);
@@ -448,6 +438,7 @@ public class ConnectionHandler implements Runnable {
 
 	private void responseReceived(Request request, ResponseHeader header,
 			InputStream content, OutputStream client) throws IOException {
+		ProxyMonitor monitor = config.getProxyMonitor();
 		if (monitor != null) {
 			try {
 				monitor.responseReceived(request, header, content, client);
@@ -463,4 +454,76 @@ public class ConnectionHandler implements Runnable {
 		}
 	}
 
+	public static class Configuration {
+
+		private InetSocketAddress target = null;
+
+		private ProxyMonitor proxyMonitor = null;
+
+		private CertificateProvider certificateProvider = null;
+
+		private HttpClientFactory httpClientFactory = null;
+
+		/**
+		 * @return the target
+		 */
+		public InetSocketAddress getTarget() {
+			return target;
+		}
+
+		/**
+		 * @param target
+		 *            the target to set
+		 */
+		public void setTarget(InetSocketAddress target) {
+			this.target = target;
+		}
+
+		/**
+		 * @return the proxyMonitor
+		 */
+		public ProxyMonitor getProxyMonitor() {
+			return proxyMonitor;
+		}
+
+		/**
+		 * @param proxyMonitor
+		 *            the proxyMonitor to set
+		 */
+		public void setProxyMonitor(ProxyMonitor proxyMonitor) {
+			this.proxyMonitor = proxyMonitor;
+		}
+
+		/**
+		 * @return the certificateProvider
+		 */
+		public CertificateProvider getCertificateProvider() {
+			return certificateProvider;
+		}
+
+		/**
+		 * @param certificateProvider
+		 *            the certificateProvider to set
+		 */
+		public void setCertificateProvider(
+				CertificateProvider certificateProvider) {
+			this.certificateProvider = certificateProvider;
+		}
+
+		/**
+		 * @return the httpClientFactory
+		 */
+		public HttpClientFactory getHttpClientFactory() {
+			return httpClientFactory;
+		}
+
+		/**
+		 * @param httpClientFactory
+		 *            the httpClientFactory to set
+		 */
+		public void setHttpClientFactory(HttpClientFactory httpClientFactory) {
+			this.httpClientFactory = httpClientFactory;
+		}
+
+	}
 }

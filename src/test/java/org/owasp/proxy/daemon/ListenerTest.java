@@ -25,7 +25,6 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
@@ -36,6 +35,7 @@ import java.net.URL;
 import java.net.URLConnection;
 
 import org.junit.AfterClass;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -44,6 +44,8 @@ import org.owasp.proxy.test.TraceServer;
 public class ListenerTest {
 
 	private static TraceServer ts;
+
+	private Listener.Configuration c;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -58,6 +60,14 @@ public class ListenerTest {
 		}
 	}
 
+	@Before
+	public void setup() throws Exception {
+		InetSocketAddress listen = InetSocketAddress.createUnresolved(
+				"localhost", 9998);
+		c = new Listener.Configuration(listen);
+		c.setProxyMonitor(new LoggingProxyMonitor());
+	}
+
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 		System.err.println("Running shutdown after class");
@@ -68,8 +78,7 @@ public class ListenerTest {
 
 	@Test
 	public void testListenerStartStop() throws Exception {
-		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
-				0, 1 }), 9998);
+		Listener l = new Listener(c);
 		l.start();
 
 		Thread.sleep(1000);
@@ -80,9 +89,7 @@ public class ListenerTest {
 
 	@Test
 	public void testRun() throws Exception {
-		Listener l = new Listener(9998);
-		ProxyMonitor pm = new LoggingProxyMonitor();
-		l.setProxyMonitor(pm);
+		Listener l = new Listener(c);
 		l.start();
 
 		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost",
@@ -130,9 +137,7 @@ public class ListenerTest {
 	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
-		Listener l = new Listener(9998);
-		ProxyMonitor pm = new LoggingProxyMonitor();
-		l.setProxyMonitor(pm);
+		Listener l = new Listener(c);
 		l.start();
 
 		// try {
@@ -160,10 +165,8 @@ public class ListenerTest {
 	 */
 	@Test
 	public void testInitialTimeout() throws Exception {
-		Listener l = new Listener(9998);
-		l.setSocketTimeout(1000);
-		ProxyMonitor pm = new LoggingProxyMonitor();
-		l.setProxyMonitor(pm);
+		c.setSocketTimeout(1000);
+		Listener l = new Listener(c);
 		l.start();
 
 		try {
@@ -203,10 +206,8 @@ public class ListenerTest {
 	@Test
 	public void testSecondTimeout() throws Exception {
 		ts.setVersion("HTTP/1.1");
-		Listener l = new Listener(9998);
-		l.setSocketTimeout(1000);
-		ProxyMonitor pm = new LoggingProxyMonitor();
-		l.setProxyMonitor(pm);
+		c.setSocketTimeout(1000);
+		Listener l = new Listener(c);
 		l.start();
 
 		try {

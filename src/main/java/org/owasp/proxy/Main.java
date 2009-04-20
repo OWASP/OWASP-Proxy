@@ -36,10 +36,15 @@ public class Main {
 			usage();
 			return;
 		}
-		int httpPort, socksPort;
+		Listener.Configuration httpConf, socksConf;
+		InetSocketAddress listen;
 		try {
-			httpPort = Integer.parseInt(args[0]);
-			socksPort = Integer.parseInt(args[1]);
+			int httpPort = Integer.parseInt(args[0]);
+			listen = InetSocketAddress.createUnresolved("localhost", httpPort);
+			httpConf = new Listener.Configuration(listen);
+			int socksPort = Integer.parseInt(args[1]);
+			listen = InetSocketAddress.createUnresolved("localhost", socksPort);
+			socksConf = new Listener.Configuration(listen);
 		} catch (NumberFormatException nfe) {
 			usage();
 			return;
@@ -95,20 +100,24 @@ public class Main {
 		ProxyMonitor lpm = new LoggingProxyMonitor();
 		CertificateProvider cp = new DefaultCertificateProvider();
 
-		Listener l = new Listener(httpPort);
-		l.setProxyMonitor(lpm);
-		l.setCertificateProvider(cp);
-		l.setHttpClientFactory(hcf);
+		httpConf.setCertificateProvider(cp);
+		httpConf.setHttpClientFactory(hcf);
+		httpConf.setProxyMonitor(lpm);
+
+		socksConf.setCertificateProvider(cp);
+		socksConf.setHttpClientFactory(hcf);
+		socksConf.setProxyMonitor(lpm);
+
+		Listener l = new Listener(httpConf);
 		l.start();
 
-		Listener sl = new SocksListener(socksPort);
-		sl.setProxyMonitor(lpm);
-		sl.setCertificateProvider(cp);
-		sl.setHttpClientFactory(hcf);
+		Listener sl = new SocksListener(socksConf);
 		sl.start();
 
-		System.out.println("Http listener started on " + httpPort
-				+ ", SOCKS listener started on " + socksPort);
+		System.out.println("Http listener started on "
+				+ httpConf.getListenerAddress()
+				+ ", SOCKS listener started on "
+				+ socksConf.getListenerAddress());
 		System.out.println("Press Enter to terminate");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
 		sl.stop();

@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
 
@@ -43,13 +44,8 @@ public class SocksListener extends Listener {
 	 * @param auth
 	 *            Authentication scheme to be used.
 	 */
-	public SocksListener(int listenPort) throws IOException {
-		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), listenPort);
-	}
-
-	public SocksListener(InetAddress address, int listenPort)
-			throws IOException {
-		super(address, listenPort);
+	public SocksListener(Configuration config) throws IOException {
+		super(config);
 	}
 
 	public void setAuthenticator(ServerAuthenticator authenticator) {
@@ -65,7 +61,9 @@ public class SocksListener extends Listener {
 		String host = sp.getTargetHost();
 		int port = sp.getTargetPort();
 		ConnectionHandler ch = super.createConnectionHandler(socket);
-		ch.setTarget(false, host, port);
+		InetSocketAddress target = InetSocketAddress.createUnresolved(host,
+				port);
+		ch.getConfiguration().setTarget(target);
 		return ch;
 	}
 
@@ -221,10 +219,12 @@ public class SocksListener extends Listener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Listener l = new SocksListener(InetAddress.getByAddress(new byte[] {
-				127, 0, 0, 1 }), 9997);
-		l.setProxyMonitor(new LoggingProxyMonitor());
-		l.setCertificateProvider(new DefaultCertificateProvider());
+		InetSocketAddress listen = InetSocketAddress.createUnresolved(
+				"localhost", 9997);
+		Configuration c = new Configuration(listen);
+		c.setProxyMonitor(new LoggingProxyMonitor());
+		c.setCertificateProvider(new DefaultCertificateProvider());
+		Listener l = new SocksListener(c);
 		l.start();
 
 		System.out.println("Socks Listener started, press Enter to exit");

@@ -22,7 +22,7 @@ package org.owasp.proxy.daemon;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -65,19 +65,7 @@ import org.owasp.proxy.httpclient.HttpClientFactory;
  */
 public class Listener {
 
-	private boolean ssl = false;
-
-	private String host;
-
-	private int port;
-
-	private int socketTimeout = 60000;
-
-	private CertificateProvider certProvider = null;
-
-	private ProxyMonitor monitor;
-
-	private HttpClientFactory clientFactory;
+	private Configuration config;
 
 	private volatile ServerSocket socket = null;
 
@@ -99,49 +87,22 @@ public class Listener {
 		listenAddresses.remove(addr);
 	}
 
-	public Listener(int listenPort) throws IOException {
-		this(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), listenPort);
-	}
-
-	public Listener(InetAddress address, int listenPort) throws IOException {
-		socket = new ServerSocket(listenPort, 20, address);
+	public Listener(Configuration config) throws IOException {
+		this.config = config;
+		InetSocketAddress listen = config.getListenerAddress();
+		socket = new ServerSocket(listen.getPort(), 20, listen.getAddress());
 		socket.setReuseAddress(true);
-	}
-
-	public void setTarget(boolean ssl, String host, int port) {
-		this.ssl = ssl;
-		this.host = host;
-		this.port = port;
-	}
-
-	public void setProxyMonitor(ProxyMonitor monitor) {
-		this.monitor = monitor;
-	}
-
-	public void setCertificateProvider(CertificateProvider certProvider) {
-		this.certProvider = certProvider;
-	}
-
-	public void setHttpClientFactory(HttpClientFactory clientFactory) {
-		this.clientFactory = clientFactory;
-	}
-
-	public int getSocketTimeout() {
-		return socketTimeout;
-	}
-
-	public void setSocketTimeout(int timeout) {
-		this.socketTimeout = timeout;
 	}
 
 	protected ConnectionHandler createConnectionHandler(Socket socket)
 			throws IOException {
-		socket.setSoTimeout(socketTimeout);
-		ConnectionHandler ch = new ConnectionHandler(socket);
-		ch.setTarget(ssl, host, port);
-		ch.setProxyMonitor(monitor);
-		ch.setCertificateProvider(certProvider);
-		ch.setHttpClientFactory(clientFactory);
+		socket.setSoTimeout(config.getSocketTimeout());
+		ConnectionHandler.Configuration c = new ConnectionHandler.Configuration();
+		c.setTarget(null);
+		c.setProxyMonitor(config.getProxyMonitor());
+		c.setCertificateProvider(config.getCertificateProvider());
+		c.setHttpClientFactory(config.getHttpClientFactory());
+		ConnectionHandler ch = new ConnectionHandler(socket, c);
 		return ch;
 	}
 
@@ -237,11 +198,116 @@ public class Listener {
 		return new HttpClient();
 	}
 
+	public static class Configuration {
+
+		private CertificateProvider certificateProvider;
+
+		private ProxyMonitor proxyMonitor;
+
+		private InetSocketAddress target = null;
+
+		private InetSocketAddress listenerAddress;
+
+		private HttpClientFactory httpClientFactory;
+
+		private int socketTimeout = 60000;
+
+		public Configuration(InetSocketAddress listenerAddress) {
+			this.listenerAddress = listenerAddress;
+		}
+
+		/**
+		 * @return the certificateProvider
+		 */
+		public CertificateProvider getCertificateProvider() {
+			return certificateProvider;
+		}
+
+		/**
+		 * @param certificateProvider
+		 *            the certificateProvider to set
+		 */
+		public void setCertificateProvider(
+				CertificateProvider certificateProvider) {
+			this.certificateProvider = certificateProvider;
+		}
+
+		/**
+		 * @return the httpClientFactory
+		 */
+		public HttpClientFactory getHttpClientFactory() {
+			return httpClientFactory;
+		}
+
+		/**
+		 * @param httpClientFactory
+		 *            the httpClientFactory to set
+		 */
+		public void setHttpClientFactory(HttpClientFactory httpClientFactory) {
+			this.httpClientFactory = httpClientFactory;
+		}
+
+		/**
+		 * @return the proxyMonitor
+		 */
+		public ProxyMonitor getProxyMonitor() {
+			return proxyMonitor;
+		}
+
+		/**
+		 * @param proxyMonitor
+		 *            the proxyMonitor to set
+		 */
+		public void setProxyMonitor(ProxyMonitor proxyMonitor) {
+			this.proxyMonitor = proxyMonitor;
+		}
+
+		/**
+		 * @return the socketTimeout
+		 */
+		public int getSocketTimeout() {
+			return socketTimeout;
+		}
+
+		/**
+		 * @param socketTimeout
+		 *            the socketTimeout to set
+		 */
+		public void setSocketTimeout(int socketTimeout) {
+			this.socketTimeout = socketTimeout;
+		}
+
+		/**
+		 * @return the target
+		 */
+		public InetSocketAddress getTarget() {
+			return target;
+		}
+
+		/**
+		 * @param target
+		 *            the target to set
+		 */
+		public void setTarget(InetSocketAddress target) {
+			this.target = target;
+		}
+
+		/**
+		 * @return the listenerAddress
+		 */
+		public InetSocketAddress getListenerAddress() {
+			return listenerAddress;
+		}
+
+	}
+
 	public static void main(String[] args) throws Exception {
-		Listener l = new Listener(InetAddress.getByAddress(new byte[] { 127, 0,
-				0, 1 }), 9998);
-		l.setProxyMonitor(new LoggingProxyMonitor());
-		l.setCertificateProvider(new DefaultCertificateProvider());
+		InetSocketAddress listener = InetSocketAddress.createUnresolved(
+				"localhost", 9998);
+		Configuration c = new Configuration(listener);
+		c.setProxyMonitor(new LoggingProxyMonitor());
+		c.setCertificateProvider(new DefaultCertificateProvider());
+		Listener l = new Listener(c);
 		l.start();
 
 		System.out.println("Listener started, press Enter to exit");
