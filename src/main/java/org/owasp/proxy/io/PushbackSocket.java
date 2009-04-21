@@ -8,8 +8,8 @@ import java.net.Socket;
 public class PushbackSocket extends SocketWrapper {
 
 	public PushbackSocket(Socket socket) throws IOException {
-		super(socket, new PushbackInputStream(socket.getInputStream()), socket
-				.getOutputStream());
+		super(socket, new PushbackInputStream(socket.getInputStream(), 128),
+				socket.getOutputStream());
 	}
 
 	protected PushbackSocket(Socket socket, PushbackInputStream in,
