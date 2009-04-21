@@ -247,6 +247,11 @@ public class ConnectionHandler implements Runnable {
 					PushbackInputStream pbis = new PushbackInputStream(socket
 							.getInputStream(), sslsniff.length);
 					int got = pbis.read(sslsniff);
+					if (got == -1) {
+						System.err.println("Connection closed?!");
+						return;
+					}
+					System.err.println("Sniffing for SSL, got " + got);
 					pbis.unread(sslsniff, 0, got);
 					if (isSSL(sslsniff, got)) {
 						SSLSocketFactory factory = getSocketFactory(config
