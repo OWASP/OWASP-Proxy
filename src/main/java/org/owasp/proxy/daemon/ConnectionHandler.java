@@ -146,10 +146,13 @@ public class ConnectionHandler implements Runnable {
 	private void readRequest(Request request, CopyInputStream in,
 			ByteArrayOutputStream copy, OutputStream out) throws IOException,
 			MessageFormatException {
+		logger.info("Entering readRequest()");
 		// read the whole header.
 		try {
-			while (!"".equals(in.readLine()))
-				;
+			String line;
+			do {
+				line = in.readLine();
+			} while (line != null && !"".equals(line));
 		} catch (IOException e) {
 			byte[] headerBytes = copy.toByteArray();
 			if (headerBytes == null || headerBytes.length == 0)
@@ -260,6 +263,7 @@ public class ConnectionHandler implements Runnable {
 						sockIn = pbis;
 					}
 				} catch (IOException ioe) {
+					ioe.printStackTrace();
 					// unexpected end of stream (or socket timeout)
 					return;
 				}
