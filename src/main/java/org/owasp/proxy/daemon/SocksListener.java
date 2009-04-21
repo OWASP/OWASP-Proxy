@@ -4,9 +4,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 
 import org.owasp.proxy.daemon.socks.ServerAuthenticator;
+import org.owasp.proxy.io.PushbackSocket;
 
 public class SocksListener extends Listener {
 
@@ -27,7 +27,7 @@ public class SocksListener extends Listener {
 	}
 
 	@Override
-	protected ConnectionHandler createConnectionHandler(Socket socket)
+	protected ConnectionHandler createConnectionHandler(PushbackSocket socket)
 			throws IOException {
 		System.out
 				.println("Connection from " + socket.getRemoteSocketAddress());

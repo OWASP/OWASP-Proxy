@@ -32,6 +32,7 @@ import java.util.logging.Logger;
 
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
+import org.owasp.proxy.io.PushbackSocket;
 
 /**
  * This class implements an intercepting HTTP proxy, which can be customized to
@@ -94,7 +95,7 @@ public class Listener {
 		socket.setReuseAddress(true);
 	}
 
-	protected ConnectionHandler createConnectionHandler(Socket socket)
+	protected ConnectionHandler createConnectionHandler(PushbackSocket socket)
 			throws IOException {
 		socket.setSoTimeout(config.getSocketTimeout());
 		ConnectionHandler.Configuration c = new ConnectionHandler.Configuration();
@@ -106,16 +107,17 @@ public class Listener {
 		return ch;
 	}
 
-	private void handleConnection(final Socket accept) {
+	private void handleConnection(Socket accept) throws IOException {
+		final PushbackSocket pbs = new PushbackSocket(accept);
 		Thread thread = new Thread(new Runnable() {
 
 			public void run() {
 				try {
-					ConnectionHandler ch = createConnectionHandler(accept);
+					ConnectionHandler ch = createConnectionHandler(pbs);
 					ch.run();
 				} catch (IOException ioe) {
 					try {
-						accept.close();
+						pbs.close();
 					} catch (IOException ignore) {
 					}
 					logger.severe("Error creating connection handler!"
