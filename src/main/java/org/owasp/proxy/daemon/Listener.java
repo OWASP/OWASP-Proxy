@@ -22,13 +22,18 @@ package org.owasp.proxy.daemon;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PushbackInputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.security.GeneralSecurityException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
+
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
@@ -95,16 +100,68 @@ public class Listener {
 		socket.setReuseAddress(true);
 	}
 
-	protected ConnectionHandler createConnectionHandler(PushbackSocket socket)
-			throws IOException {
+	private byte[] sniff(PushbackSocket socket) throws IOException {
+		PushbackInputStream in = socket.getInputStream();
+		byte[] sniff = new byte[4];
+		int read = 0, attempt = 0;
+		do {
+			int got = in.read(sniff, read, sniff.length - read);
+			if (got == -1)
+				return null;
+			read += got;
+			attempt++;
+		} while (read < sniff.length && attempt < 4);
+		if (read < sniff.length)
+			throw new IOException("Failed to read 4 bytes in 4 attempts!");
+		in.unread(sniff);
+		return sniff;
+	}
+
+	private boolean isSSL(byte[] sniff) {
+		for (int i = 0; i < sniff.length; i++)
+			if (sniff[i] == 0x03)
+				return true;
+		return false;
+	}
+
+	private SSLSocket negotiateSsl(Socket socket, InetSocketAddress target)
+			throws GeneralSecurityException, IOException {
+		CertificateProvider cp = config.getCertificateProvider();
+		if (cp == null)
+			return null;
+
+		SSLSocketFactory factory = cp.getSocketFactory(target.getHostName(),
+				target.getPort());
+		if (factory == null)
+			return null;
+		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
+				.getInetAddress().getHostName(), socket.getPort(), true);
+		sslsock.setUseClientMode(false);
+		return sslsock;
+	}
+
+	protected ConnectionHandler createConnectionHandler(PushbackSocket socket,
+			ConnectionHandler.Configuration c) throws IOException {
 		socket.setSoTimeout(config.getSocketTimeout());
-		ConnectionHandler.Configuration c = new ConnectionHandler.Configuration();
-		c.setTarget(null);
-		c.setProxyMonitor(config.getProxyMonitor());
-		c.setCertificateProvider(config.getCertificateProvider());
-		c.setHttpClientFactory(config.getHttpClientFactory());
-		ConnectionHandler ch = new ConnectionHandler(socket, c);
-		return ch;
+
+		// check if it is an SSL connection
+		byte[] sniff = sniff(socket);
+		if (sniff == null) // connection closed
+			return null;
+
+		if (isSSL(sniff)) {
+			c.setSsl(true);
+			try {
+				return new ConnectionHandler(
+						negotiateSsl(socket, c.getTarget()), c);
+			} catch (GeneralSecurityException gse) {
+				gse.printStackTrace();
+				socket.close();
+				return null;
+			}
+		} else {
+			return new ConnectionHandler(socket, c);
+		}
 	}
 
 	private void handleConnection(Socket accept) throws IOException {
@@ -113,7 +170,13 @@ public class Listener {
 
 			public void run() {
 				try {
-					ConnectionHandler ch = createConnectionHandler(pbs);
+					ConnectionHandler.Configuration c = new ConnectionHandler.Configuration();
+					c.setTarget(config.getTarget());
+					c.setCertificateProvider(config.getCertificateProvider());
+					c.setHttpClientFactory(config.getHttpClientFactory());
+					c.setProxyMonitor(config.getProxyMonitor());
+
+					ConnectionHandler ch = createConnectionHandler(pbs, c);
 					ch.run();
 				} catch (IOException ioe) {
 					try {

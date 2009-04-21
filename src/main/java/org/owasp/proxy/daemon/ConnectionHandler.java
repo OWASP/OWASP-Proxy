@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.io.PushbackInputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.URISyntaxException;
@@ -25,7 +24,6 @@ import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
 import org.owasp.proxy.io.CopyInputStream;
-import org.owasp.proxy.io.SocketWrapper;
 import org.owasp.proxy.model.URI;
 
 public class ConnectionHandler implements Runnable {
@@ -59,17 +57,11 @@ public class ConnectionHandler implements Runnable {
 
 	private Configuration config;
 
-	private boolean targetSsl = false;
-
 	private HttpClient httpClient = null;
 
 	public ConnectionHandler(Socket accept, Configuration config) {
 		this.socket = accept;
 		this.config = config;
-	}
-
-	public Configuration getConfiguration() {
-		return config;
 	}
 
 	private Socket negotiateSSL(SSLSocketFactory factory, Socket socket)
@@ -137,7 +129,7 @@ public class ConnectionHandler implements Runnable {
 			// start over from the beginning to handle this
 			// connection as an SSL connection
 			socket = negotiateSSL(socketFactory, socket);
-			targetSsl = true;
+			config.setSsl(true);
 			config.setTarget(target);
 			run();
 		}
@@ -178,13 +170,6 @@ public class ConnectionHandler implements Runnable {
 
 		// clear the stream copy
 		copy.reset();
-	}
-
-	private boolean isSSL(byte[] sniff, int len) {
-		for (int i = 0; i < len; i++)
-			if (sniff[i] == 0x03)
-				return true;
-		return false;
 	}
 
 	private void extractTargetFromResource(Request request)
@@ -240,39 +225,6 @@ public class ConnectionHandler implements Runnable {
 				return;
 			}
 
-			if (!targetSsl) {
-				// check if it is an SSL Connection
-				try {
-					byte[] sslsniff = new byte[4];
-					PushbackInputStream pbis = new PushbackInputStream(socket
-							.getInputStream(), sslsniff.length);
-					int got = pbis.read(sslsniff);
-					if (got == -1) {
-						System.err.println("Connection closed?!");
-						return;
-					}
-					System.err.println("Sniffing for SSL, got " + got);
-					pbis.unread(sslsniff, 0, got);
-					if (isSSL(sslsniff, got)) {
-						SSLSocketFactory factory = getSocketFactory(config
-								.getTarget());
-						if (factory == null)
-							return;
-						SocketWrapper wrapper = new SocketWrapper(socket, pbis,
-								out);
-						socket = negotiateSSL(factory, wrapper);
-						targetSsl = true;
-						run();
-						return;
-					} else {
-						sockIn = pbis;
-					}
-				} catch (IOException ioe) {
-					ioe.printStackTrace();
-					// unexpected end of stream (or socket timeout)
-					return;
-				}
-			}
 			boolean close;
 			String version = null, connection = null;
 			do {
@@ -320,7 +272,7 @@ public class ConnectionHandler implements Runnable {
 					InetSocketAddress target = config.getTarget();
 					request.setHost(target.getHostName());
 					request.setPort(target.getPort());
-					request.setSsl(targetSsl);
+					request.setSsl(config.isSsl());
 				} else if (request.getHeader("Host") != null) {
 					extractTargetFromHost(request);
 				}
@@ -467,6 +419,8 @@ public class ConnectionHandler implements Runnable {
 
 		private InetSocketAddress target = null;
 
+		private boolean ssl = false;
+
 		private ProxyMonitor proxyMonitor = null;
 
 		private CertificateProvider certificateProvider = null;
@@ -501,6 +455,21 @@ public class ConnectionHandler implements Runnable {
 		 */
 		public void setProxyMonitor(ProxyMonitor proxyMonitor) {
 			this.proxyMonitor = proxyMonitor;
+		}
+
+		/**
+		 * @return the ssl
+		 */
+		public boolean isSsl() {
+			return ssl;
+		}
+
+		/**
+		 * @param ssl
+		 *            the ssl to set
+		 */
+		public void setSsl(boolean ssl) {
+			this.ssl = ssl;
 		}
 
 		/**

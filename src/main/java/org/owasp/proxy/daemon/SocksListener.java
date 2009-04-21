@@ -27,14 +27,14 @@ public class SocksListener extends Listener {
 	}
 
 	@Override
-	protected ConnectionHandler createConnectionHandler(PushbackSocket socket)
-			throws IOException {
+	protected ConnectionHandler createConnectionHandler(PushbackSocket socket,
+			ConnectionHandler.Configuration c) throws IOException {
 		System.out
 				.println("Connection from " + socket.getRemoteSocketAddress());
 		SocksProtocolHandler sp = new SocksProtocolHandler(socket, auth);
 		InetSocketAddress target = sp.handleConnectRequest();
-		ConnectionHandler ch = super.createConnectionHandler(socket);
-		ch.getConfiguration().setTarget(target);
+		c.setTarget(target);
+		ConnectionHandler ch = super.createConnectionHandler(socket, c);
 		System.err.println(Thread.currentThread().getName() + ": Target is "
 				+ target);
 		return ch;
