@@ -99,9 +99,9 @@ public class Listener {
 		socket.setReuseAddress(true);
 	}
 
-	private byte[] sniff(PushbackSocket socket) throws IOException {
+	private byte[] sniff(PushbackSocket socket, int len) throws IOException {
 		PushbackInputStream in = socket.getInputStream();
-		byte[] sniff = new byte[4];
+		byte[] sniff = new byte[len];
 		int read = 0, attempt = 0;
 		do {
 			int got = in.read(sniff, read, sniff.length - read);
@@ -109,9 +109,10 @@ public class Listener {
 				return null;
 			read += got;
 			attempt++;
-		} while (read < sniff.length && attempt < 4);
+		} while (read < sniff.length && attempt < sniff.length);
 		if (read < sniff.length)
-			throw new IOException("Failed to read 4 bytes in 4 attempts!");
+			throw new IOException("Failed to read " + len
+					+ " bytes in as many attempts!");
 		in.unread(sniff);
 		return sniff;
 	}
@@ -129,8 +130,9 @@ public class Listener {
 		if (cp == null)
 			return null;
 
-		SSLSocketFactory factory = cp.getSocketFactory(target.getHostName(),
-				target.getPort());
+		SSLSocketFactory factory = target != null ? cp.getSocketFactory(target
+				.getHostName(), target.getPort()) : cp.getSocketFactory(null,
+				-1);
 		if (factory == null)
 			return null;
 		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
@@ -143,8 +145,22 @@ public class Listener {
 			ConnectionHandler.Configuration c) throws IOException {
 		socket.setSoTimeout(config.getSocketTimeout());
 
+		byte[] sniff;
+		// check if it is a SOCKS request
+		sniff = sniff(socket, 1);
+		if (sniff == null) // connection closed
+			return null;
+
+		if (sniff[0] == 4 || sniff[0] == 5) { // SOCKS v4 or V5
+			SocksProtocolHandler sp = new SocksProtocolHandler(socket, null);
+			InetSocketAddress target = sp.handleConnectRequest();
+			c.setTarget(target);
+		} else {
+			System.err.println("Doesn't look like SOCKS!");
+		}
+
 		// check if it is an SSL connection
-		byte[] sniff = sniff(socket);
+		sniff = sniff(socket, 4);
 		if (sniff == null) // connection closed
 			return null;
 
@@ -159,8 +175,9 @@ public class Listener {
 				return null;
 			}
 		} else {
-			return new ConnectionHandler(socket, c);
+			System.err.println("Doesn't look like SSL!");
 		}
+		return new ConnectionHandler(socket, c);
 	}
 
 	private void handleConnection(Socket accept) throws IOException {

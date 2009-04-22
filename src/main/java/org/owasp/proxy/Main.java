@@ -16,7 +16,6 @@ import org.owasp.proxy.daemon.DefaultCertificateProvider;
 import org.owasp.proxy.daemon.Listener;
 import org.owasp.proxy.daemon.LoggingProxyMonitor;
 import org.owasp.proxy.daemon.ProxyMonitor;
-import org.owasp.proxy.daemon.SocksListener;
 import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
 import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
@@ -25,26 +24,23 @@ public class Main {
 
 	private static void usage() {
 		System.err
-				.println("Usage: java -jar proxy.jar httpPort socksPort [\"proxy instruction\"]");
+				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"]");
 		System.err.println("Where \'proxy instruction\' might look like:");
 		System.err
 				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
 	}
 
 	public static void main(String[] args) throws Exception {
-		if (args == null || (args.length != 2 && args.length != 3)) {
+		if (args == null || (args.length != 1 && args.length != 2)) {
 			usage();
 			return;
 		}
-		Listener.Configuration httpConf, socksConf;
+		Listener.Configuration conf;
 		InetSocketAddress listen;
 		try {
-			int httpPort = Integer.parseInt(args[0]);
-			listen = new InetSocketAddress("localhost", httpPort);
-			httpConf = new Listener.Configuration(listen);
-			int socksPort = Integer.parseInt(args[1]);
-			listen = new InetSocketAddress("localhost", socksPort);
-			socksConf = new Listener.Configuration(listen);
+			int port = Integer.parseInt(args[0]);
+			listen = new InetSocketAddress("localhost", port);
+			conf = new Listener.Configuration(listen);
 		} catch (NumberFormatException nfe) {
 			usage();
 			return;
@@ -100,27 +96,16 @@ public class Main {
 		ProxyMonitor lpm = new LoggingProxyMonitor();
 		CertificateProvider cp = new DefaultCertificateProvider();
 
-		httpConf.setCertificateProvider(cp);
-		httpConf.setHttpClientFactory(hcf);
-		httpConf.setProxyMonitor(lpm);
+		conf.setCertificateProvider(cp);
+		conf.setHttpClientFactory(hcf);
+		conf.setProxyMonitor(lpm);
 
-		socksConf.setCertificateProvider(cp);
-		socksConf.setHttpClientFactory(hcf);
-		socksConf.setProxyMonitor(lpm);
-
-		Listener l = new Listener(httpConf);
+		Listener l = new Listener(conf);
 		l.start();
 
-		Listener sl = new SocksListener(socksConf);
-		sl.start();
-
-		System.out.println("Http listener started on "
-				+ httpConf.getListenerAddress()
-				+ ", SOCKS listener started on "
-				+ socksConf.getListenerAddress());
+		System.out.println("Listener started on " + conf.getListenerAddress());
 		System.out.println("Press Enter to terminate");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
-		sl.stop();
 		l.stop();
 		System.out.println("Terminated");
 	}

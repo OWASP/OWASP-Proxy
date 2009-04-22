@@ -177,8 +177,9 @@ public class ConnectionHandler implements Runnable {
 		try {
 			URI uri = new URI(resource);
 			request.setSsl("https".equals(uri.getScheme()));
-			request.setTarget(new InetSocketAddress(uri.getHost(), uri
-					.getPort()));
+			int port = uri.getPort() > 0 ? uri.getPort()
+					: request.isSsl() ? 443 : 80;
+			request.setTarget(new InetSocketAddress(uri.getHost(), port));
 			request.setResource(uri.getResource());
 		} catch (URISyntaxException use) {
 			throw new MessageFormatException(
