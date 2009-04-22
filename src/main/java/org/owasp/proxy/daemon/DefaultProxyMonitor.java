@@ -4,12 +4,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
 import org.owasp.httpclient.ResponseHeader;
 
+/**
+ * @author rogan
+ * 
+ */
 public class DefaultProxyMonitor implements ProxyMonitor {
 
 	public Response errorReadingRequest(Request request, Exception e) {
@@ -43,6 +48,11 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 	public void requestSent(Request request) {
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see org.owasp.proxy.daemon.ProxyMonitor#
+	 */
 	public void responseReceived(Request request, ResponseHeader header,
 			InputStream responseContent, OutputStream client)
 			throws IOException {
@@ -50,7 +60,11 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 		byte[] buff = new byte[1024];
 		int got;
 		while ((got = responseContent.read(buff)) > -1)
-			client.write(buff, 0, got);
+			try {
+				client.write(buff, 0, got);
+			} catch (SocketException se) {
+				return;
+			}
 		client.flush();
 	}
 
