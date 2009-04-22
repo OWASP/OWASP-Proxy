@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.owasp.proxy.httpclient.HttpClient;
 import org.owasp.proxy.httpclient.HttpClientFactory;
 import org.owasp.proxy.io.PushbackSocket;
 
@@ -257,10 +256,6 @@ public class Listener {
 
 	public synchronized boolean isStopped() {
 		return socket == null || socket.isClosed();
-	}
-
-	protected HttpClient createHttpClient() {
-		return new HttpClient();
 	}
 
 	public static class Configuration {
