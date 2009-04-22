@@ -66,7 +66,7 @@ public class RecordingProxyMonitor implements ProxyMonitor {
 	}
 
 	public Response requestReceived(Request request) {
-		if (!host.equals(request.getHost()))
+		if (!host.equals(request.getTarget().getHostName()))
 			return null;
 		return handleRequest(request);
 	}
@@ -196,8 +196,7 @@ public class RecordingProxyMonitor implements ProxyMonitor {
 		cs.setResponseHeaderTime(c.getResponseHeaderTime());
 		cs.setResponseContentTime(c.getResponseContentTime());
 
-		cs.setHost(reqH.getHost());
-		cs.setPort(reqH.getPort());
+		cs.setTarget(reqH.getTarget());
 		cs.setSsl(reqH.isSsl());
 		try {
 			cs.setRequestMethod(reqH.getMethod());
@@ -284,8 +283,8 @@ public class RecordingProxyMonitor implements ProxyMonitor {
 		buff.append("\" responseContentTime=\"").append(
 				summary.getResponseContentTime());
 		buff.append("\">");
-		tag(buff, "host", summary.getHost());
-		tag(buff, "port", summary.getPort());
+		tag(buff, "host", summary.getTarget().getHostName());
+		tag(buff, "port", summary.getTarget().getPort());
 		tag(buff, "ssl", summary.isSsl());
 		tag(buff, "resource", summary.getRequestResource());
 		tag(buff, "RequestContentType", summary.getRequestContentType());

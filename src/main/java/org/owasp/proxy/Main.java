@@ -40,10 +40,10 @@ public class Main {
 		InetSocketAddress listen;
 		try {
 			int httpPort = Integer.parseInt(args[0]);
-			listen = InetSocketAddress.createUnresolved("localhost", httpPort);
+			listen = new InetSocketAddress("localhost", httpPort);
 			httpConf = new Listener.Configuration(listen);
 			int socksPort = Integer.parseInt(args[1]);
-			listen = InetSocketAddress.createUnresolved("localhost", socksPort);
+			listen = new InetSocketAddress("localhost", socksPort);
 			socksConf = new Listener.Configuration(listen);
 		} catch (NumberFormatException nfe) {
 			usage();

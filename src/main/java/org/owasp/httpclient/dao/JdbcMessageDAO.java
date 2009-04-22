@@ -1,6 +1,7 @@
 package org.owasp.httpclient.dao;
 
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -372,8 +373,10 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 		saveMessageHeader(requestHeader, contentId);
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue(ID, requestHeader.getId(), Types.INTEGER);
-		params.addValue(HOST, requestHeader.getHost(), Types.VARCHAR);
-		params.addValue(PORT, requestHeader.getPort(), Types.INTEGER);
+		params.addValue(HOST, requestHeader.getTarget().getHostName(),
+				Types.VARCHAR);
+		params.addValue(PORT, requestHeader.getTarget().getPort(),
+				Types.INTEGER);
 		params.addValue(SSL, requestHeader.isSsl(), Types.BIT);
 		getNamedParameterJdbcTemplate().update(INSERT_REQUEST, params);
 	}
@@ -426,8 +429,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 
 			Request request = new Request.Impl();
 			request.setId(id);
-			request.setHost(host);
-			request.setPort(port);
+			request.setTarget(InetSocketAddress.createUnresolved(host, port));
 			request.setSsl(ssl);
 			request.setHeader(rs.getBytes(HEADER));
 			return request;

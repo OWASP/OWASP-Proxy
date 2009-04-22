@@ -62,8 +62,7 @@ public class ListenerTest {
 
 	@Before
 	public void setup() throws Exception {
-		InetSocketAddress listen = InetSocketAddress.createUnresolved(
-				"localhost", 9998);
+		InetSocketAddress listen = new InetSocketAddress("localhost", 9998);
 		c = new Listener.Configuration(listen);
 		c.setProxyMonitor(new LoggingProxyMonitor());
 	}

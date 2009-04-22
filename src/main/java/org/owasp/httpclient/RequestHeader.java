@@ -1,14 +1,12 @@
 package org.owasp.httpclient;
 
+import java.net.InetSocketAddress;
+
 public interface RequestHeader extends MessageHeader {
 
-	void setHost(String host);
+	void setTarget(InetSocketAddress target);
 
-	String getHost();
-
-	void setPort(int port);
-
-	int getPort();
+	InetSocketAddress getTarget();
 
 	void setSsl(boolean ssl);
 
@@ -29,26 +27,16 @@ public interface RequestHeader extends MessageHeader {
 	public static class Impl extends MessageHeader.Impl implements
 			RequestHeader {
 
-		private String host;
-
-		private int port;
+		private InetSocketAddress target;
 
 		private boolean ssl;
 
-		public String getHost() {
-			return host;
+		public InetSocketAddress getTarget() {
+			return target;
 		}
 
-		public void setHost(String host) {
-			this.host = host;
-		}
-
-		public int getPort() {
-			return port;
-		}
-
-		public void setPort(int port) {
-			this.port = port;
+		public void setTarget(InetSocketAddress target) {
+			this.target = target;
 		}
 
 		public boolean isSsl() {
@@ -141,8 +129,7 @@ public interface RequestHeader extends MessageHeader {
 
 		@Override
 		public String toString() {
-			return ssl ? "SSL " : "" + host + ":" + port + "\n"
-					+ super.toString();
+			return ssl ? "SSL " : "" + target + "\n" + super.toString();
 		}
 	}
 }

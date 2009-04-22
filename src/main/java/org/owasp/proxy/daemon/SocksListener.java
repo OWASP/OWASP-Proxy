@@ -41,8 +41,7 @@ public class SocksListener extends Listener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		InetSocketAddress listen = InetSocketAddress.createUnresolved(
-				"localhost", 9997);
+		InetSocketAddress listen = new InetSocketAddress("localhost", 9997);
 		Configuration c = new Configuration(listen);
 		c.setProxyMonitor(new LoggingProxyMonitor());
 		c.setCertificateProvider(new DefaultCertificateProvider());

@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.junit.After;
@@ -62,8 +63,7 @@ public class JdbcMessageDAOTest {
 	@Test
 	public void testSaveMessageContent() {
 		Request request = new Request.Impl();
-		request.setHost("localhost");
-		request.setPort(80);
+		request.setTarget(InetSocketAddress.createUnresolved("localhost", 80));
 		request.setSsl(false);
 		request.setHeader(AsciiString
 				.getBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"));
@@ -89,8 +89,7 @@ public class JdbcMessageDAOTest {
 		ResponseHeader resph = dao.loadResponseHeader(c.getResponseId());
 
 		assertTrue(Arrays.equals(request.getHeader(), reqh.getHeader()));
-		assertEquals(request.getHost(), reqh.getHost());
-		assertEquals(request.getPort(), reqh.getPort());
+		assertEquals(request.getTarget(), reqh.getTarget());
 		assertEquals(request.isSsl(), reqh.isSsl());
 		assertTrue("Response headers differ", Arrays.equals(response
 				.getHeader(), resph.getHeader()));

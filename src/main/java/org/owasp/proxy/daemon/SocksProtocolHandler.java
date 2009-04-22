@@ -152,7 +152,7 @@ public class SocksProtocolHandler {
 		}
 		response.write(out);
 
-		return InetSocketAddress.createUnresolved(msg.host, msg.port);
+		return new InetSocketAddress(msg.host, msg.port);
 	}
 
 }

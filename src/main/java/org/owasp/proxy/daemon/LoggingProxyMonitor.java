@@ -61,8 +61,7 @@ public class LoggingProxyMonitor extends DefaultProxyMonitor {
 			StringBuilder buff = new StringBuilder();
 			buff.append(request.getMethod()).append(" ");
 			buff.append(request.isSsl() ? "ssl " : "");
-			buff.append(request.getHost()).append(":")
-					.append(request.getPort());
+			buff.append(request.getTarget());
 			buff.append(request.getResource()).append(" ");
 			buff.append(header.getStatus()).append(" - ").append(size);
 			buff.append(" bytes in ").append(time).append("(").append(

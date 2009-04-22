@@ -367,8 +367,7 @@ public class Listener {
 	}
 
 	public static void main(String[] args) throws Exception {
-		InetSocketAddress listener = InetSocketAddress.createUnresolved(
-				"localhost", 9998);
+		InetSocketAddress listener = new InetSocketAddress("localhost", 9998);
 		Configuration c = new Configuration(listener);
 		c.setProxyMonitor(new LoggingProxyMonitor());
 		c.setCertificateProvider(new DefaultCertificateProvider());

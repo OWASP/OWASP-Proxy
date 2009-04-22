@@ -11,6 +11,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.ProxySelector;
@@ -165,21 +166,21 @@ public class Client {
 	}
 
 	public void connect(String host, int port, boolean ssl) throws IOException {
-		if (host == null)
-			throw new IllegalArgumentException(
-					"Host is not set, don't know where to connect to!");
+		connect(new InetSocketAddress(host, port), ssl);
+	}
 
-		if (port == -1)
-			port = (ssl ? 443 : 80);
-
-		InetSocketAddress target = null;
+	public void connect(InetSocketAddress target, boolean ssl)
+			throws IOException {
 		if (resolver != null) {
-			target = new InetSocketAddress(resolver.getAddress(host), port);
-		} else {
-			target = new InetSocketAddress(host, port);
+			InetAddress addr = resolver.getAddress(target.getHostName());
+			target = new InetSocketAddress(addr, target.getPort());
 		}
 
-		URI uri = constructUri(ssl, host, port);
+		if (target.isUnresolved())
+			target = new InetSocketAddress(target.getHostName(), target
+					.getPort());
+
+		URI uri = constructUri(ssl, target.getHostName(), target.getPort());
 		List<Proxy> proxies = getProxySelector().select(uri);
 
 		if (isConnected(target)) {

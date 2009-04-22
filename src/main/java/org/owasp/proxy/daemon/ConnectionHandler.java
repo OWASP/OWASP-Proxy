@@ -115,8 +115,7 @@ public class ConnectionHandler implements Runnable {
 			throw new MessageFormatException("Malformed CONNECT line : '"
 					+ resource + "'", request.getHeader());
 		}
-		InetSocketAddress target = InetSocketAddress.createUnresolved(host,
-				port);
+		InetSocketAddress target = new InetSocketAddress(host, port);
 		SSLSocketFactory socketFactory = getSocketFactory(target);
 		if (socketFactory == null) {
 			out.write(NO_CERTIFICATE_HEADER);
@@ -178,8 +177,8 @@ public class ConnectionHandler implements Runnable {
 		try {
 			URI uri = new URI(resource);
 			request.setSsl("https".equals(uri.getScheme()));
-			request.setHost(uri.getHost());
-			request.setPort(uri.getPort());
+			request.setTarget(new InetSocketAddress(uri.getHost(), uri
+					.getPort()));
 			request.setResource(uri.getResource());
 		} catch (URISyntaxException use) {
 			throw new MessageFormatException(
@@ -194,16 +193,16 @@ public class ConnectionHandler implements Runnable {
 		int colon = host.indexOf(':');
 		if (colon > -1) {
 			try {
-				request.setHost(host.substring(0, colon));
+				String h = host.substring(0, colon);
 				int port = Integer.parseInt(host.substring(colon + 1).trim());
-				request.setPort(port);
+				request.setTarget(new InetSocketAddress(h, port));
 			} catch (NumberFormatException nfe) {
 				throw new MessageFormatException(
 						"Couldn't parse target port from Host: header", nfe);
 			}
 		} else {
-			request.setHost(host);
-			request.setPort(request.isSsl() ? 443 : 80);
+			int port = request.isSsl() ? 443 : 80;
+			request.setTarget(new InetSocketAddress(host, port));
 		}
 	}
 
@@ -269,9 +268,7 @@ public class ConnectionHandler implements Runnable {
 				} else if (!request.getResource().startsWith("/")) {
 					extractTargetFromResource(request);
 				} else if (config.getTarget() != null) {
-					InetSocketAddress target = config.getTarget();
-					request.setHost(target.getHostName());
-					request.setPort(target.getPort());
+					request.setTarget(config.getTarget());
 					request.setSsl(config.isSsl());
 				} else if (request.getHeader("Host") != null) {
 					extractTargetFromHost(request);
@@ -280,8 +277,7 @@ public class ConnectionHandler implements Runnable {
 				try {
 					if (httpClient == null)
 						httpClient = clientFactory.createHttpClient();
-					httpClient.connect(request.getHost(), request.getPort(),
-							request.isSsl());
+					httpClient.connect(request.getTarget(), request.isSsl());
 
 					httpClient.sendRequestHeader(request.getHeader());
 					httpClient.sendRequestContent(request.getContent());

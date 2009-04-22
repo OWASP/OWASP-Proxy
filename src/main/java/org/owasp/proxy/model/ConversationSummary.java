@@ -1,5 +1,7 @@
 package org.owasp.proxy.model;
 
+import java.net.InetSocketAddress;
+
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
@@ -8,12 +10,14 @@ public class ConversationSummary {
 
 	private long id;
 
-	private String host, requestMethod, requestResource, requestContentType,
+	private InetSocketAddress target;
+
+	private String requestMethod, requestResource, requestContentType,
 			responseStatus, responseReason, responseContentType, connection;
 
 	private boolean ssl;
 
-	private int port, requestContentSize, responseContentSize;
+	private int requestContentSize, responseContentSize;
 
 	private long requestTime, responseHeaderTime, responseContentTime;
 
@@ -21,8 +25,7 @@ public class ConversationSummary {
 	}
 
 	public void summarizeRequest(Request request) throws MessageFormatException {
-		host = request.getHost();
-		port = request.getPort();
+		target = request.getTarget();
 		ssl = request.isSsl();
 
 		requestMethod = request.getMethod();
@@ -49,12 +52,12 @@ public class ConversationSummary {
 		this.id = id;
 	}
 
-	public String getHost() {
-		return host;
+	public InetSocketAddress getTarget() {
+		return target;
 	}
 
-	public void setHost(String host) {
-		this.host = host;
+	public void setTarget(InetSocketAddress target) {
+		this.target = target;
 	}
 
 	public String getRequestMethod() {
@@ -119,14 +122,6 @@ public class ConversationSummary {
 
 	public void setSsl(boolean ssl) {
 		this.ssl = ssl;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
-	public void setPort(int port) {
-		this.port = port;
 	}
 
 	public int getRequestContentSize() {
