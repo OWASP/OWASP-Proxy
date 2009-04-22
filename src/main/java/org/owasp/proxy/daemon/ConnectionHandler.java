@@ -295,10 +295,10 @@ public class ConnectionHandler implements Runnable {
 					InputStream content = httpClient.getResponseContent();
 					responseReceived(request, header, content, out);
 					out.flush();
-				} catch (Exception e) {
-					Response response = errorReadingResponse(request, null, e);
+				} catch (IOException ioe) {
+					Response response = errorReadingResponse(request, null, ioe);
 					if (response == null) {
-						writeErrorResponse(out, request, e);
+						writeErrorResponse(out, request, ioe);
 					} else {
 						out.write(response.getHeader());
 						if (response.getContent() != null)
@@ -402,6 +402,10 @@ public class ConnectionHandler implements Runnable {
 				monitor.responseReceived(request, header, content, client);
 			} catch (Exception e) {
 				e.printStackTrace();
+				IOException ioe = new IOException(
+						"Error piping response content to the client");
+				ioe.initCause(e);
+				throw ioe;
 			}
 		} else {
 			client.write(header.getHeader());
