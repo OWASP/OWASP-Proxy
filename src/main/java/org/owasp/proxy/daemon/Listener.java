@@ -145,26 +145,37 @@ public class Listener {
 			ConnectionHandler.Configuration c) throws IOException {
 		socket.setSoTimeout(config.getSocketTimeout());
 
-		byte[] sniff;
-		// check if it is a SOCKS request
-		sniff = sniff(socket, 1);
-		if (sniff == null) // connection closed
-			return null;
+		boolean socks = false;
+		if (config.getSocks() == Configuration.SOCKS_AUTO) {
+			// check if it is a SOCKS request
+			byte[] sniff = sniff(socket, 1);
+			if (sniff == null) // connection closed
+				return null;
 
-		if (sniff[0] == 4 || sniff[0] == 5) { // SOCKS v4 or V5
+			if (sniff[0] == 4 || sniff[0] == 5) // SOCKS v4 or V5
+				socks = true;
+		} else if (config.getSocks() == Configuration.SOCKS_ALWAYS)
+			socks = true;
+
+		if (socks) {
 			SocksProtocolHandler sp = new SocksProtocolHandler(socket, null);
 			InetSocketAddress target = sp.handleConnectRequest();
 			c.setTarget(target);
-		} else {
-			System.err.println("Doesn't look like SOCKS!");
 		}
 
-		// check if it is an SSL connection
-		sniff = sniff(socket, 4);
-		if (sniff == null) // connection closed
-			return null;
+		boolean ssl = false;
+		if (config.getSsl() == Configuration.SSL_AUTO) {
+			// check if it is an SSL connection
+			byte[] sniff = sniff(socket, 4);
+			if (sniff == null) // connection closed
+				return null;
 
-		if (isSSL(sniff)) {
+			if (isSSL(sniff))
+				ssl = true;
+		} else if (config.getSsl() == Configuration.SSL_ALWAYS)
+			ssl = true;
+
+		if (ssl) {
 			c.setSsl(true);
 			try {
 				return new ConnectionHandler(
@@ -174,9 +185,8 @@ public class Listener {
 				socket.close();
 				return null;
 			}
-		} else {
-			System.err.println("Doesn't look like SSL!");
 		}
+
 		return new ConnectionHandler(socket, c);
 	}
 
@@ -277,6 +287,22 @@ public class Listener {
 
 	public static class Configuration {
 
+		public static Boolean SOCKS_ALWAYS = Boolean.TRUE;
+
+		public static Boolean SOCKS_NEVER = Boolean.FALSE;
+
+		public static Boolean SOCKS_AUTO = null;
+
+		public static Boolean SSL_ALWAYS = Boolean.TRUE;
+
+		public static Boolean SSL_NEVER = Boolean.FALSE;
+
+		public static Boolean SSL_AUTO = null;
+
+		private Boolean socks = SOCKS_AUTO;
+
+		private Boolean ssl = SSL_AUTO;
+
 		private CertificateProvider certificateProvider;
 
 		private ProxyMonitor proxyMonitor;
@@ -352,6 +378,52 @@ public class Listener {
 		 */
 		public void setSocketTimeout(int socketTimeout) {
 			this.socketTimeout = socketTimeout;
+		}
+
+		/**
+		 * Specifies SOCKS-related behaviour of the Listener.
+		 * 
+		 * @see #getSocks()
+		 * @return the socks
+		 */
+		public Boolean getSocks() {
+			return socks;
+		}
+
+		/**
+		 * Specifies how the Listener supports the SOCKS protocol.
+		 * 
+		 * @param socks
+		 *            SOCKS_ALWAYS requires SOCKS negotiation to be performed,
+		 *            SOCKS_NEVER forbids SOCKS negotiation, and SOCKS_AUTO (the
+		 *            default) will autodetect clients making SOCKS requests,
+		 *            and behave appropriately
+		 */
+		public void setSocks(Boolean socks) {
+			this.socks = socks;
+		}
+
+		/**
+		 * Specifies SSL-related behaviour of the Listener.
+		 * 
+		 * @see #setSsl(Boolean)
+		 * @return the ssl
+		 */
+		public Boolean getSsl() {
+			return ssl;
+		}
+
+		/**
+		 * Specifies how the Listener supports the SSL protocol.
+		 * 
+		 * @param ssl
+		 *            SSL_ALWAYS requires SSL negotiation to be performed,
+		 *            SSL_NEVER forbids SSL negotiation, and SSL_AUTO (the
+		 *            default) will autodetect clients making SSL requests, and
+		 *            behave appropriately
+		 */
+		public void setSsl(Boolean ssl) {
+			this.ssl = ssl;
 		}
 
 		/**
