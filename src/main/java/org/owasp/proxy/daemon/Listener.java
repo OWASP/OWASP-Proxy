@@ -47,11 +47,10 @@ import org.owasp.proxy.io.PushbackSocket;
  * The most basic proxy (that has no customized behaviour) should look like:
  * 
  * <code>
- * 	int port = . . .;
- * 	Listener listener = new Listener(InetAddress.getByAddress(new byte[] { 127, 0, 0, 1 }), port); 
- * 	Thread t = new Thread(listener);
- * 	t.setDaemon(true);
- * 	t.start();
+ * 	InetSocketAddress address = new InetSocketAddress("localhost", 8008);
+ *  Listener.Configuration config = new Listener.Configuration(address);
+ * 	Listener listener = new Listener(config); 
+ * 	listener.start();
  * 	
  * 	<wait for signal to stop>
  * 	
@@ -62,8 +61,8 @@ import org.owasp.proxy.io.PushbackSocket;
  * 
  * Observing and influencing the proxy is accomplished through the ProxyMonitor.
  * 
- * @see Listener#setProxyMonitor(BufferedProxyMonitor)
- * @see BufferedProxyMonitor
+ * @see Listener.Configuration#setProxyMonitor(ProxyMonitor)
+ * @see ProxyMonitor
  * 
  * @author Rogan Dawes
  * 
@@ -244,6 +243,7 @@ public class Listener {
 			}
 			deregisterListener(addr);
 			synchronized (this) {
+				runner = null;
 				notifyAll();
 			}
 		}
@@ -277,7 +277,6 @@ public class Listener {
 				}
 			}
 		}
-		runner = null;
 		return true;
 	}
 
@@ -287,17 +286,17 @@ public class Listener {
 
 	public static class Configuration {
 
-		public static Boolean SOCKS_ALWAYS = Boolean.TRUE;
+		public static final Boolean SOCKS_ALWAYS = Boolean.TRUE;
 
-		public static Boolean SOCKS_NEVER = Boolean.FALSE;
+		public static final Boolean SOCKS_NEVER = Boolean.FALSE;
 
-		public static Boolean SOCKS_AUTO = null;
+		public static final Boolean SOCKS_AUTO = null;
 
-		public static Boolean SSL_ALWAYS = Boolean.TRUE;
+		public static final Boolean SSL_ALWAYS = Boolean.TRUE;
 
-		public static Boolean SSL_NEVER = Boolean.FALSE;
+		public static final Boolean SSL_NEVER = Boolean.FALSE;
 
-		public static Boolean SSL_AUTO = null;
+		public static final Boolean SSL_AUTO = null;
 
 		private Boolean socks = SOCKS_AUTO;
 
