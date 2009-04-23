@@ -18,8 +18,8 @@ public interface Request extends RequestHeader, Message {
 
 		@Override
 		public String toString() {
-			return super.toString() + content != null ? AsciiString
-					.create(content) : "";
+			return super.toString()
+					+ (content != null ? AsciiString.create(content) : "");
 		}
 	}
 

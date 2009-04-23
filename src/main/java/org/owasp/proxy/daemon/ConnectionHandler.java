@@ -159,7 +159,6 @@ public class ConnectionHandler implements Runnable {
 			return;
 
 		request.setHeader(headerBytes);
-		headerBytes = null;
 
 		// Get the request content (if any) from the stream,
 		copy.reset();
