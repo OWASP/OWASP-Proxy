@@ -5,7 +5,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -28,6 +27,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.io.ChunkedInputStream;
+import org.owasp.httpclient.io.EofNotifyingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.util.AsciiString;
 
@@ -332,8 +332,16 @@ public class Client {
 		InputStream is = socket.getInputStream();
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
 		int i = -1;
-		while (!header.isEndOfHeader() && (i = is.read()) > -1)
-			header.write(i);
+		try {
+			while (!header.isEndOfHeader() && (i = is.read()) > -1)
+				header.write(i);
+		} catch (SocketTimeoutException ste) {
+			System.err.println("Timeout reading response header. Had read "
+					+ header.size() + " bytes");
+			if (header.size() > 0)
+				System.err.write(header.toByteArray());
+			throw ste;
+		}
 		if (i == -1)
 			throw new IOException("Unexpected end of stream reading header");
 		ResponseHeader.Impl rh = new ResponseHeader.Impl();
@@ -376,7 +384,12 @@ public class Client {
 					"Illegal state. Can't read response body when state is "
 							+ state);
 		state = State.RESPONSE_CONTENT_IN_PROGRESS;
-		return new EofNotifyingInputStream(responseContent);
+		return new EofNotifyingInputStream(responseContent) {
+			@Override
+			public void eof() {
+				state = State.RESPONSE_CONTENT_READ;
+			}
+		};
 	}
 
 	public void disconnect() throws IOException {
@@ -401,27 +414,4 @@ public class Client {
 
 	}
 
-	private class EofNotifyingInputStream extends FilterInputStream {
-
-		public EofNotifyingInputStream(InputStream in) {
-			super(in);
-		}
-
-		@Override
-		public int read() throws IOException {
-			int result = super.read();
-			if (result == -1)
-				state = State.RESPONSE_CONTENT_READ;
-			return result;
-		}
-
-		@Override
-		public int read(byte[] b, int off, int len) throws IOException {
-			int result = super.read(b, off, len);
-			if (result == -1)
-				state = State.RESPONSE_CONTENT_READ;
-			return result;
-		}
-
-	}
 }
