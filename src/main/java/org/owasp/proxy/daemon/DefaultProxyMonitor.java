@@ -63,6 +63,7 @@ public class DefaultProxyMonitor implements ProxyMonitor {
 			try {
 				client.write(buff, 0, got);
 			} catch (SocketException se) {
+				// ignored
 				return;
 			}
 		client.flush();
