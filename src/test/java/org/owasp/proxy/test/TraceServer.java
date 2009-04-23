@@ -29,6 +29,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.Request;
 import org.owasp.httpclient.Response;
 import org.owasp.httpclient.io.ChunkedOutputStream;
@@ -200,7 +201,9 @@ public class TraceServer implements Runnable {
 						close = true;
 					}
 				} while (!close);
-			} catch (Exception e) {
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (MessageFormatException e) {
 				e.printStackTrace();
 			} finally {
 				try {
