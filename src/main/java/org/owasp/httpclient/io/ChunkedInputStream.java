@@ -164,4 +164,14 @@ public class ChunkedInputStream extends FilterInputStream {
 			;
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see java.io.FilterInputStream#close()
+	 */
+	@Override
+	public void close() throws IOException {
+		// do nothing
+	}
+
 }
