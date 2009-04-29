@@ -5,6 +5,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -17,6 +19,7 @@ import org.owasp.httpclient.StreamingMessage;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkedOutputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
+import org.owasp.proxy.util.Pump;
 
 public class MessageUtils {
 
@@ -108,7 +111,35 @@ public class MessageUtils {
 	 * @return
 	 * @throws MessageFormatException
 	 */
-	public static OutputStream encode(MessageHeader header, OutputStream content)
+	public static InputStream encode(StreamingMessage message)
+			throws MessageFormatException {
+		return encode(message, message.getContent());
+	}
+
+	public static byte[] encode(Message message) throws MessageFormatException {
+		try {
+			InputStream content = new ByteArrayInputStream(message.getContent());
+			content = encode(message, content);
+			ByteArrayOutputStream copy = new ByteArrayOutputStream();
+			byte[] buff = new byte[4096];
+			int got;
+			while ((got = content.read(buff)) > 0)
+				copy.write(buff, 0, got);
+			return copy.toByteArray();
+		} catch (IOException ioe) {
+			throw new MessageFormatException("Malformed encoded content: "
+					+ ioe.getMessage(), ioe);
+
+		}
+	}
+
+	/**
+	 * @param content
+	 * @param codings
+	 * @return
+	 * @throws MessageFormatException
+	 */
+	public static InputStream encode(MessageHeader header, InputStream content)
 			throws MessageFormatException {
 		String codings = header.getHeader("Transfer-Coding");
 		if (codings == null || codings.trim().equals(""))
@@ -117,18 +148,21 @@ public class MessageUtils {
 			String[] algos = codings.split("[ \t]*,[ \t]*");
 			if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
 				return content;
+			PipedInputStream sink = new PipedInputStream();
+			OutputStream source = new PipedOutputStream(sink);
 			for (int i = 0; i < algos.length; i++) {
 				if ("chunked".equalsIgnoreCase(algos[i])) {
-					content = new ChunkedOutputStream(content);
+					source = new ChunkedOutputStream(source);
 				} else if ("gzip".equalsIgnoreCase(algos[i])) {
-					content = new GZIPOutputStream(content);
+					source = new GZIPOutputStream(source);
 				} else if ("identity".equalsIgnoreCase(algos[i])) {
 					// nothing to do
 				} else
 					throw new MessageFormatException("Unsupported coding : "
 							+ algos[i], header.getHeader());
 			}
-			return content;
+			new Pump(content, source).start();
+			return sink;
 		} catch (IOException ioe) {
 			throw new MessageFormatException("Error encoding content", ioe);
 		}
