@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -39,15 +38,17 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.owasp.proxy.daemon.Proxy.SOCKS;
-import org.owasp.proxy.daemon.SSLProxy.SSL;
 import org.owasp.proxy.test.TraceServer;
 
 public class DefaultHttpProxyTest {
 
 	private static TraceServer ts;
 
-	InetSocketAddress listen;
+	private InetSocketAddress listen;
+
+	private TargetedConnectionHandler ch;
+
+	private HttpRequestHandler rh;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -65,6 +66,8 @@ public class DefaultHttpProxyTest {
 	@Before
 	public void setup() throws Exception {
 		listen = new InetSocketAddress("localhost", 9998);
+		rh = new DefaultHttpRequestHandler();
+		ch = new HttpProxyConnectionHandler(rh);
 	}
 
 	@AfterClass
@@ -77,8 +80,7 @@ public class DefaultHttpProxyTest {
 
 	@Test
 	public void testListenerStartStop() throws Exception {
-		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
-				SSL.AUTO);
+		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.start();
 
 		Thread.sleep(1000);
@@ -89,12 +91,11 @@ public class DefaultHttpProxyTest {
 
 	@Test
 	public void testRun() throws Exception {
-		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
-				SSL.AUTO);
+		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.start();
 
-		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost",
-				9998));
+		java.net.Proxy p = new java.net.Proxy(java.net.Proxy.Type.HTTP,
+				new InetSocketAddress("localhost", 9998));
 
 		try {
 			URL url = new URL("http://localhost:9999/");
@@ -136,8 +137,7 @@ public class DefaultHttpProxyTest {
 	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
-		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
-				SSL.AUTO);
+		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.start();
 
 		// try {
@@ -165,14 +165,13 @@ public class DefaultHttpProxyTest {
 	 */
 	@Test
 	public void testInitialTimeout() throws Exception {
-		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
-				SSL.AUTO);
+		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.setSocketTimeout(1000);
 		proxy.start();
 
 		try {
 			SocketAddress addr = new InetSocketAddress("localhost", 9998);
-			Socket s = new Socket(Proxy.NO_PROXY);
+			Socket s = new Socket(java.net.Proxy.NO_PROXY);
 			s.connect(addr);
 			Thread.sleep(2500);
 			OutputStream os = s.getOutputStream();
@@ -207,14 +206,13 @@ public class DefaultHttpProxyTest {
 	@Test
 	public void testSecondTimeout() throws Exception {
 		ts.setVersion("HTTP/1.1");
-		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
-				SSL.AUTO);
+		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.setSocketTimeout(1000);
 		proxy.start();
 
 		try {
 			SocketAddress addr = new InetSocketAddress("localhost", 9998);
-			Socket s = new Socket(Proxy.NO_PROXY);
+			Socket s = new Socket(java.net.Proxy.NO_PROXY);
 			s.connect(addr);
 			OutputStream os = s.getOutputStream();
 			os

@@ -14,6 +14,7 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.httpclient.MessageFormatException;
@@ -27,7 +28,8 @@ import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.model.URI;
 
-public abstract class HttpProxy extends SSLProxy {
+public class HttpProxyConnectionHandler implements ConnectionHandler,
+		TargetedConnectionHandler, EncryptedConnectionHandler {
 
 	private final static byte[] NO_CERTIFICATE_HEADER = AsciiString
 			.getBytes("HTTP/1.0 503 Service unavailable"
@@ -48,33 +50,45 @@ public abstract class HttpProxy extends SSLProxy {
 
 	private final static String ERROR_MESSAGE3 = "</pre></body></html>";
 
-	private final static Logger logger = Logger.getLogger(HttpProxy.class
-			.toString());
+	private final static Logger logger = Logger
+			.getLogger(HttpProxyConnectionHandler.class.toString());
 
-	public HttpProxy(InetSocketAddress listen, InetSocketAddress target,
-			SOCKS socks, SSL ssl) throws IOException {
-		super(listen, target, socks, ssl);
-		// logger.setLevel(Level.FINE);
+	private HttpRequestHandler requestHandler;
+
+	private CertificateProvider certificateProvider;
+
+	public HttpProxyConnectionHandler(HttpRequestHandler requestHandler) {
+		this(requestHandler, null);
 	}
 
-	/**
-	 * Construct a response to the specified request. Note that this method must
-	 * be thread-safe
-	 * 
-	 * @param source
-	 *            TODO
-	 * @param request
-	 *            received from the client
-	 * 
-	 * @return the response to return to the client
-	 * @throws IOException
-	 *             if the response cannot be obtained, or if the request content
-	 *             cannot be read
-	 */
-	protected abstract StreamingResponse handleRequest(InetAddress source,
-			StreamingRequest request) throws IOException;
+	public HttpProxyConnectionHandler(HttpRequestHandler requestHandler,
+			CertificateProvider certificateProvider) {
+		this.requestHandler = requestHandler;
+		this.certificateProvider = certificateProvider;
+	}
 
-	protected abstract void close();
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ConnectionHandler#handleConnection(java.net.Socket
+	 * )
+	 */
+	public void handleConnection(Socket socket) throws IOException {
+		handleConnection(socket, null);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ifbased.ConnectionHandler#handleConnection(java
+	 * .net.Socket, java.net.InetSocketAddress)
+	 */
+	public void handleConnection(Socket socket, InetSocketAddress target)
+			throws IOException {
+		handleConnection(socket, target, false);
+	}
 
 	protected StreamingResponse createErrorResponse(StreamingRequest request,
 			Exception e) throws IOException {
@@ -91,6 +105,22 @@ public abstract class HttpProxy extends SSLProxy {
 		response.setContent(new ByteArrayInputStream(AsciiString.getBytes(buff
 				.toString())));
 		return response;
+	}
+
+	protected SSLSocketFactory getSSLSocketFactory(InetSocketAddress target)
+			throws IOException, GeneralSecurityException {
+		String host = target == null ? null : target.getHostName();
+		int port = target == null ? -1 : target.getPort();
+		return certificateProvider == null ? null : certificateProvider
+				.getSocketFactory(host, port);
+	}
+
+	protected SSLSocket negotiateSSL(Socket socket, SSLSocketFactory factory)
+			throws GeneralSecurityException, IOException {
+		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
+				.getInetAddress().getHostName(), socket.getPort(), true);
+		sslsock.setUseClientMode(false);
+		return sslsock;
 	}
 
 	private void doConnect(Socket socket, RequestHeader request)
@@ -124,7 +154,7 @@ public abstract class HttpProxy extends SSLProxy {
 			out.flush();
 			// start over from the beginning to handle this
 			// connection as an SSL connection
-			socket = negotiateSsl(socket, socketFactory);
+			socket = negotiateSSL(socket, socketFactory);
 			handleConnection(socket, target, true);
 		}
 	}
@@ -144,9 +174,8 @@ public abstract class HttpProxy extends SSLProxy {
 			byte[] headerBytes = copy.toByteArray();
 			if (headerBytes == null || headerBytes.length == 0)
 				return null;
-			logger.fine("Read incomplete request header: \n"
-					+ AsciiString.create(headerBytes));
-			throw e;
+			throw new MessageFormatException("Incomplete request header", e,
+					headerBytes);
 		}
 
 		byte[] headerBytes = copy.toByteArray();
@@ -216,8 +245,15 @@ public abstract class HttpProxy extends SSLProxy {
 		}
 	}
 
-	protected final void handleConnection(Socket socket,
-			InetSocketAddress target, boolean ssl) {
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ifbased.EncryptedConnectionHandler#handleConnection
+	 * (java.net.Socket, java.net.InetSocketAddress, boolean)
+	 */
+	public void handleConnection(Socket socket, InetSocketAddress target,
+			boolean ssl) throws IOException {
 		try {
 			InetAddress source = socket.getInetAddress();
 
@@ -262,6 +298,10 @@ public abstract class HttpProxy extends SSLProxy {
 				} else if (request.getHeader("Host") != null) {
 					extractTargetFromHost(request);
 					request.setSsl(ssl);
+				} else {
+					throw new MessageFormatException(
+							"No idea where this request is going!", request
+									.getHeader());
 				}
 
 				InputStream requestContent = request.getContent();
@@ -281,7 +321,7 @@ public abstract class HttpProxy extends SSLProxy {
 
 				StreamingResponse response = null;
 				try {
-					response = handleRequest(source, request);
+					response = requestHandler.handleRequest(source, request);
 					holder.state = State.RESPONSE_HEADER;
 				} catch (IOException ioe) {
 					response = createErrorResponse(request, ioe);
@@ -293,26 +333,28 @@ public abstract class HttpProxy extends SSLProxy {
 					return;
 				}
 				InputStream content = response.getContent();
-				int count = 0;
-				try {
-					byte[] buff = new byte[4096];
-					int got;
-					while ((got = content.read(buff)) > -1) {
-						try {
-							out.write(buff, 0, got);
-							count += got;
-						} catch (IOException ioe) { // client gone
-							content.close();
-							return;
+				if (content != null) {
+					int count = 0;
+					try {
+						byte[] buff = new byte[4096];
+						int got;
+						while ((got = content.read(buff)) > -1) {
+							try {
+								out.write(buff, 0, got);
+								count += got;
+							} catch (IOException ioe) { // client gone
+								content.close();
+								return;
+							}
 						}
+						out.flush();
+					} catch (IOException ioe) { // server closed
+						logger.fine("Request was " + request);
+						logger.fine("Incomplete response content because "
+								+ ioe.getMessage());
+						logger.fine("Read " + count + " bytes");
+						return;
 					}
-					out.flush();
-				} catch (IOException ioe) { // server closed
-					logger.fine("Request was " + request);
-					logger.fine("Incomplete response content: "
-							+ ioe.getMessage());
-					logger.fine("Read " + count + " bytes");
-					return;
 				}
 				holder.state = State.READY;
 				version = response.getVersion();
@@ -337,13 +379,12 @@ public abstract class HttpProxy extends SSLProxy {
 			logger.info(mfe.getMessage());
 			mfe.printStackTrace();
 		} finally {
-			if (!socket.isClosed()) {
-				try {
-					socket.close();
-				} catch (IOException ignore) {
-				}
+			try {
+				requestHandler.dispose();
+			} catch (IOException ioe) {
+				logger.warning("Error disposing of requestHandler resources: "
+						+ ioe.getMessage());
 			}
-			close();
 		}
 
 	}

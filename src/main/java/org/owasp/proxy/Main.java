@@ -11,10 +11,14 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.owasp.httpclient.Client;
+import org.owasp.proxy.daemon.DefaultCertificateProvider;
+import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
+import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
+import org.owasp.proxy.daemon.HttpRequestHandler;
 import org.owasp.proxy.daemon.Proxy;
-import org.owasp.proxy.daemon.Proxy.SOCKS;
-import org.owasp.proxy.daemon.SSLProxy.SSL;
-import org.owasp.proxy.examples.LoggingHttpProxy;
+import org.owasp.proxy.daemon.SSLConnectionHandler;
+import org.owasp.proxy.daemon.SocksConnectionHandler;
+import org.owasp.proxy.daemon.TargetedConnectionHandler;
 
 public class Main {
 
@@ -84,19 +88,27 @@ public class Main {
 
 		final ProxySelector ps = getProxySelector(proxy);
 
-		Proxy p = new LoggingHttpProxy(listen, null, SOCKS.AUTO, SSL.AUTO) {
+		HttpRequestHandler rh = new DefaultHttpRequestHandler() {
+
 			/*
 			 * (non-Javadoc)
 			 * 
-			 * @see org.owasp.proxy.daemon.DefaultHttpProxy#createHttpClient()
+			 * @see
+			 * org.owasp.proxy.daemon.DefaultHttpRequestHandler#createClient()
 			 */
 			@Override
-			protected Client createHttpClient() {
-				Client client = super.createHttpClient();
+			protected Client createClient() {
+				Client client = super.createClient();
 				client.setProxySelector(ps);
 				return client;
 			}
+
 		};
+		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
+		SSLConnectionHandler sch = new SSLConnectionHandler(
+				new DefaultCertificateProvider(), true, hpch);
+		TargetedConnectionHandler socks = new SocksConnectionHandler(sch, true);
+		Proxy p = new Proxy(listen, socks, null);
 		p.start();
 
 		System.out.println("Listener started on " + listen);
