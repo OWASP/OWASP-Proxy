@@ -19,17 +19,6 @@
  */
 package org.owasp.httpclient;
 
-/**
- * Finally, there are two methods that operate on the content, processing it
- * according to the Content-Encoding and Transfer-Encoding headers:
- * <ul>
- * <li>getEntity()</li>
- * <li>setEntity(byte[])</li>
- * </ul>
- * 
- * @author Rogan Dawes
- * 
- */
 public interface Message extends MessageHeader {
 
 	/**
