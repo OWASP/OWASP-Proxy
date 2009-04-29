@@ -4,21 +4,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
 
-import org.owasp.proxy.daemon.CertificateProvider;
-import org.owasp.proxy.daemon.DefaultCertificateProvider;
-import org.owasp.proxy.daemon.Listener;
-import org.owasp.proxy.daemon.LoggingProxyMonitor;
-import org.owasp.proxy.daemon.ProxyMonitor;
-import org.owasp.proxy.httpclient.DefaultHttpClientFactory;
-import org.owasp.proxy.httpclient.HttpClient;
-import org.owasp.proxy.httpclient.HttpClientFactory;
+import org.owasp.httpclient.Client;
+import org.owasp.proxy.daemon.Proxy;
+import org.owasp.proxy.daemon.Proxy.SOCKS;
+import org.owasp.proxy.daemon.SSLProxy.SSL;
+import org.owasp.proxy.examples.LoggingHttpProxy;
 
 public class Main {
 
@@ -30,35 +26,16 @@ public class Main {
 				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
 	}
 
-	public static void main(String[] args) throws Exception {
-		if (args == null || (args.length != 1 && args.length != 2)) {
-			usage();
-			return;
-		}
-		Listener.Configuration conf;
-		InetSocketAddress listen;
-		try {
-			int port = Integer.parseInt(args[0]);
-			listen = new InetSocketAddress("localhost", port);
-			conf = new Listener.Configuration(listen);
-		} catch (NumberFormatException nfe) {
-			usage();
-			return;
-		}
-		String proxy = "DIRECT";
-		if (args.length == 3) {
-			proxy = args[2];
-		}
-
-		final Proxy upstream;
+	private static ProxySelector getProxySelector(String proxy) {
+		final java.net.Proxy upstream;
 		if ("DIRECT".equals(proxy)) {
-			upstream = Proxy.NO_PROXY;
+			upstream = java.net.Proxy.NO_PROXY;
 		} else {
-			Proxy.Type type = null;
+			java.net.Proxy.Type type = null;
 			if (proxy.startsWith("PROXY ")) {
-				type = Proxy.Type.HTTP;
+				type = java.net.Proxy.Type.HTTP;
 			} else if (proxy.startsWith("SOCKS ")) {
-				type = Proxy.Type.SOCKS;
+				type = java.net.Proxy.Type.SOCKS;
 			} else
 				throw new IllegalArgumentException("Unknown Proxy type: "
 						+ proxy);
@@ -69,9 +46,9 @@ public class Main {
 						+ proxy);
 			InetSocketAddress addr = new InetSocketAddress(proxy
 					.substring(0, c), Integer.parseInt(proxy.substring(c + 1)));
-			upstream = new Proxy(type, addr);
+			upstream = new java.net.Proxy(type, addr);
 		}
-		final ProxySelector ps = new ProxySelector() {
+		ProxySelector ps = new ProxySelector() {
 
 			@Override
 			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
@@ -80,33 +57,52 @@ public class Main {
 			}
 
 			@Override
-			public List<Proxy> select(URI uri) {
+			public List<java.net.Proxy> select(URI uri) {
 				return Arrays.asList(upstream);
 			}
 		};
-		HttpClientFactory hcf = new DefaultHttpClientFactory() {
+		return ps;
+	}
 
+	public static void main(String[] args) throws Exception {
+		if (args == null || (args.length != 1 && args.length != 2)) {
+			usage();
+			return;
+		}
+		InetSocketAddress listen;
+		try {
+			int port = Integer.parseInt(args[0]);
+			listen = new InetSocketAddress("localhost", port);
+		} catch (NumberFormatException nfe) {
+			usage();
+			return;
+		}
+		String proxy = "DIRECT";
+		if (args.length == 3) {
+			proxy = args[2];
+		}
+
+		final ProxySelector ps = getProxySelector(proxy);
+
+		Proxy p = new LoggingHttpProxy(listen, null, SOCKS.AUTO, SSL.AUTO) {
+			/*
+			 * (non-Javadoc)
+			 * 
+			 * @see org.owasp.proxy.daemon.DefaultHttpProxy#createHttpClient()
+			 */
 			@Override
-			public HttpClient createHttpClient() {
-				HttpClient client = super.createHttpClient();
+			protected Client createHttpClient() {
+				Client client = super.createHttpClient();
 				client.setProxySelector(ps);
 				return client;
 			}
 		};
-		ProxyMonitor lpm = new LoggingProxyMonitor();
-		CertificateProvider cp = new DefaultCertificateProvider();
+		p.start();
 
-		conf.setCertificateProvider(cp);
-		conf.setHttpClientFactory(hcf);
-		conf.setProxyMonitor(lpm);
-
-		Listener l = new Listener(conf);
-		l.start();
-
-		System.out.println("Listener started on " + conf.getListenerAddress());
+		System.out.println("Listener started on " + listen);
 		System.out.println("Press Enter to terminate");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
-		l.stop();
+		p.stop();
 		System.out.println("Terminated");
 	}
 }

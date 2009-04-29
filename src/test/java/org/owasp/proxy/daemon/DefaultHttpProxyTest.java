@@ -39,13 +39,15 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.owasp.proxy.daemon.Proxy.SOCKS;
+import org.owasp.proxy.daemon.SSLProxy.SSL;
 import org.owasp.proxy.test.TraceServer;
 
-public class ListenerTest {
+public class DefaultHttpProxyTest {
 
 	private static TraceServer ts;
 
-	private Listener.Configuration c;
+	InetSocketAddress listen;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
@@ -62,9 +64,7 @@ public class ListenerTest {
 
 	@Before
 	public void setup() throws Exception {
-		InetSocketAddress listen = new InetSocketAddress("localhost", 9998);
-		c = new Listener.Configuration(listen);
-		c.setProxyMonitor(new LoggingProxyMonitor());
+		listen = new InetSocketAddress("localhost", 9998);
 	}
 
 	@AfterClass
@@ -77,19 +77,21 @@ public class ListenerTest {
 
 	@Test
 	public void testListenerStartStop() throws Exception {
-		Listener l = new Listener(c);
-		l.start();
+		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
+				SSL.AUTO);
+		proxy.start();
 
 		Thread.sleep(1000);
 
-		l.stop();
-		assertTrue("Listener didn't exit", l.isStopped());
+		proxy.stop();
+		assertTrue("Listener didn't exit", proxy.isStopped());
 	}
 
 	@Test
 	public void testRun() throws Exception {
-		Listener l = new Listener(c);
-		l.start();
+		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
+				SSL.AUTO);
+		proxy.start();
 
 		Proxy p = new Proxy(Proxy.Type.HTTP, new InetSocketAddress("localhost",
 				9998));
@@ -126,9 +128,7 @@ public class ListenerTest {
 			// // System.out.write(c.getResponse().getMessage());
 
 		} finally {
-
-			l.stop();
-			Thread.sleep(1000);
+			proxy.stop();
 		}
 	}
 
@@ -136,8 +136,9 @@ public class ListenerTest {
 	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
 		ts.setChunked(true);
-		Listener l = new Listener(c);
-		l.start();
+		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
+				SSL.AUTO);
+		proxy.start();
 
 		// try {
 		// Request request = new Request();
@@ -152,7 +153,7 @@ public class ListenerTest {
 		// assertEquals("response did not match request", request.getMessage(),
 		// c.getResponse().getContent());
 		// } finally {
-		l.stop();
+		proxy.stop();
 		// assertTrue("Listener didn't exit", l.isStopped());
 		// }
 	}
@@ -164,9 +165,10 @@ public class ListenerTest {
 	 */
 	@Test
 	public void testInitialTimeout() throws Exception {
-		c.setSocketTimeout(1000);
-		Listener l = new Listener(c);
-		l.start();
+		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
+				SSL.AUTO);
+		proxy.setSocketTimeout(1000);
+		proxy.start();
 
 		try {
 			SocketAddress addr = new InetSocketAddress("localhost", 9998);
@@ -193,8 +195,8 @@ public class ListenerTest {
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		} finally {
-			l.stop();
-			assertTrue("Listener didn't exit", l.isStopped());
+			proxy.stop();
+			assertTrue("Listener didn't exit", proxy.isStopped());
 		}
 	}
 
@@ -205,9 +207,10 @@ public class ListenerTest {
 	@Test
 	public void testSecondTimeout() throws Exception {
 		ts.setVersion("HTTP/1.1");
-		c.setSocketTimeout(1000);
-		Listener l = new Listener(c);
-		l.start();
+		DefaultHttpProxy proxy = new DefaultHttpProxy(listen, null, SOCKS.AUTO,
+				SSL.AUTO);
+		proxy.setSocketTimeout(1000);
+		proxy.start();
 
 		try {
 			SocketAddress addr = new InetSocketAddress("localhost", 9998);
@@ -263,8 +266,8 @@ public class ListenerTest {
 					}
 			}
 		} finally {
-			l.stop();
-			assertTrue("Listener didn't exit", l.isStopped());
+			proxy.stop();
+			assertTrue("Listener didn't exit", proxy.isStopped());
 		}
 	}
 

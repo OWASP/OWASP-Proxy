@@ -24,26 +24,22 @@ import java.io.PushbackInputStream;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
-
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.proxy.io.PushbackSocket;
 
 /**
  * This class implements an intercepting proxy. The user is required to override
- * the {@link #createProtocolHandler(Socket, InetSocketAddress, boolean)} method
- * to implement the required protocol.
+ * the {@link #handleConnection(Socket, InetSocketAddress)} method to implement
+ * the required protocol.
  * 
- * This class has built-in support for auto-detecting SOCKS and SSL protocols,
- * and will perform the relevant negotiation when appropriate. This behaviour
- * can be controlled by using the
- * {@link #Proxy(InetSocketAddress, InetSocketAddress, SOCKS, SSL)} constructor
- * if necessary.
+ * This class has built-in support for auto-detecting the SOCKS protocol, and
+ * will perform the negotiation when appropriate. This behaviour can be
+ * controlled by using the
+ * {@link #Proxy(InetSocketAddress, InetSocketAddress, SOCKS)} constructor if
+ * necessary.
  * 
- * If SOCKS support is disabled, and the protocol provides no method to
+ * If SOCKS support is disabled, and the protocol itself provides no method to
  * determine the desired target destination, you should specify a target for
  * connections to be relayed to. This target address will be passed directly to
  * {@link #createProtocolHandler(Socket, InetSocketAddress, boolean)}.
@@ -52,16 +48,12 @@ import org.owasp.proxy.io.PushbackSocket;
  * 
  * <code>
  * 	InetSocketAddress address = new InetSocketAddress("localhost", 8008);
- * 	Proxy proxy = new Proxy(address) {
- *  	protected Runnable createProtocolHandler(final Socket sock, final InetSocketAddress target, boolean ssl) {
- *  		return new Runnable() {
- *  			public void run() {
- *  				try {
- *  				Socket dst = new Socket();
- *  				dst.connect(target);
- *  				new SocketPipe(sock, dst).connect();
- *  			}
- *  		};
+ * 	Proxy proxy = new Proxy(address, null, Proxy.SOCKS.AUTO) {
+ *  	protected void handleConnection(final Socket sock, final InetSocketAddress target) {
+ * 			try {
+ * 				Socket dst = new Socket(target.getInetAddress(), target.getPort());
+ * 				new SocketPipe(sock, dst).connect();
+ * 			} catch (IOException ignore) {}
  *  	}
  *  }; 
  * 	proxy.start();
@@ -73,16 +65,6 @@ import org.owasp.proxy.io.PushbackSocket;
  * 	}
  * </code>
  * 
- * Note: The above proxy does not support SSL connections (since it does not
- * check the "ssl" parameter), and will simply relay unencrypted data to the
- * destination.
- * 
- * This proxy allows provision of target-specific SSL server certificates, by
- * overriding the {@link #getSSLSocketFactory(InetSocketAddress)} method.
- * 
- * If you need more complex SSL protocol handling than is provided by this
- * proxy, simply specifiy SSL.NEVER, and handle it in your own class.
- * 
  * @author Rogan Dawes
  * 
  */
@@ -91,17 +73,11 @@ public abstract class Proxy {
 	private final static Logger logger = Logger
 			.getLogger(Proxy.class.getName());
 
-	public enum SSL {
-		NEVER, ALWAYS, AUTO
-	};
-
 	public enum SOCKS {
 		NEVER, ALWAYS, AUTO
 	};
 
 	private volatile ServerSocket socket = null;
-
-	private SSL ssl;
 
 	private SOCKS socks;
 
@@ -109,22 +85,15 @@ public abstract class Proxy {
 
 	private int socketTimeout = 0;
 
-	public Proxy(InetSocketAddress listen) throws IOException {
-		this(listen, null, SOCKS.AUTO, SSL.AUTO);
-	}
-
-	public Proxy(InetSocketAddress listen, InetSocketAddress target,
-			SOCKS socks, SSL ssl) throws IOException {
+	public Proxy(InetSocketAddress listen, InetSocketAddress target, SOCKS socks)
+			throws IOException {
 		if (socks == null)
 			socks = SOCKS.AUTO;
-		if (ssl == null)
-			ssl = SSL.AUTO;
 		if (target != null && socks != SOCKS.NEVER)
 			throw new IllegalArgumentException(
 					"You cannot specify a target as well as allowing SOCKS negotiation");
 		this.target = target;
 		this.socks = socks;
-		this.ssl = ssl;
 		socket = new ServerSocket(listen.getPort(), 20, listen.getAddress());
 		socket.setReuseAddress(true);
 	}
@@ -144,24 +113,6 @@ public abstract class Proxy {
 		this.socketTimeout = socketTimeout;
 	}
 
-	private SSLSocketFactory sslSocketFactory = null;
-
-	protected SSLSocketFactory getSSLSocketFactory(InetSocketAddress target)
-			throws GeneralSecurityException {
-		if (sslSocketFactory == null) {
-			try {
-				DefaultCertificateProvider cp = new DefaultCertificateProvider();
-				sslSocketFactory = cp.getSocketFactory(null, -1);
-			} catch (IOException ioe) {
-				throw new GeneralSecurityException(ioe);
-			}
-		}
-		return sslSocketFactory;
-	}
-
-	protected abstract Runnable createProtocolHandler(Socket socket,
-			InetSocketAddress target, boolean ssl);
-
 	private byte[] sniff(PushbackSocket socket, int len) throws IOException {
 		PushbackInputStream in = socket.getInputStream();
 		byte[] sniff = new byte[len];
@@ -180,26 +131,28 @@ public abstract class Proxy {
 		return sniff;
 	}
 
-	private boolean isSSL(byte[] sniff) {
-		for (int i = 0; i < sniff.length; i++)
-			if (sniff[i] == 0x03)
-				return true;
-		return false;
-	}
-
-	private SSLSocket negotiateSsl(Socket socket, InetSocketAddress target)
-			throws GeneralSecurityException, IOException {
-		SSLSocketFactory factory = getSSLSocketFactory(target);
-		if (factory == null)
-			return null;
-		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
-				.getInetAddress().getHostName(), socket.getPort(), true);
-		sslsock.setUseClientMode(false);
-		return sslsock;
-	}
-
-	private Runnable getConnectionHandler(PushbackSocket socket)
+	private Thread createConnectionHandler(final Socket socket)
 			throws IOException {
+		Thread thread = new Thread() {
+			public void run() {
+				try {
+					handleConnection(socket);
+				} catch (IOException ignore) {
+				} finally {
+					try {
+						if (!socket.isClosed())
+							socket.close();
+					} catch (IOException ignore) {
+					}
+				}
+			}
+		};
+		thread.setDaemon(true);
+		return thread;
+	}
+
+	private void handleConnection(Socket accept) throws IOException {
+		final PushbackSocket socket = new PushbackSocket(accept);
 		socket.setSoTimeout(socketTimeout);
 
 		InetSocketAddress target = this.target;
@@ -209,7 +162,7 @@ public abstract class Proxy {
 			// check if it is a SOCKS request
 			byte[] sniff = sniff(socket, 1);
 			if (sniff == null) // connection closed
-				return null;
+				return;
 
 			if (sniff[0] == 4 || sniff[0] == 5) // SOCKS v4 or V5
 				socks = true;
@@ -221,53 +174,11 @@ public abstract class Proxy {
 			target = sp.handleConnectRequest();
 		}
 
-		boolean ssl = false;
-		if (this.ssl.equals(SSL.AUTO)) {
-			// check if it is an SSL connection
-			byte[] sniff = sniff(socket, 4);
-			if (sniff == null) // connection closed
-				return null;
-
-			if (isSSL(sniff))
-				ssl = true;
-		} else if (this.ssl.equals(SSL.ALWAYS))
-			ssl = true;
-
-		Socket sock = socket;
-		if (ssl) {
-			try {
-				sock = negotiateSsl(sock, target);
-			} catch (GeneralSecurityException gse) {
-				logger.warning("Error negotiating SSL: " + gse.getMessage());
-				return null;
-			}
-		}
-
-		return createProtocolHandler(sock, target, ssl);
+		handleConnection(socket, target);
 	}
 
-	private void handleConnection(Socket accept) throws IOException {
-		final PushbackSocket socket = new PushbackSocket(accept);
-		Thread thread = new Thread() {
-			public void run() {
-				try {
-					Runnable r = getConnectionHandler(socket);
-					if (r != null)
-						r.run();
-				} catch (IOException ioe) {
-					logger.severe("Error creating connection handler!"
-							+ ioe.getMessage());
-				} finally {
-					try {
-						socket.close();
-					} catch (IOException ignore) {
-					}
-				}
-			}
-		};
-		thread.setDaemon(true);
-		thread.start();
-	}
+	protected abstract void handleConnection(Socket socket,
+			InetSocketAddress target) throws IOException;
 
 	private AcceptThread acceptThread = null;
 
@@ -276,7 +187,7 @@ public abstract class Proxy {
 		public void run() {
 			try {
 				do {
-					handleConnection(socket.accept());
+					createConnectionHandler(socket.accept()).start();
 				} while (!socket.isClosed());
 			} catch (IOException ioe) {
 				if (!isStopped()) {

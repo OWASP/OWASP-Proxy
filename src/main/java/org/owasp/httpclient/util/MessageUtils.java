@@ -1,5 +1,7 @@
 package org.owasp.httpclient.util;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,6 +13,7 @@ import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MessageHeader;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.StreamingMessage;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkedOutputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
@@ -49,9 +52,33 @@ public class MessageUtils {
 	 * @return
 	 * @throws MessageFormatException
 	 */
-	public static InputStream decode(MessageHeader header, InputStream content)
+	public static InputStream decode(StreamingMessage message)
 			throws MessageFormatException {
-		String codings = header.getHeader("Transfer-Coding");
+		return decode(message, message.getContent());
+	}
+
+	public static byte[] decode(Message message) throws MessageFormatException {
+		try {
+			InputStream content = new ByteArrayInputStream(message.getContent());
+			content = decode(message, content);
+			ByteArrayOutputStream copy = new ByteArrayOutputStream();
+			byte[] buff = new byte[4096];
+			int got;
+			while ((got = content.read(buff)) > 0)
+				copy.write(buff, 0, got);
+			return copy.toByteArray();
+		} catch (IOException ioe) {
+			throw new MessageFormatException("Malformed encoded content: "
+					+ ioe.getMessage(), ioe);
+
+		}
+	}
+
+	public static InputStream decode(MessageHeader message, InputStream content)
+			throws MessageFormatException {
+		if (content == null)
+			return content;
+		String codings = message.getHeader("Transfer-Coding");
 		if (codings == null || codings.trim().equals(""))
 			return content;
 		try {
@@ -67,7 +94,7 @@ public class MessageUtils {
 					// nothing to do
 				} else
 					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i], header.getHeader());
+							+ algos[i], message.getHeader());
 			}
 			return content;
 		} catch (IOException ioe) {
