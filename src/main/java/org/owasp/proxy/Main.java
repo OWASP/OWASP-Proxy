@@ -15,6 +15,7 @@ import org.owasp.proxy.daemon.DefaultCertificateProvider;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
 import org.owasp.proxy.daemon.HttpRequestHandler;
+import org.owasp.proxy.daemon.LoggingHttpRequestHandler;
 import org.owasp.proxy.daemon.Proxy;
 import org.owasp.proxy.daemon.SSLConnectionHandler;
 import org.owasp.proxy.daemon.SocksConnectionHandler;
@@ -89,21 +90,14 @@ public class Main {
 		final ProxySelector ps = getProxySelector(proxy);
 
 		HttpRequestHandler rh = new DefaultHttpRequestHandler() {
-
-			/*
-			 * (non-Javadoc)
-			 * 
-			 * @see
-			 * org.owasp.proxy.daemon.DefaultHttpRequestHandler#createClient()
-			 */
 			@Override
 			protected Client createClient() {
 				Client client = super.createClient();
 				client.setProxySelector(ps);
 				return client;
 			}
-
 		};
+		rh = new LoggingHttpRequestHandler(rh);
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLConnectionHandler sch = new SSLConnectionHandler(
 				new DefaultCertificateProvider(), true, hpch);
