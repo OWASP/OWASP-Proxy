@@ -19,7 +19,6 @@
  */
 package org.owasp.httpclient;
 
-
 public class NamedValue {
 
 	private String name;
@@ -76,6 +75,8 @@ public class NamedValue {
 				String sep = string.substring(parts[0].length(), string
 						.length());
 				return new NamedValue(parts[0], sep, "");
+			} else {
+				return new NamedValue(parts[0], null, null);
 			}
 		}
 		throw new MessageFormatException("Error parsing '" + string
@@ -110,4 +111,12 @@ public class NamedValue {
 		return buff.toString();
 	}
 
+	public static String findValue(NamedValue[] values, String name) {
+		if (values == null || values.length == 0)
+			return null;
+		for (int i = 0; i < values.length; i++)
+			if (name.equals(values[i].getName()))
+				return values[i].getValue();
+		return null;
+	}
 }
