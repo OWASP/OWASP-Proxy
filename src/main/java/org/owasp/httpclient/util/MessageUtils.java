@@ -61,19 +61,23 @@ public class MessageUtils {
 	}
 
 	public static byte[] decode(Message message) throws MessageFormatException {
+		return decode(message, message.getContent());
+	}
+
+	public static byte[] decode(MessageHeader message, byte[] content)
+			throws MessageFormatException {
 		try {
-			InputStream content = new ByteArrayInputStream(message.getContent());
-			content = decode(message, content);
+			InputStream is = new ByteArrayInputStream(content);
+			is = decode(message, is);
 			ByteArrayOutputStream copy = new ByteArrayOutputStream();
 			byte[] buff = new byte[4096];
 			int got;
-			while ((got = content.read(buff)) > 0)
+			while ((got = is.read(buff)) > 0)
 				copy.write(buff, 0, got);
 			return copy.toByteArray();
 		} catch (IOException ioe) {
 			throw new MessageFormatException("Malformed encoded content: "
 					+ ioe.getMessage(), ioe);
-
 		}
 	}
 
