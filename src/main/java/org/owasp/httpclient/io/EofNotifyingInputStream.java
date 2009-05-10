@@ -10,7 +10,7 @@ public abstract class EofNotifyingInputStream extends FilterInputStream {
 		super(in);
 	}
 
-	public abstract void eof();
+	protected abstract void eof();
 
 	@Override
 	public int read() throws IOException {
