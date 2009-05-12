@@ -61,7 +61,7 @@ public class Server {
 	private final static Logger logger = Logger.getLogger(Server.class
 			.getName());
 
-	private volatile ServerSocket socket = null;
+	private ServerSocket socket;
 
 	private int socketTimeout = 0;
 
