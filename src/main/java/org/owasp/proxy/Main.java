@@ -11,24 +11,30 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.owasp.httpclient.Client;
+import org.owasp.httpclient.dao.JdbcMessageDAO;
 import org.owasp.proxy.daemon.DefaultCertificateProvider;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
 import org.owasp.proxy.daemon.HttpRequestHandler;
 import org.owasp.proxy.daemon.LoggingHttpRequestHandler;
 import org.owasp.proxy.daemon.Proxy;
+import org.owasp.proxy.daemon.RecordingHttpRequestHandler;
 import org.owasp.proxy.daemon.SSLConnectionHandler;
 import org.owasp.proxy.daemon.SocksConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class Main {
 
 	private static void usage() {
 		System.err
-				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"]");
+				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"] [ Driver URL username password ]");
 		System.err.println("Where \'proxy instruction\' might look like:");
 		System.err
 				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
+		System.err.println("and the JDBC connection details might look like:");
+		System.err
+				.println("org.h2.Driver jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1 sa \"\"");
 	}
 
 	private static ProxySelector getProxySelector(String proxy) {
@@ -98,6 +104,18 @@ public class Main {
 			}
 		};
 		rh = new LoggingHttpRequestHandler(rh);
+
+		DriverManagerDataSource dataSource = new DriverManagerDataSource();
+		dataSource.setDriverClassName("org.h2.Driver");
+		dataSource.setUrl("jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1");
+		// dataSource.setUsername("sa");
+		// dataSource.setPassword("");
+		JdbcMessageDAO dao = new JdbcMessageDAO();
+		dao.setDataSource(dataSource);
+		dao.setDataSource(dataSource);
+		dao.createTables();
+		rh = new RecordingHttpRequestHandler("dawes.za.net", dao, rh);
+
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLConnectionHandler sch = new SSLConnectionHandler(
 				new DefaultCertificateProvider(), true, hpch);
