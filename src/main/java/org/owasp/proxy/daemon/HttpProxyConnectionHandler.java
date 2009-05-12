@@ -14,9 +14,6 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
@@ -31,12 +28,12 @@ import org.owasp.proxy.model.URI;
 public class HttpProxyConnectionHandler implements ConnectionHandler,
 		TargetedConnectionHandler, EncryptedConnectionHandler {
 
-	private final static byte[] NO_CERTIFICATE_HEADER = AsciiString
+	private final static byte[] NO_CONNECT_HEADER = AsciiString
 			.getBytes("HTTP/1.0 503 Service unavailable"
-					+ " - SSL server certificate not available\r\n\r\n");
+					+ " - CONNECT not supported\r\n\r\n");
 
-	private final static byte[] NO_CERTIFICATE_MESSAGE = AsciiString
-			.getBytes("There is no SSL server certificate available for use");
+	private final static byte[] NO_CONNECT_MESSAGE = AsciiString
+			.getBytes("There is no CONNECT handler available");
 
 	private final static byte[] ERROR_HEADER = AsciiString
 			.getBytes("HTTP/1.0 500 OWASP Proxy Error\r\n"
@@ -55,16 +52,14 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 
 	private HttpRequestHandler requestHandler;
 
-	private CertificateProvider certificateProvider;
+	private TargetedConnectionHandler connectHandler = null;
 
 	public HttpProxyConnectionHandler(HttpRequestHandler requestHandler) {
-		this(requestHandler, null);
+		this.requestHandler = requestHandler;
 	}
 
-	public HttpProxyConnectionHandler(HttpRequestHandler requestHandler,
-			CertificateProvider certificateProvider) {
-		this.requestHandler = requestHandler;
-		this.certificateProvider = certificateProvider;
+	public void setConnectHandler(TargetedConnectionHandler connectHandler) {
+		this.connectHandler = connectHandler;
 	}
 
 	/*
@@ -107,22 +102,6 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		return response;
 	}
 
-	protected SSLSocketFactory getSSLSocketFactory(InetSocketAddress target)
-			throws IOException, GeneralSecurityException {
-		String host = target == null ? null : target.getHostName();
-		int port = target == null ? -1 : target.getPort();
-		return certificateProvider == null ? null : certificateProvider
-				.getSocketFactory(host, port);
-	}
-
-	protected SSLSocket negotiateSSL(Socket socket, SSLSocketFactory factory)
-			throws GeneralSecurityException, IOException {
-		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
-				.getInetAddress().getHostName(), socket.getPort(), true);
-		sslsock.setUseClientMode(false);
-		return sslsock;
-	}
-
 	private void doConnect(Socket socket, RequestHeader request)
 			throws IOException, GeneralSecurityException,
 			MessageFormatException {
@@ -143,19 +122,17 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 					+ resource + "'", request.getHeader());
 		}
 		InetSocketAddress target = new InetSocketAddress(host, port);
-		SSLSocketFactory socketFactory = getSSLSocketFactory(target);
 		OutputStream out = socket.getOutputStream();
-		if (socketFactory == null) {
-			out.write(NO_CERTIFICATE_HEADER);
-			out.write(NO_CERTIFICATE_MESSAGE);
+		if (connectHandler == null) {
+			out.write(NO_CONNECT_HEADER);
+			out.write(NO_CONNECT_MESSAGE);
 			out.flush();
 		} else {
 			out.write("HTTP/1.0 200 Ok\r\n\r\n".getBytes());
 			out.flush();
 			// start over from the beginning to handle this
 			// connection as an SSL connection
-			socket = negotiateSSL(socket, socketFactory);
-			handleConnection(socket, target, true);
+			connectHandler.handleConnection(socket, target);
 		}
 	}
 

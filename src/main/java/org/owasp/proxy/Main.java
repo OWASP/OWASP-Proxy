@@ -101,6 +101,7 @@ public class Main {
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLConnectionHandler sch = new SSLConnectionHandler(
 				new DefaultCertificateProvider(), true, hpch);
+		hpch.setConnectHandler(sch);
 		TargetedConnectionHandler socks = new SocksConnectionHandler(sch, true);
 		Proxy p = new Proxy(listen, socks, null);
 		p.start();
@@ -110,5 +111,6 @@ public class Main {
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
 		p.stop();
 		System.out.println("Terminated");
+		System.exit(0);
 	}
 }
