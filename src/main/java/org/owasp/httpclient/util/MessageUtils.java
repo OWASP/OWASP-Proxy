@@ -5,10 +5,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.PipedInputStream;
-import java.io.PipedOutputStream;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.GZIPOutputStream;
 
 import org.owasp.httpclient.Message;
 import org.owasp.httpclient.MessageFormatException;
@@ -17,9 +13,10 @@ import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingMessage;
 import org.owasp.httpclient.io.ChunkedInputStream;
-import org.owasp.httpclient.io.ChunkedOutputStream;
+import org.owasp.httpclient.io.ChunkingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
-import org.owasp.proxy.util.Pump;
+import org.owasp.httpclient.io.GunzipInputStream;
+import org.owasp.httpclient.io.GzipInputStream;
 
 public class MessageUtils {
 
@@ -96,7 +93,7 @@ public class MessageUtils {
 				if ("chunked".equalsIgnoreCase(algos[i])) {
 					content = new ChunkedInputStream(content);
 				} else if ("gzip".equalsIgnoreCase(algos[i])) {
-					content = new GZIPInputStream(content);
+					content = new GunzipInputStream(content);
 				} else if ("identity".equalsIgnoreCase(algos[i])) {
 					// nothing to do
 				} else
@@ -148,28 +145,21 @@ public class MessageUtils {
 		String codings = header.getHeader("Transfer-Coding");
 		if (codings == null || codings.trim().equals(""))
 			return content;
-		try {
-			String[] algos = codings.split("[ \t]*,[ \t]*");
-			if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
-				return content;
-			PipedInputStream sink = new PipedInputStream();
-			OutputStream source = new PipedOutputStream(sink);
-			for (int i = 0; i < algos.length; i++) {
-				if ("chunked".equalsIgnoreCase(algos[i])) {
-					source = new ChunkedOutputStream(source);
-				} else if ("gzip".equalsIgnoreCase(algos[i])) {
-					source = new GZIPOutputStream(source);
-				} else if ("identity".equalsIgnoreCase(algos[i])) {
-					// nothing to do
-				} else
-					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i], header.getHeader());
-			}
-			new Pump(content, source).start();
-			return sink;
-		} catch (IOException ioe) {
-			throw new MessageFormatException("Error encoding content", ioe);
+		String[] algos = codings.split("[ \t]*,[ \t]*");
+		if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
+			return content;
+		for (int i = 0; i < algos.length; i++) {
+			if ("chunked".equalsIgnoreCase(algos[i])) {
+				content = new ChunkingInputStream(content);
+			} else if ("gzip".equalsIgnoreCase(algos[i])) {
+				content = new GzipInputStream(content);
+			} else if ("identity".equalsIgnoreCase(algos[i])) {
+				// nothing to do
+			} else
+				throw new MessageFormatException("Unsupported coding : "
+						+ algos[i], header.getHeader());
 		}
+		return content;
 	}
 
 	public static boolean flushContent(MessageHeader header, InputStream in)
