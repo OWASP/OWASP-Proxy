@@ -97,6 +97,7 @@ public class Server {
 		Thread thread = new Thread() {
 			public void run() {
 				try {
+					socket.setSoTimeout(socketTimeout);
 					connectionHandler.handleConnection(socket);
 				} catch (IOException ignore) {
 				} finally {
