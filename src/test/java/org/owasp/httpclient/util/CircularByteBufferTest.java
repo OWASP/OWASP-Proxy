@@ -33,6 +33,33 @@ public class CircularByteBufferTest {
 	}
 
 	@Test
+	public void pushAndRemove() {
+		cb.push((byte) 'C');
+		cb.push((byte) 'B');
+		cb.push((byte) 'A');
+
+		cb.add((byte) 'D');
+		cb.add((byte) 'E');
+
+		assertEquals(5, cb.length());
+
+		assertTrue(cb.remove() == (byte) 'A');
+		assertTrue(cb.remove() == (byte) 'B');
+		assertTrue(cb.remove() == (byte) 'C');
+		assertTrue(cb.remove() == (byte) 'D');
+		assertTrue(cb.remove() == (byte) 'E');
+
+		assertEquals(0, cb.length());
+
+		cb.push(AsciiString.getBytes("WXYZ"));
+		cb.push(AsciiString.getBytes("JKLMNOPQRSTUV"));
+		cb.push(AsciiString.getBytes("ABCDEFGHI"));
+		byte[] buff = new byte[30];
+		assertEquals(26, cb.remove(buff));
+		assertEquals("ABCDEFGHIJKLMNOPQRSTUVWXYZ", new String(buff, 0, 26));
+	}
+
+	@Test
 	public void addAndRemove() {
 		cb.add((byte) 'A');
 		cb.add((byte) 'B');
@@ -70,9 +97,9 @@ public class CircularByteBufferTest {
 		cb.add((byte) 'Z');
 		cb.add((byte) 'Z');
 		cb.add((byte) 'Z');
-		assertEquals((byte) 'Z', cb.remove());
-		assertEquals((byte) 'Z', cb.remove());
-		assertEquals((byte) 'Z', cb.remove());
+		assertEquals((byte) 'Z', (byte) cb.remove());
+		assertEquals((byte) 'Z', (byte) cb.remove());
+		assertEquals((byte) 'Z', (byte) cb.remove());
 
 		cb.add(s16.getBytes());
 		assertEquals(s16.length(), cb.length());

@@ -57,6 +57,42 @@ public class CircularByteBuffer {
 		ensureCapacity(len);
 
 		int pos = (start + length) % buff.length;
+		copyToBuffer(pos, b, off, len);
+		length = length + len;
+	}
+
+	public void push(byte i) {
+		ensureCapacity(1);
+		int pos = 0;
+		if (length > 0) {
+			pos = start - 1;
+			if (pos < 0)
+				pos += buff.length;
+		}
+		buff[pos] = i;
+		start = pos;
+		length++;
+	}
+
+	public void push(byte[] b) {
+		push(b, 0, b.length);
+	}
+
+	public void push(byte[] b, int off, int len) {
+		ensureCapacity(len);
+
+		int pos = 0;
+		if (length > 0) {
+			pos = start - len;
+			if (pos < 0)
+				pos += buff.length;
+		}
+		copyToBuffer(pos, b, off, len);
+		start = pos;
+		length += len;
+	}
+
+	private void copyToBuffer(int pos, byte[] b, int off, int len) {
 		int l = buff.length - pos;
 		if (l >= len) { // there is enough space in one chunk
 			System.arraycopy(b, off, buff, pos, len);
@@ -64,16 +100,24 @@ public class CircularByteBuffer {
 			System.arraycopy(b, off, buff, pos, l);
 			System.arraycopy(b, off + l, buff, 0, len - l);
 		}
-		length = length + len;
 	}
 
-	public byte remove() {
+	private void copyFromBuffer(byte[] b, int off, int len) {
+		int l = Math.min(buff.length - start, len);
+		System.arraycopy(buff, start, b, off, l);
+		if (l != len)
+			System.arraycopy(buff, 0, b, off + l, len - l);
+	}
+
+	public int remove() {
+		if (length == 0)
+			return -1;
+
 		byte b = buff[start];
 		start = (start + 1) % buff.length;
 		length--;
-		// if (length == 0)
-		// start = 0;
-		return b;
+
+		return b & 0xFF;
 	}
 
 	public int remove(byte[] b) {
@@ -81,20 +125,15 @@ public class CircularByteBuffer {
 	}
 
 	public int remove(byte[] b, int off, int len) {
+		if (length == 0)
+			return -1;
+
 		int read = Math.min(len, length);
 
-		int l = Math.min(buff.length - start, read);
-		System.arraycopy(buff, start, b, off, l);
-		start = (start + l) % buff.length;
-		length = length - l;
+		copyFromBuffer(b, off, read);
+		start = (start + read) % buff.length;
+		length = length - read;
 
-		// if (length == 0)
-		// start = 0;
-		//
-		if (l < read) {
-			return l + remove(b, off + l, len - l);
-		} else {
-			return l;
-		}
+		return read;
 	}
 }
