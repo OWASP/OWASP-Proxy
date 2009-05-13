@@ -95,7 +95,7 @@ public class Client {
 		return state;
 	}
 
-	protected void checkLoop(SocketAddress target) throws IOException {
+	protected void validateTarget(SocketAddress target) throws IOException {
 	}
 
 	private URI constructUri(boolean ssl, String host, int port)
@@ -203,7 +203,7 @@ public class Client {
 			direct = true;
 			try {
 				SocketAddress addr = proxy.address();
-				checkLoop(addr);
+				validateTarget(addr);
 				if (proxy.type() == Proxy.Type.HTTP) {
 					socket = new Socket(Proxy.NO_PROXY);
 					socket.setSoTimeout(10000);
