@@ -6,6 +6,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -24,12 +26,17 @@ import org.springframework.jdbc.support.rowset.SqlRowSetMetaData;
 
 public class JdbcMessageDAOTest {
 
+	private static Logger logger = Logger.getAnonymousLogger();
+
 	private static JdbcMessageDAO dao = null;
 
 	private static DriverManagerDataSource dataSource = null;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		Logger dslogger = Logger.getLogger(DriverManagerDataSource.class
+				.getName());
+		dslogger.setLevel(Level.OFF);
 		dataSource = new DriverManagerDataSource();
 		dataSource.setDriverClassName("org.h2.Driver");
 		dataSource.setUrl("jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1");
@@ -79,9 +86,9 @@ public class JdbcMessageDAOTest {
 		int id = dao.saveConversation(request.getId(), response.getId(), 0, 0,
 				0);
 
-		System.out.println("ADDED conversation");
+		logger.fine("ADDED conversation");
 		dump();
-		System.out.println("##############################################");
+		logger.fine("##############################################");
 
 		Conversation c = dao.getConversation(id);
 
@@ -110,22 +117,27 @@ public class JdbcMessageDAOTest {
 	}
 
 	private static void dump(String sql) {
-		System.out.println("\n" + sql);
+		logger.fine("\n" + sql);
 		SqlRowSet rs = dao.getJdbcTemplate().queryForRowSet(sql);
 		try {
 			SqlRowSetMetaData rsmd = rs.getMetaData();
 			int c = rsmd.getColumnCount();
+			StringBuffer buff = new StringBuffer();
 			for (int i = 1; i <= c; i++) {
-				System.out.print(rsmd.getColumnLabel(i));
-				System.out.print(i == c ? "\n" : "\t");
+				buff.append(rsmd.getColumnLabel(i));
+				buff.append(i == c ? "\n" : "\t");
 			}
+			logger.fine(buff.toString());
+			buff.delete(0, buff.length());
 			while (rs.next()) {
 				for (int i = 1; i <= c; i++) {
-					System.out.print(rs.getObject(i));
-					System.out.print(i == c ? "\n" : "\t");
+					buff.append(rs.getObject(i));
+					buff.append(i == c ? "\n" : "\t");
 				}
+				logger.fine(buff.toString());
+				buff.delete(0, buff.length());
 			}
-			System.out.println("================\n\n");
+			logger.fine("================\n\n");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

@@ -23,21 +23,24 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.InputStream;
+import java.util.logging.Logger;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.owasp.httpclient.io.ChunkedInputStream;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.test.TraceServer;
 
 public class ClientTest {
+
+	private static Logger logger = Logger.getAnonymousLogger();
 
 	private static TraceServer ts = null;
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		System.err.println("Running setupBeforeClass()");
 		ts = new TraceServer(9999);
 		Thread t = new Thread(ts);
 		t.setDaemon(false);
@@ -46,7 +49,6 @@ public class ClientTest {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-		System.err.println("Running shutdown after class");
 		ts.stop();
 		Thread.sleep(1000);
 		assertTrue("TraceServer shutdown failed!", ts.isStopped());
@@ -59,7 +61,7 @@ public class ClientTest {
 		String request = "GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n";
 		client.sendRequestHeader(request.getBytes());
 		byte[] header = client.getResponseHeader();
-		System.out.println("Header length: " + header.length);
+		logger.fine("Header length: " + header.length);
 		int got, read = 0;
 		byte[] buff = new byte[1024];
 		InputStream is = client.getResponseContent();
@@ -77,7 +79,7 @@ public class ClientTest {
 				+ "Host : www.google.co.za\r\n\r\n";
 		client.sendRequestHeader(request.getBytes());
 		byte[] responseHeader = client.getResponseHeader();
-		System.out.write(responseHeader);
+		logger.finer(AsciiString.create(responseHeader));
 		MessageHeader mh = new MessageHeader.Impl();
 		mh.setHeader(responseHeader);
 		InputStream is = client.getResponseContent();
@@ -87,7 +89,7 @@ public class ClientTest {
 		byte[] buff = new byte[1024];
 		int got;
 		while ((got = is.read(buff)) > 0) {
-			System.out.write(buff, 0, got);
+			logger.finer(new String(buff, 0, got));
 		}
 		is.close();
 	}

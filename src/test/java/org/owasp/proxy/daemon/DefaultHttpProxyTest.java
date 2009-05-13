@@ -32,15 +32,19 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.logging.Logger;
 
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.test.TraceServer;
 
 public class DefaultHttpProxyTest {
+
+	private static Logger logger = Logger.getAnonymousLogger();
 
 	private static TraceServer ts;
 
@@ -52,7 +56,6 @@ public class DefaultHttpProxyTest {
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
-		System.err.println("Running setupBeforeClass()");
 		try {
 			ts = new TraceServer(9999);
 			Thread t = new Thread(ts);
@@ -72,7 +75,6 @@ public class DefaultHttpProxyTest {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-		System.err.println("Running shutdown after class");
 		ts.stop();
 		Thread.sleep(1000);
 		assertTrue("TraceServer shutdown failed!", ts.isStopped());
@@ -105,7 +107,7 @@ public class DefaultHttpProxyTest {
 			byte buff[] = new byte[1024];
 			int got;
 			while ((got = is.read(buff)) > 0) {
-				System.out.write(buff, 0, got);
+				logger.finer(AsciiString.create(buff, 0, got));
 			}
 			is.close();
 
@@ -118,7 +120,7 @@ public class DefaultHttpProxyTest {
 			os.close();
 			is = uc.getInputStream();
 			while ((got = is.read(buff)) > 0) {
-				System.out.write(buff, 0, got);
+				logger.finer(AsciiString.create(buff, 0, got));
 			}
 			is.close();
 
@@ -183,7 +185,7 @@ public class DefaultHttpProxyTest {
 			byte[] buff = new byte[1024];
 			try {
 				while ((got = is.read(buff)) > 0) {
-					System.out.write(buff, 0, got);
+					logger.finer(AsciiString.create(buff, 0, got));
 				}
 			} catch (SocketTimeoutException expected) {
 			} catch (SocketException expected) {
@@ -228,10 +230,9 @@ public class DefaultHttpProxyTest {
 					;
 				fail("Socket closed unexpectedly!");
 			} catch (SocketTimeoutException expected) {
-				System.out
-						.println("Finished reading the first response via timeout");
+				logger.fine("Finished reading the first response via timeout");
 			}
-			System.out.println("Submitting second request\n\n");
+			logger.fine("Submitting second request\n\n");
 			try {
 				Thread.sleep(2000);
 				os
@@ -240,7 +241,7 @@ public class DefaultHttpProxyTest {
 				os.flush();
 				try {
 					if ((got = is.read(buff)) > 0) {
-						System.out.write(buff, 0, got);
+						logger.finer(AsciiString.create(buff, 0, got));
 						fail("Expected the socket to be closed");
 					} else {
 						return;
@@ -248,7 +249,7 @@ public class DefaultHttpProxyTest {
 				} catch (SocketTimeoutException unexpected) {
 					throw unexpected;
 				} catch (SocketException expected) {
-					System.err.println("Got expected socket exception: "
+					logger.fine("Got expected socket exception: "
 							+ expected.getMessage());
 					return;
 				}

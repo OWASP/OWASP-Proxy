@@ -19,15 +19,20 @@
  */
 package org.owasp.proxy.io;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.owasp.httpclient.io.ChunkedOutputStream;
+import org.owasp.httpclient.util.AsciiString;
 
 public class ChunkedOutputStreamTest {
+
+	private static Logger logger = Logger.getAnonymousLogger();
 
 	@Before
 	public void setUp() throws Exception {
@@ -39,9 +44,11 @@ public class ChunkedOutputStreamTest {
 
 	@Test
 	public void testWriteByteArrayIntInt() throws IOException {
-		OutputStream out = new ChunkedOutputStream(System.out);
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		OutputStream out = new ChunkedOutputStream(baos);
 		out.write("ABCDEFGHIJKLMNOPQRSTUVWXYZ".getBytes());
 		out.close();
+		logger.fine(AsciiString.create(baos.toByteArray()));
 	}
 
 }

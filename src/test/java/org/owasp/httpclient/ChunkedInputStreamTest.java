@@ -28,6 +28,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +37,8 @@ import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkedOutputStream;
 
 public class ChunkedInputStreamTest {
+
+	private static Logger logger = Logger.getAnonymousLogger();
 
 	private InputStream is;
 
@@ -103,7 +106,7 @@ public class ChunkedInputStreamTest {
 		int got;
 		int total = 0;
 		while ((got = is.read(buff)) > 0) {
-			System.err.println("Read " + got + " bytes");
+			logger.fine("Read " + got + " bytes");
 			// verify expectation
 			for (int i = 0; i < got; i++) {
 				assertEquals("byte " + (total + i) + " different!",
@@ -123,7 +126,7 @@ public class ChunkedInputStreamTest {
 		while ((got = raw.read(buff)) > -1)
 			baos.write(buff, 0, got);
 		byte[] result = baos.toByteArray();
-		System.out.println(new String(result));
+		logger.fine(new String(result));
 		assertEquals(sample.length(), result.length);
 		assertTrue(Arrays.equals(sample.getBytes(), result));
 	}

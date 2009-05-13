@@ -3,6 +3,7 @@ package org.owasp.httpclient.io;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.logging.Logger;
 
 import org.junit.After;
 import org.junit.AfterClass;
@@ -12,6 +13,8 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ChunkingInputStreamTest {
+
+	private static Logger logger = Logger.getAnonymousLogger();
 
 	private byte[] data;
 
@@ -42,7 +45,7 @@ public class ChunkingInputStreamTest {
 		byte[] buff = new byte[data.length + 1024];
 		int read = 0, got;
 		while ((got = is.read(buff, read, Math.min(1024, buff.length - read))) > -1) {
-			System.err.println("Read " + got);
+			logger.fine("Read " + got);
 			read += got;
 		}
 		Assert.assertEquals(data.length, read);
