@@ -26,6 +26,12 @@ import java.io.InputStream;
 import org.owasp.httpclient.util.CircularByteBuffer;
 
 /**
+ * This class processes streams encoded according to RFC2616 "chunked"
+ * specification.
+ * 
+ * This class will either return decoded chunks, or will return the original
+ * stream, but return EOF when the last chunk and trailer have been read (if raw
+ * == true).
  * 
  * @author Rogan Dawes
  */
@@ -110,10 +116,6 @@ public class ChunkedInputStream extends FilterInputStream {
 		if (buffer == null || buffer.length() == 0)
 			return -1;
 		return buffer.remove();
-	}
-
-	public int read(byte[] b) throws IOException {
-		return read(b, 0, b.length);
 	}
 
 	public int read(byte[] b, int off, int len) throws IOException {
