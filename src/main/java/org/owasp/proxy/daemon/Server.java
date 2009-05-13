@@ -123,7 +123,7 @@ public class Server {
 					handleConnection(socket.accept());
 				} while (!socket.isClosed());
 			} catch (IOException ioe) {
-				if (!isStopped()) {
+				if (!socket.isClosed()) {
 					ioe.printStackTrace();
 					logger.warning("Exception listening for connections: "
 							+ ioe.getMessage());
@@ -135,8 +135,8 @@ public class Server {
 			} catch (IOException ioe) {
 				logger.warning("Exception closing socket: " + ioe.getMessage());
 			}
-			synchronized (this) {
-				notifyAll();
+			synchronized (Server.this) {
+				Server.this.notifyAll();
 			}
 		}
 	}
@@ -174,7 +174,7 @@ public class Server {
 	}
 
 	public synchronized boolean isStopped() {
-		return socket == null || socket.isClosed();
+		return acceptThread == null || !acceptThread.isAlive();
 	}
 
 }
