@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.owasp.httpclient.Message;
+import org.owasp.httpclient.BufferedMessage;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MessageHeader;
 import org.owasp.httpclient.RequestHeader;
@@ -57,7 +57,7 @@ public class MessageUtils {
 		return decode(message, message.getContent());
 	}
 
-	public static byte[] decode(Message message) throws MessageFormatException {
+	public static byte[] decode(BufferedMessage message) throws MessageFormatException {
 		return decode(message, message.getContent());
 	}
 
@@ -117,7 +117,7 @@ public class MessageUtils {
 		return encode(message, message.getContent());
 	}
 
-	public static byte[] encode(Message message) throws MessageFormatException {
+	public static byte[] encode(BufferedMessage message) throws MessageFormatException {
 		try {
 			InputStream content = new ByteArrayInputStream(message.getContent());
 			content = encode(message, content);
@@ -205,7 +205,7 @@ public class MessageUtils {
 	 * 
 	 * @return the internal byte[] representing the contents of this message.
 	 */
-	public static byte[] getMessage(Message message) {
+	public static byte[] getMessage(BufferedMessage message) {
 		byte[] header = message.getHeader();
 		byte[] content = message.getContent();
 		if (content != null && content.length > 0) {

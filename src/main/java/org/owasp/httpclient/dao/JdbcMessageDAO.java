@@ -11,9 +11,9 @@ import java.util.Collections;
 
 import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.MessageHeader;
-import org.owasp.httpclient.Request;
+import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.Response;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
@@ -43,8 +43,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	private static final String RESPONSE_HEADER_TIME = "responseHeaderTime";
 	private static final String RESPONSE_CONTENT_TIME = "responseContentTime";
 
-	private static final ParameterizedRowMapper<Request> REQUEST_MAPPER = new RequestMapper();
-	private static final ParameterizedRowMapper<Response> RESPONSE_MAPPER = new ResponseMapper();
+	private static final ParameterizedRowMapper<BufferedRequest> REQUEST_MAPPER = new RequestMapper();
+	private static final ParameterizedRowMapper<BufferedResponse> RESPONSE_MAPPER = new ResponseMapper();
 	private static final ParameterizedRowMapper<byte[]> CONTENT_MAPPER = new ContentMapper();
 	private static final ParameterizedRowMapper<Integer> ID_MAPPER = new IdMapper();
 	private static final ParameterizedRowMapper<Conversation> CONVERSATION_MAPPER = new ConversationMapper();
@@ -248,8 +248,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadRequest(int)
 	 */
-	public Request loadRequest(int id) throws DataAccessException {
-		Request request = (Request) loadRequestHeader(id);
+	public BufferedRequest loadRequest(int id) throws DataAccessException {
+		BufferedRequest request = (BufferedRequest) loadRequestHeader(id);
 		if (request == null)
 			return null;
 		int contentId = getMessageContentId(id);
@@ -281,8 +281,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadResponse(int)
 	 */
-	public Response loadResponse(int id) throws DataAccessException {
-		Response response = (Response) loadResponseHeader(id);
+	public BufferedResponse loadResponse(int id) throws DataAccessException {
+		BufferedResponse response = (BufferedResponse) loadResponseHeader(id);
 		if (response == null)
 			return null;
 		int contentId = getMessageContentId(id);
@@ -354,7 +354,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveRequest(org.owasp.httpclient.
 	 * Request)
 	 */
-	public void saveRequest(Request request) throws DataAccessException {
+	public void saveRequest(BufferedRequest request) throws DataAccessException {
 		int contentId = -1;
 		if (request.getContent() != null)
 			contentId = saveMessageContent(request.getContent());
@@ -388,7 +388,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveResponse(org.owasp.httpclient
 	 * .Response)
 	 */
-	public void saveResponse(Response response) throws DataAccessException {
+	public void saveResponse(BufferedResponse response) throws DataAccessException {
 		int contentId = -1;
 		if (response.getContent() != null)
 			contentId = saveMessageContent(response.getContent());
@@ -418,16 +418,16 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	}
 
 	private static class RequestMapper implements
-			ParameterizedRowMapper<Request> {
+			ParameterizedRowMapper<BufferedRequest> {
 
-		public Request mapRow(ResultSet rs, int rowNum) throws SQLException {
+		public BufferedRequest mapRow(ResultSet rs, int rowNum) throws SQLException {
 			int id = rs.getInt(ID);
 
 			String host = rs.getString(HOST);
 			int port = rs.getInt(PORT);
 			boolean ssl = rs.getBoolean(SSL);
 
-			Request request = new Request.Impl();
+			BufferedRequest request = new BufferedRequest.Impl();
 			request.setId(id);
 			request.setTarget(InetSocketAddress.createUnresolved(host, port));
 			request.setSsl(ssl);
@@ -438,12 +438,12 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	}
 
 	private static class ResponseMapper implements
-			ParameterizedRowMapper<Response> {
+			ParameterizedRowMapper<BufferedResponse> {
 
-		public Response mapRow(ResultSet rs, int rowNum) throws SQLException {
+		public BufferedResponse mapRow(ResultSet rs, int rowNum) throws SQLException {
 			int id = rs.getInt(ID);
 
-			Response response = new Response.Impl();
+			BufferedResponse response = new BufferedResponse.Impl();
 			response.setId(id);
 			response.setHeader(rs.getBytes(HEADER));
 			return response;

@@ -15,9 +15,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.owasp.httpclient.Conversation;
-import org.owasp.httpclient.Request;
+import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.Response;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.util.AsciiString;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -69,12 +69,12 @@ public class JdbcMessageDAOTest {
 
 	@Test
 	public void testSaveMessageContent() {
-		Request request = new Request.Impl();
+		BufferedRequest request = new BufferedRequest.Impl();
 		request.setTarget(InetSocketAddress.createUnresolved("localhost", 80));
 		request.setSsl(false);
 		request.setHeader(AsciiString
 				.getBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"));
-		Response response = new Response.Impl();
+		BufferedResponse response = new BufferedResponse.Impl();
 		response.setHeader(AsciiString
 				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text\r\n\r\n"));
 		byte[] cont = AsciiString.getBytes("Some content");

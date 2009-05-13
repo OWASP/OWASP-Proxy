@@ -3,8 +3,8 @@ package org.owasp.proxy.model;
 import java.net.InetSocketAddress;
 
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.Request;
-import org.owasp.httpclient.Response;
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 
 public class ConversationSummary {
 
@@ -24,7 +24,7 @@ public class ConversationSummary {
 	public ConversationSummary() {
 	}
 
-	public void summarizeRequest(Request request) throws MessageFormatException {
+	public void summarizeRequest(BufferedRequest request) throws MessageFormatException {
 		target = request.getTarget();
 		ssl = request.isSsl();
 
@@ -35,7 +35,7 @@ public class ConversationSummary {
 		requestContentSize = content == null ? 0 : content.length;
 	}
 
-	public void summarizeResponse(Response response)
+	public void summarizeResponse(BufferedResponse response)
 			throws MessageFormatException {
 		responseStatus = response.getStatus();
 		responseReason = response.getReason();

@@ -19,7 +19,7 @@
  */
 package org.owasp.httpclient;
 
-public interface Message extends MessageHeader {
+public interface BufferedMessage extends MessageHeader {
 
 	/**
 	 * @return

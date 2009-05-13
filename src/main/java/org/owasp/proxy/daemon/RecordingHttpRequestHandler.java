@@ -12,9 +12,9 @@ import java.util.List;
 import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.Request;
+import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.Response;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
@@ -77,7 +77,7 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		if (name.equals(request.getTarget().getHostName())) {
 			return handleLocalRequest(request);
 		}
-		final Request req = new Request.Impl();
+		final BufferedRequest req = new BufferedRequest.Impl();
 		req.setTarget(request.getTarget());
 		req.setSsl(request.isSsl());
 		req.setHeader(request.getHeader());
@@ -100,7 +100,7 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		StreamingResponse response = next.handleRequest(source, request);
 		final long requestTime = reqis.getLastRead();
 		final long responseHeaderTime = System.currentTimeMillis();
-		final Response resp = new Response.Impl();
+		final BufferedResponse resp = new BufferedResponse.Impl();
 		resp.setHeader(response.getHeader());
 		if (response.getContent() != null) {
 			InputStream content = response.getContent();
@@ -122,7 +122,7 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		return response;
 	}
 
-	private void record(InetAddress source, Request request, Response response,
+	private void record(InetAddress source, BufferedRequest request, BufferedResponse response,
 			long requestTime, long responseHeaderTime, long responseContentTime) {
 		dao.saveRequest(request);
 		dao.saveResponse(response);

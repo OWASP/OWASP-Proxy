@@ -54,7 +54,7 @@ public class MessageHeaderTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.Message#getMessage()}.
+	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getMessage()}.
 	 */
 	@Test
 	public void testGetSetHeader() throws Exception {
@@ -65,7 +65,7 @@ public class MessageHeaderTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.Message#getStartLine()}.
+	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getStartLine()}.
 	 */
 	@Test
 	public void testGetFirstLine() throws Exception {
@@ -78,7 +78,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#setStartLine(java.lang.String)}.
+	 * {@link org.owasp.httpclient.BufferedMessage#setStartLine(java.lang.String)}.
 	 */
 	@Test
 	public void testSetFirstLine() throws Exception {
@@ -88,7 +88,7 @@ public class MessageHeaderTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.Message#getHeaders()}.
+	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getHeaders()}.
 	 */
 	@Test
 	public void testGetHeaders() throws Exception {
@@ -100,7 +100,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#setHeaders(org.owasp.httpclient.NamedValue[])}
+	 * {@link org.owasp.httpclient.BufferedMessage#setHeaders(org.owasp.httpclient.NamedValue[])}
 	 * .
 	 */
 	@Test
@@ -123,7 +123,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#getHeader(java.lang.String)}.
+	 * {@link org.owasp.httpclient.BufferedMessage#getHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testGetHeaderString() throws Exception {
@@ -134,7 +134,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#setHeader(java.lang.String, java.lang.String)}
+	 * {@link org.owasp.httpclient.BufferedMessage#setHeader(java.lang.String, java.lang.String)}
 	 * .
 	 */
 	@Test
@@ -147,7 +147,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#addHeader(java.lang.String, java.lang.String)}
+	 * {@link org.owasp.httpclient.BufferedMessage#addHeader(java.lang.String, java.lang.String)}
 	 * .
 	 */
 	@Test
@@ -172,7 +172,7 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.Message#deleteHeader(java.lang.String)}.
+	 * {@link org.owasp.httpclient.BufferedMessage#deleteHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testDeleteHeader() throws Exception {

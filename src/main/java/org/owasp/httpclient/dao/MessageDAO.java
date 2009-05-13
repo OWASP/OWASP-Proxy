@@ -4,20 +4,20 @@ import java.io.InputStream;
 import java.util.Collection;
 
 import org.owasp.httpclient.Conversation;
-import org.owasp.httpclient.Request;
+import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.Response;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.ResponseHeader;
 import org.springframework.dao.DataAccessException;
 
 public interface MessageDAO {
 
-	void saveRequest(Request request) throws DataAccessException;
+	void saveRequest(BufferedRequest request) throws DataAccessException;
 
 	void saveRequestHeader(RequestHeader requestHeader, int contentId)
 			throws DataAccessException;
 
-	void saveResponse(Response response) throws DataAccessException;
+	void saveResponse(BufferedResponse response) throws DataAccessException;
 
 	void saveResponseHeader(ResponseHeader responseHeader, int contentId)
 			throws DataAccessException;
@@ -27,11 +27,11 @@ public interface MessageDAO {
 
 	int saveMessageContent(byte[] messageContent) throws DataAccessException;
 
-	Request loadRequest(int id) throws DataAccessException;
+	BufferedRequest loadRequest(int id) throws DataAccessException;
 
 	RequestHeader loadRequestHeader(int id) throws DataAccessException;
 
-	Response loadResponse(int id) throws DataAccessException;
+	BufferedResponse loadResponse(int id) throws DataAccessException;
 
 	ResponseHeader loadResponseHeader(int id) throws DataAccessException;
 
