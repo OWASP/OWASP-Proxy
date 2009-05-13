@@ -17,9 +17,11 @@ import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
 import org.owasp.proxy.daemon.HttpRequestHandler;
 import org.owasp.proxy.daemon.LoggingHttpRequestHandler;
+import org.owasp.proxy.daemon.LoopAvoidingTargetedConnectionHandler;
 import org.owasp.proxy.daemon.Proxy;
 import org.owasp.proxy.daemon.RecordingHttpRequestHandler;
 import org.owasp.proxy.daemon.SSLConnectionHandler;
+import org.owasp.proxy.daemon.ServerGroup;
 import org.owasp.proxy.daemon.SocksConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -95,7 +97,7 @@ public class Main {
 
 		final ProxySelector ps = getProxySelector(proxy);
 
-		HttpRequestHandler rh = new DefaultHttpRequestHandler() {
+		DefaultHttpRequestHandler drh = new DefaultHttpRequestHandler() {
 			@Override
 			protected Client createClient() {
 				Client client = super.createClient();
@@ -103,6 +105,10 @@ public class Main {
 				return client;
 			}
 		};
+		ServerGroup sg = new ServerGroup();
+		sg.addServer(listen);
+		drh.setServerGroup(sg);
+		HttpRequestHandler rh = drh;
 		rh = new LoggingHttpRequestHandler(rh);
 
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
@@ -117,10 +123,11 @@ public class Main {
 		rh = new RecordingHttpRequestHandler("dawes.za.net", dao, rh);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		SSLConnectionHandler sch = new SSLConnectionHandler(
+		TargetedConnectionHandler tch = new SSLConnectionHandler(
 				new DefaultCertificateProvider(), true, hpch);
-		hpch.setConnectHandler(sch);
-		TargetedConnectionHandler socks = new SocksConnectionHandler(sch, true);
+		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
+		hpch.setConnectHandler(tch);
+		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
 		Proxy p = new Proxy(listen, socks, null);
 		p.start();
 

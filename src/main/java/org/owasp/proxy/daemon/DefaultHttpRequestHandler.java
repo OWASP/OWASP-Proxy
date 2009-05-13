@@ -2,6 +2,8 @@ package org.owasp.proxy.daemon;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 import org.owasp.httpclient.Client;
 import org.owasp.httpclient.MessageFormatException;
@@ -9,6 +11,8 @@ import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 
 public class DefaultHttpRequestHandler implements HttpRequestHandler {
+
+	private ServerGroup serverGroup = null;
 
 	private ThreadLocal<Client> client = new ThreadLocal<Client>() {
 
@@ -24,8 +28,28 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 
 	};
 
+	public void setServerGroup(ServerGroup serverGroup) {
+		this.serverGroup = serverGroup;
+	}
+
 	protected Client createClient() {
-		return new Client();
+		return new Client() {
+
+			/*
+			 * (non-Javadoc)
+			 * 
+			 * @see
+			 * org.owasp.httpclient.Client#checkLoop(java.net.SocketAddress)
+			 */
+			@Override
+			protected void validateTarget(SocketAddress target)
+					throws IOException {
+				if (serverGroup != null && target instanceof InetSocketAddress
+						&& serverGroup.wouldAccept((InetSocketAddress) target))
+					throw new IOException("Loop detected");
+			}
+
+		};
 	}
 
 	/*
