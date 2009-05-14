@@ -120,7 +120,8 @@ public class Main {
 		dao.setDataSource(dataSource);
 		dao.setDataSource(dataSource);
 		dao.createTables();
-		rh = new RecordingHttpRequestHandler("dawes.za.net", dao, rh);
+		rh = new RecordingHttpRequestHandler("dawes.za.net", dao, rh,
+				1024 * 1024);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		TargetedConnectionHandler tch = new SSLConnectionHandler(

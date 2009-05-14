@@ -1,7 +1,6 @@
 package org.owasp.proxy.daemon;
 
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
@@ -9,21 +8,18 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.dao.MessageDAO;
-import org.owasp.httpclient.io.EofNotifyingInputStream;
-import org.owasp.httpclient.io.TimedInputStream;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
-import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.model.ConversationSummary;
 import org.springframework.dao.DataAccessException;
 
@@ -48,11 +44,14 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 
 	private HttpRequestHandler next;
 
+	private int max;
+
 	public RecordingHttpRequestHandler(String name, MessageDAO dao,
-			HttpRequestHandler next) {
+			HttpRequestHandler next, int maxContentSize) {
 		this.name = name;
 		this.dao = dao;
 		this.next = next;
+		this.max = maxContentSize;
 	}
 
 	/*
@@ -77,53 +76,21 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		if (name.equals(request.getTarget().getHostName())) {
 			return handleLocalRequest(request);
 		}
-		final BufferedRequest req = new BufferedRequest.Impl();
-		req.setTarget(request.getTarget());
-		req.setSsl(request.isSsl());
-		req.setHeader(request.getHeader());
-		if (request.getContent() != null) {
-			InputStream content = request.getContent();
-			final ByteArrayOutputStream copy = new ByteArrayOutputStream();
-			content = new CopyInputStream(content, copy);
-			content = new EofNotifyingInputStream(content) {
-				@Override
-				protected void eof() {
-					req.setContent(copy.toByteArray());
-				}
-			};
-			request.setContent(content);
-		} else {
-			request.setContent(new ByteArrayInputStream(new byte[0]));
-		}
-		TimedInputStream reqis = new TimedInputStream(request.getContent());
-		request.setContent(reqis);
+		BufferedRequest req = new BufferedRequest.Impl();
+		BufferedResponse resp = new BufferedResponse.Impl();
+		ConversationObserver observer = new ConversationObserver(source, req,
+				resp);
+		MessageUtils.delayedCopy(request, req, max, observer
+				.getRequestObserver());
 		StreamingResponse response = next.handleRequest(source, request);
-		final long requestTime = reqis.getLastRead();
-		final long responseHeaderTime = System.currentTimeMillis();
-		final BufferedResponse resp = new BufferedResponse.Impl();
-		resp.setHeader(response.getHeader());
-		if (response.getContent() != null) {
-			InputStream content = response.getContent();
-			final ByteArrayOutputStream copy = new ByteArrayOutputStream();
-			content = new CopyInputStream(content, copy);
-			content = new EofNotifyingInputStream(content) {
-				@Override
-				protected void eof() {
-					resp.setContent(copy.toByteArray());
-					record(source, req, resp, requestTime, responseHeaderTime,
-							System.currentTimeMillis());
-				}
-			};
-			response.setContent(content);
-		} else {
-			record(source, req, resp, requestTime, responseHeaderTime, System
-					.currentTimeMillis());
-		}
+		MessageUtils.delayedCopy(response, resp, max, observer
+				.getResponseObserver());
 		return response;
 	}
 
-	private void record(InetAddress source, BufferedRequest request, BufferedResponse response,
-			long requestTime, long responseHeaderTime, long responseContentTime) {
+	private void record(InetAddress source, BufferedRequest request,
+			BufferedResponse response, long requestTime,
+			long responseHeaderTime, long responseContentTime) {
 		dao.saveRequest(request);
 		dao.saveResponse(response);
 		dao.saveConversation(request.getId(), response.getId(), requestTime,
@@ -438,4 +405,56 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		return content(AsciiString.getBytes(content));
 	}
 
+	private class ConversationObserver {
+
+		private InetAddress source;
+		private BufferedRequest request;
+		private BufferedResponse response;
+
+		private long requestTime, responseHeaderTime, responseContentTime;
+
+		private boolean requestContentOverflow, responseContentOverflow;
+
+		public ConversationObserver(InetAddress source,
+				BufferedRequest request, BufferedResponse response) {
+			this.source = source;
+			this.request = request;
+			this.response = response;
+		}
+
+		public MessageUtils.DelayedCopyObserver getRequestObserver() {
+			return new MessageUtils.DelayedCopyObserver() {
+				@Override
+				public void contentOverflow() {
+					requestContentOverflow = true;
+				}
+
+				@Override
+				public void copyCompleted() {
+					requestTime = System.currentTimeMillis();
+					if (requestContentOverflow)
+						request.setContent(null);
+					if (responseContentOverflow)
+						response.setContent(null);
+					record(source, request, response, requestTime,
+							responseHeaderTime, responseContentTime);
+				}
+			};
+		}
+
+		public MessageUtils.DelayedCopyObserver getResponseObserver() {
+			responseHeaderTime = System.currentTimeMillis();
+			return new MessageUtils.DelayedCopyObserver() {
+				@Override
+				public void contentOverflow() {
+					responseContentOverflow = true;
+				}
+
+				@Override
+				public void copyCompleted() {
+					responseContentTime = System.currentTimeMillis();
+				}
+			};
+		}
+	}
 }
