@@ -28,7 +28,7 @@ public class ServerGroup {
 		}
 	}
 
-	private List<InetSocketAddress> servers;
+	private List<InetSocketAddress> servers = new ArrayList<InetSocketAddress>();
 
 	public synchronized void addServer(InetSocketAddress listen) {
 		servers.add(listen);
