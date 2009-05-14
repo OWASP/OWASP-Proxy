@@ -7,16 +7,23 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.owasp.httpclient.BufferedMessage;
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MessageHeader;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingMessage;
+import org.owasp.httpclient.StreamingRequest;
+import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkingInputStream;
+import org.owasp.httpclient.io.EofNotifyingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.io.GunzipInputStream;
 import org.owasp.httpclient.io.GzipInputStream;
+import org.owasp.httpclient.io.SizeLimitedByteArrayOutputStream;
+import org.owasp.proxy.io.CopyInputStream;
 
 public class MessageUtils {
 
@@ -57,7 +64,8 @@ public class MessageUtils {
 		return decode(message, message.getContent());
 	}
 
-	public static byte[] decode(BufferedMessage message) throws MessageFormatException {
+	public static byte[] decode(BufferedMessage message)
+			throws MessageFormatException {
 		return decode(message, message.getContent());
 	}
 
@@ -117,7 +125,8 @@ public class MessageUtils {
 		return encode(message, message.getContent());
 	}
 
-	public static byte[] encode(BufferedMessage message) throws MessageFormatException {
+	public static byte[] encode(BufferedMessage message)
+			throws MessageFormatException {
 		try {
 			InputStream content = new ByteArrayInputStream(message.getContent());
 			content = encode(message, content);
@@ -231,4 +240,106 @@ public class MessageUtils {
 				.equals(status));
 	}
 
+	public static BufferedRequest buffer(StreamingRequest request)
+			throws IOException {
+		BufferedRequest buff = new BufferedRequest.Impl();
+		buff.setTarget(request.getTarget());
+		buff.setSsl(request.isSsl());
+		buffer(request, buff);
+		return buff;
+	}
+
+	public static BufferedResponse buffer(StreamingResponse response)
+			throws IOException {
+		BufferedResponse buff = new BufferedResponse.Impl();
+		buffer(response, buff);
+		return buff;
+	}
+
+	public static void buffer(StreamingMessage message, BufferedMessage buffered)
+			throws IOException {
+		buffered.setHeader(message.getHeader());
+		InputStream in = message.getContent();
+		if (in != null) {
+			ByteArrayOutputStream copy = new ByteArrayOutputStream();
+			byte[] b = new byte[1024];
+			int got;
+			while ((got = in.read(b)) > -1) {
+				copy.write(b, 0, got);
+			}
+			buffered.setContent(copy.toByteArray());
+		}
+	}
+
+	public static StreamingRequest stream(BufferedRequest request) {
+		StreamingRequest stream = new StreamingRequest.Impl();
+		stream.setTarget(request.getTarget());
+		stream.setSsl(request.isSsl());
+		stream(request, stream);
+		return stream;
+	}
+
+	public static StreamingResponse stream(BufferedResponse response) {
+		StreamingResponse stream = new StreamingResponse.Impl();
+		stream(response, stream);
+		return stream;
+	}
+
+	public static void stream(BufferedMessage message, StreamingMessage stream) {
+		stream.setHeader(message.getHeader());
+		byte[] content = message.getContent();
+		if (content != null && content.length > 0)
+			stream.setContent(new ByteArrayInputStream(content));
+	}
+
+	public static void delayedCopy(StreamingRequest message,
+			BufferedRequest copy, int max, DelayedCopyObserver observer) {
+		copy.setTarget(message.getTarget());
+		copy.setSsl(message.isSsl());
+		delayedCopy((StreamingMessage) message, (BufferedMessage) copy, max,
+				observer);
+	}
+
+	public static void delayedCopy(StreamingResponse message,
+			BufferedResponse copy, int max, DelayedCopyObserver observer) {
+		delayedCopy((StreamingMessage) message, (BufferedMessage) copy, max,
+				observer);
+	}
+
+	public static void delayedCopy(StreamingMessage message,
+			final BufferedMessage copy, int max,
+			final DelayedCopyObserver observer) {
+		if (observer == null)
+			throw new NullPointerException("Observer may not be null");
+
+		copy.setHeader(message.getHeader());
+		InputStream content = message.getContent();
+		if (content == null) {
+			observer.copyCompleted();
+		} else {
+			final ByteArrayOutputStream copyContent = new SizeLimitedByteArrayOutputStream(
+					max) {
+				public void overflow() {
+					observer.contentOverflow();
+				}
+			};
+			content = new CopyInputStream(content, copyContent);
+			content = new EofNotifyingInputStream(content) {
+				protected void eof() {
+					copy.setContent(copyContent.toByteArray());
+					observer.copyCompleted();
+				}
+			};
+		}
+	}
+
+	public static abstract class DelayedCopyObserver {
+
+		public void contentOverflow() {
+		}
+
+		public void copyCompleted() {
+		}
+
+	}
 }
