@@ -339,8 +339,7 @@ public class MessageUtils {
 		public void contentOverflow() {
 		}
 
-		public void copyCompleted() {
-		}
+		public abstract void copyCompleted();
 
 	}
 }
