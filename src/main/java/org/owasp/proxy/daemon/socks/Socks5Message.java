@@ -190,12 +190,12 @@ public class Socks5Message extends ProxyMessage {
 		case SOCKS_ATYP_IPV4:
 			addr = new byte[4];
 			di.readFully(addr);
-			host = bytes2IPV4(addr, 0);
+			host = InetAddress.getByAddress(addr).getHostAddress();
 			break;
 		case SOCKS_ATYP_IPV6:
 			addr = new byte[SOCKS_IPV6_LENGTH];// I believe it is 16 bytes,huge!
 			di.readFully(addr);
-			host = bytes2IPV6(addr, 0);
+			host = InetAddress.getByAddress(addr).getHostAddress();
 			break;
 		case SOCKS_ATYP_DOMAINNAME:
 			// System.out.println("Reading ATYP_DOMAINNAME");

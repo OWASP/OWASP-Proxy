@@ -89,7 +89,7 @@ public abstract class ProxyMessage {
 	}
 
 	/**
-	 * Get string representaion of this message.
+	 * Get string representation of this message.
 	 * 
 	 * @return string representation of this message.
 	 */
@@ -97,21 +97,6 @@ public abstract class ProxyMessage {
 		return "Proxy Message:\n" + "Version:" + version + "\n" + "Command:"
 				+ command + "\n" + "IP:     " + ip + "\n" + "Port:   " + port
 				+ "\n" + "User:   " + user + "\n";
-	}
-
-	// Package methods
-	// ////////////////
-
-	static final String bytes2IPV4(byte[] addr, int offset) {
-		String hostName = "" + (addr[offset] & 0xFF);
-		for (int i = offset + 1; i < offset + 4; ++i)
-			hostName += "." + (addr[i] & 0xFF);
-		return hostName;
-	}
-
-	static final String bytes2IPV6(byte[] addr, int offset) {
-		// Have no idea how they look like!
-		return null;
 	}
 
 }

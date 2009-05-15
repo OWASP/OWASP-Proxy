@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 import org.owasp.httpclient.util.AsciiString;
 
@@ -109,7 +108,7 @@ public class Socks4Message extends ProxyMessage {
 		port = d_in.readUnsignedShort();
 		byte[] addr = new byte[4];
 		d_in.readFully(addr);
-		ip = bytes2IP(addr);
+		ip = InetAddress.getByAddress(addr);
 		host = ip.getHostName();
 		if (!clientMode) {
 			int b = in.read();
@@ -132,16 +131,6 @@ public class Socks4Message extends ProxyMessage {
 			msgLength = msg.msgLength;
 		}
 		out.write(msgBytes);
-	}
-
-	// Class methods
-	static InetAddress bytes2IP(byte[] addr) {
-		String s = bytes2IPV4(addr, 0);
-		try {
-			return InetAddress.getByName(s);
-		} catch (UnknownHostException uh_ex) {
-			return null;
-		}
 	}
 
 	// Constants
