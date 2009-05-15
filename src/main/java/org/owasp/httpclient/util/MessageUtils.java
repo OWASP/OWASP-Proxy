@@ -330,6 +330,7 @@ public class MessageUtils {
 					observer.copyCompleted();
 				}
 			};
+			message.setContent(content);
 		}
 	}
 
