@@ -61,7 +61,7 @@ public class LoggingHttpRequestHandler implements HttpRequestHandler {
 		return response;
 	}
 
-	private void log(InetAddress source, RequestHeader request,
+	protected void log(InetAddress source, RequestHeader request,
 			ResponseHeader response, int bytes) {
 		try {
 			StringBuilder buff = new StringBuilder();
