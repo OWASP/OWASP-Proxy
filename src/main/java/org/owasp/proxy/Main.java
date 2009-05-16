@@ -9,9 +9,13 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
 
 import org.owasp.httpclient.Client;
 import org.owasp.httpclient.dao.JdbcMessageDAO;
+import org.owasp.proxy.daemon.ConversationServiceHttpRequestHandler;
 import org.owasp.proxy.daemon.DefaultCertificateProvider;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
@@ -24,6 +28,7 @@ import org.owasp.proxy.daemon.SSLConnectionHandler;
 import org.owasp.proxy.daemon.ServerGroup;
 import org.owasp.proxy.daemon.SocksConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
+import org.owasp.proxy.util.TextFormatter;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class Main {
@@ -78,6 +83,12 @@ public class Main {
 	}
 
 	public static void main(String[] args) throws Exception {
+		Logger logger = Logger.getLogger("org.owasp.proxy");
+		logger.setUseParentHandlers(false);
+		Handler ch = new ConsoleHandler();
+		ch.setFormatter(new TextFormatter());
+		logger.addHandler(ch);
+
 		if (args == null || (args.length != 1 && args.length != 2)) {
 			usage();
 			return;
@@ -120,8 +131,8 @@ public class Main {
 		dao.setDataSource(dataSource);
 		dao.setDataSource(dataSource);
 		dao.createTables();
-		rh = new RecordingHttpRequestHandler("dawes.za.net", dao, rh,
-				1024 * 1024);
+		rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
+		rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		TargetedConnectionHandler tch = new SSLConnectionHandler(
