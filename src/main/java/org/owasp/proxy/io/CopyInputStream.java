@@ -23,6 +23,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.logging.Logger;
 
 /**
  * CopyInputStream writes a copy of everything that is read through it to one or
@@ -37,6 +38,9 @@ import java.io.OutputStream;
  * 
  */
 public class CopyInputStream extends FilterInputStream {
+
+	private static Logger logger = Logger.getLogger(CopyInputStream.class
+			.getName());
 
 	private OutputStream[] copy;
 
@@ -146,8 +150,9 @@ public class CopyInputStream extends FilterInputStream {
 		if (i == 13) { // 10 is unix LF, but DOS does 13+10, so read the 10 if
 			// we got 13
 			if ((i = read()) != 10)
-				System.out.println("Unexpected character "
-						+ Integer.toHexString(i) + ". Expected 0x0d");
+				throw new IOException("Unexpected character "
+						+ Integer.toHexString(i) + ". Expected 0x0d. Had read "
+						+ line);
 		}
 		return line.toString();
 	}
