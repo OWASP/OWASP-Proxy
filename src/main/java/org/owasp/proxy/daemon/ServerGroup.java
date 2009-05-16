@@ -43,6 +43,8 @@ public class ServerGroup {
 	}
 
 	public synchronized boolean wouldAccept(InetSocketAddress target) {
+		if (target == null)
+			return false;
 		for (InetSocketAddress listen : servers) {
 			if (listen.getPort() == target.getPort()) { // maybe
 				if (listen.getAddress().equals(target.getAddress()))
