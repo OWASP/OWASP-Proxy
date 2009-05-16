@@ -355,6 +355,8 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		} catch (MessageFormatException mfe) {
 			logger.info(mfe.getMessage());
 			mfe.printStackTrace();
+			logger.info("Header was " + new String(mfe.getHeader()));
+			logger.info("Target was " + target);
 		} finally {
 			try {
 				requestHandler.dispose();
