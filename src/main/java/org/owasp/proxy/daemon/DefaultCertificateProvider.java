@@ -37,7 +37,9 @@ public class DefaultCertificateProvider implements CertificateProvider {
 			SSLContext sslcontext = SSLContext.getInstance("SSLv3");
 			sslcontext.init(kmf.getKeyManagers(), null, null);
 			sslSocketFactory = sslcontext.getSocketFactory();
-		}
+		} else
+			throw new GeneralSecurityException("Couldn't find resource: "
+					+ resource);
 	}
 
 	/**
