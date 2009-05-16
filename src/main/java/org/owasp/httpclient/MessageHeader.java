@@ -2,6 +2,7 @@ package org.owasp.httpclient;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.logging.Logger;
 
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
@@ -55,6 +56,9 @@ public interface MessageHeader {
 
 	public static class Impl implements MessageHeader {
 
+		private static Logger logger = Logger.getLogger(MessageHeader.class
+				.getName());
+
 		private static final byte[] CRLF = { '\r', '\n' };
 
 		private int id = -1;
@@ -77,9 +81,13 @@ public interface MessageHeader {
 							"The header does not end with CRLFCRLF");
 				} else {
 					for (int i = 0; i < 4; i++) {
-						if (header[header.length - 4 + i] != CRLF[i % 2])
+						if (header[header.length - 4 + i] != CRLF[i % 2]) {
+							logger
+									.info("Odd header does not end with CRLFCRLF: "
+											+ AsciiString.create(header));
 							throw new IllegalStateException(
 									"The header does not end with CRLFCRLF");
+						}
 					}
 				}
 		}
