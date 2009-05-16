@@ -82,7 +82,7 @@ public class SSLConnectionHandler implements TargetedConnectionHandler {
 					: new PushbackSocket(socket);
 			socket = pbs;
 			// check if it is an SSL connection
-			byte[] sniff = sniff(pbs, 1);
+			byte[] sniff = sniff(pbs, 4);
 			if (sniff == null) // connection closed
 				return;
 
