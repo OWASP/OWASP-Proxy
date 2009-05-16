@@ -21,6 +21,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
@@ -32,6 +33,8 @@ import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.util.AsciiString;
 
 public class Client {
+
+	private static Logger logger = Logger.getLogger(Client.class.getName());
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {
 
@@ -138,7 +141,7 @@ public class Client {
 					socket.setSoTimeout(oldtimeout);
 				}
 			} catch (IOException ioe) {
-				System.err.println("Looks closed!");
+				logger.fine("Connection looks closed! Opening a new one");
 				return false;
 			}
 		}
@@ -336,10 +339,10 @@ public class Client {
 			while (!header.isEndOfHeader() && (i = is.read()) > -1)
 				header.write(i);
 		} catch (SocketTimeoutException ste) {
-			System.err.println("Timeout reading response header. Had read "
+			logger.fine("Timeout reading response header. Had read "
 					+ header.size() + " bytes");
 			if (header.size() > 0)
-				System.err.write(header.toByteArray());
+				logger.fine(AsciiString.create(header.toByteArray()));
 			throw ste;
 		}
 		if (i == -1)

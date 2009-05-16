@@ -28,15 +28,20 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.util.logging.Logger;
 
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.io.ChunkedOutputStream;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.io.CopyInputStream;
 
 public class TraceServer implements Runnable {
+
+	private static Logger logger = Logger
+			.getLogger(TraceServer.class.getName());
 
 	private ServerSocket socket;
 
@@ -134,7 +139,7 @@ public class TraceServer implements Runnable {
 				OutputStream out = socket.getOutputStream();
 
 				if (verbose)
-					System.err.println("Connection: " + socket);
+					logger.info("Connection: " + socket);
 				boolean close = true;
 				do {
 					copy.reset();
@@ -163,9 +168,10 @@ public class TraceServer implements Runnable {
 						request.setContent(copy.toByteArray());
 
 					if (verbose) {
-						System.out.write(request.getHeader());
+						logger.info(AsciiString.create(request.getHeader()));
 						if (request.getContent() != null)
-							System.out.write(request.getContent());
+							logger.info(AsciiString
+									.create(request.getContent()));
 					}
 
 					BufferedResponse response = new BufferedResponse.Impl();
@@ -184,9 +190,10 @@ public class TraceServer implements Runnable {
 						response.setContent(MessageUtils.getMessage(request));
 					}
 					if (verbose) {
-						System.out.write(response.getHeader());
+						logger.info(AsciiString.create(response.getHeader()));
 						if (response.getContent() != null)
-							System.out.write(response.getContent());
+							logger.info(AsciiString.create(response
+									.getContent()));
 					}
 
 					out.write(response.getHeader());

@@ -1,6 +1,7 @@
 package org.owasp.proxy.daemon;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 
 import org.owasp.httpclient.MessageFormatException;
@@ -13,9 +14,16 @@ import org.owasp.httpclient.io.EofNotifyingInputStream;
 
 public class LoggingHttpRequestHandler implements HttpRequestHandler {
 
+	private PrintStream out;
+
 	private HttpRequestHandler next;
 
 	public LoggingHttpRequestHandler(HttpRequestHandler next) {
+		this(System.out, next);
+	}
+
+	public LoggingHttpRequestHandler(PrintStream out, HttpRequestHandler next) {
+		this.out = out;
 		this.next = next;
 	}
 
@@ -74,7 +82,7 @@ public class LoggingHttpRequestHandler implements HttpRequestHandler {
 			buff.append(request.getVersion()).append("\" ");
 			buff.append(response.getStatus()).append(" ");
 			buff.append(bytes);
-			System.out.println(buff.toString());
+			out.println(buff.toString());
 		} catch (MessageFormatException ignore) {
 		}
 	}
