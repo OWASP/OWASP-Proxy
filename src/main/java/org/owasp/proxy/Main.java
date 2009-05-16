@@ -33,6 +33,8 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 public class Main {
 
+	private static Logger logger = Logger.getLogger("org.owasp.proxy");
+
 	private static void usage() {
 		System.err
 				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"] [ Driver URL username password ]");
@@ -70,7 +72,7 @@ public class Main {
 
 			@Override
 			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-				System.err.println("Proxy connection to " + uri + " via " + sa
+				logger.info("Proxy connection to " + uri + " via " + sa
 						+ " failed! " + ioe.getLocalizedMessage());
 			}
 
@@ -83,7 +85,6 @@ public class Main {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Logger logger = Logger.getLogger("org.owasp.proxy");
 		logger.setUseParentHandlers(false);
 		Handler ch = new ConsoleHandler();
 		ch.setFormatter(new TextFormatter());
