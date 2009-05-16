@@ -70,8 +70,8 @@ public class Main {
 
 			@Override
 			public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-				System.err.println("Proxy connection failed! "
-						+ ioe.getLocalizedMessage());
+				System.err.println("Proxy connection to " + uri + " via " + sa
+						+ " failed! " + ioe.getLocalizedMessage());
 			}
 
 			@Override
