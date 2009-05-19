@@ -5,8 +5,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.MessageFormatException;
@@ -21,6 +23,7 @@ import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.model.ConversationSummary;
 import org.springframework.dao.DataAccessException;
 
+@SuppressWarnings("serial")
 public class ConversationServiceHttpRequestHandler implements
 		HttpRequestHandler {
 
@@ -40,6 +43,13 @@ public class ConversationServiceHttpRequestHandler implements
 	private String hostname;
 	private MessageDAO dao;
 	private HttpRequestHandler next;
+
+	private Map<Integer, ConversationSummary> summaryCache = new LinkedHashMap<Integer, ConversationSummary>() {
+		protected boolean removeEldestEntry(
+				Map.Entry<Integer, ConversationSummary> eldest) {
+			return size() > 1000;
+		}
+	};
 
 	public ConversationServiceHttpRequestHandler(String hostname,
 			MessageDAO dao, HttpRequestHandler next) {
@@ -135,6 +145,10 @@ public class ConversationServiceHttpRequestHandler implements
 	}
 
 	private ConversationSummary loadConversationSummary(int id) {
+		ConversationSummary cs = summaryCache.get(id);
+		if (cs != null)
+			return cs;
+
 		Conversation c = dao.getConversation(id);
 		if (c == null)
 			return null;
@@ -142,7 +156,7 @@ public class ConversationServiceHttpRequestHandler implements
 		RequestHeader reqH = dao.loadRequestHeader(c.getRequestId());
 		ResponseHeader respH = dao.loadResponseHeader(c.getResponseId());
 
-		ConversationSummary cs = new ConversationSummary();
+		cs = new ConversationSummary();
 		cs.setId(c.getId());
 		cs.setRequestTime(c.getRequestTime());
 		cs.setResponseHeaderTime(c.getResponseHeaderTime());
@@ -172,6 +186,7 @@ public class ConversationServiceHttpRequestHandler implements
 		if (contentId != -1)
 			cs.setResponseContentSize(dao.getMessageContentSize(contentId));
 
+		summaryCache.put(id, cs);
 		return cs;
 	}
 
