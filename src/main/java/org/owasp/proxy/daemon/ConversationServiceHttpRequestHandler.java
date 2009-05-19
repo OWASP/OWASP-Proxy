@@ -10,17 +10,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
+import org.owasp.httpclient.dao.ConversationSummary;
 import org.owasp.httpclient.dao.MessageDAO;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
-import org.owasp.proxy.model.ConversationSummary;
 import org.springframework.dao.DataAccessException;
 
 @SuppressWarnings("serial")
@@ -149,43 +148,7 @@ public class ConversationServiceHttpRequestHandler implements
 		if (cs != null)
 			return cs;
 
-		Conversation c = dao.getConversation(id);
-		if (c == null)
-			return null;
-
-		RequestHeader reqH = dao.loadRequestHeader(c.getRequestId());
-		ResponseHeader respH = dao.loadResponseHeader(c.getResponseId());
-
-		cs = new ConversationSummary();
-		cs.setId(c.getId());
-		cs.setRequestTime(c.getRequestTime());
-		cs.setResponseHeaderTime(c.getResponseHeaderTime());
-		cs.setResponseContentTime(c.getResponseContentTime());
-
-		cs.setTarget(reqH.getTarget());
-		cs.setSsl(reqH.isSsl());
-		try {
-			cs.setRequestMethod(reqH.getMethod());
-			cs.setRequestResource(reqH.getResource());
-			cs.setRequestContentType(reqH.getHeader("Content-Type"));
-		} catch (MessageFormatException mfe) {
-			mfe.printStackTrace();
-		}
-		try {
-			cs.setResponseStatus(respH.getStatus());
-			cs.setResponseReason(respH.getReason());
-			cs.setResponseContentType(respH.getHeader("Content-Type"));
-		} catch (MessageFormatException mfe) {
-			mfe.printStackTrace();
-		}
-		int contentId = dao.getMessageContentId(reqH.getId());
-		if (contentId != -1)
-			cs.setRequestContentSize(dao.getMessageContentSize(contentId));
-
-		contentId = dao.getMessageContentId(respH.getId());
-		if (contentId != -1)
-			cs.setResponseContentSize(dao.getMessageContentSize(contentId));
-
+		cs = dao.getConversationSummary(id);
 		summaryCache.put(id, cs);
 		return cs;
 	}

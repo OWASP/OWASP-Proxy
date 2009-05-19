@@ -9,11 +9,11 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.owasp.httpclient.Conversation;
-import org.owasp.httpclient.MessageHeader;
 import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.MessageHeader;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
@@ -228,6 +228,35 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	/*
 	 * (non-Javadoc)
 	 * 
+	 * @see org.owasp.httpclient.dao.MessageDAO#getConversationSummary(int)
+	 */
+	public ConversationSummary getConversationSummary(int id)
+			throws DataAccessException {
+		Conversation c = getConversation(id);
+		if (c == null)
+			return null;
+		ConversationSummary cs = new ConversationSummary();
+		cs.setId(id);
+		RequestHeader rqh = loadRequestHeader(c.getRequestId());
+		try {
+			cs.summarizeRequest(rqh, getMessageContentSize(c.getRequestId()));
+		} catch (MessageFormatException ignored) {
+			// Return an empty request summary if it cannot be parsed
+			// The detailed request is still available
+		}
+		ResponseHeader rph = loadResponseHeader(c.getResponseId());
+		try {
+			cs.summarizeResponse(rph, getMessageContentSize(c.getResponseId()));
+		} catch (MessageFormatException ignored) {
+			// Return an empty response summary if it cannot be parsed
+			// The detailed response is still available
+		}
+		return cs;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadMessageContent(int)
 	 */
 	public byte[] loadMessageContent(int id) throws DataAccessException {
@@ -388,7 +417,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveResponse(org.owasp.httpclient
 	 * .Response)
 	 */
-	public void saveResponse(BufferedResponse response) throws DataAccessException {
+	public void saveResponse(BufferedResponse response)
+			throws DataAccessException {
 		int contentId = -1;
 		if (response.getContent() != null)
 			contentId = saveMessageContent(response.getContent());
@@ -420,7 +450,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	private static class RequestMapper implements
 			ParameterizedRowMapper<BufferedRequest> {
 
-		public BufferedRequest mapRow(ResultSet rs, int rowNum) throws SQLException {
+		public BufferedRequest mapRow(ResultSet rs, int rowNum)
+				throws SQLException {
 			int id = rs.getInt(ID);
 
 			String host = rs.getString(HOST);
@@ -440,7 +471,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	private static class ResponseMapper implements
 			ParameterizedRowMapper<BufferedResponse> {
 
-		public BufferedResponse mapRow(ResultSet rs, int rowNum) throws SQLException {
+		public BufferedResponse mapRow(ResultSet rs, int rowNum)
+				throws SQLException {
 			int id = rs.getInt(ID);
 
 			BufferedResponse response = new BufferedResponse.Impl();

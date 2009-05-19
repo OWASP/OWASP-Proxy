@@ -1,10 +1,12 @@
-package org.owasp.proxy.model;
+package org.owasp.httpclient.dao;
 
 import java.net.InetSocketAddress;
 
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 
 public class ConversationSummary {
 
@@ -24,24 +26,36 @@ public class ConversationSummary {
 	public ConversationSummary() {
 	}
 
-	public void summarizeRequest(BufferedRequest request) throws MessageFormatException {
+	public void summarizeRequest(BufferedRequest request)
+			throws MessageFormatException {
+		byte[] content = request.getContent();
+		int contentSize = content == null ? 0 : content.length;
+		summarizeRequest(request, contentSize);
+	}
+
+	public void summarizeRequest(RequestHeader request, int contentSize)
+			throws MessageFormatException {
 		target = request.getTarget();
 		ssl = request.isSsl();
-
 		requestMethod = request.getMethod();
 		requestResource = request.getResource();
 		requestContentType = request.getHeader("Content-Type");
-		byte[] content = request.getContent();
-		requestContentSize = content == null ? 0 : content.length;
+		requestContentSize = contentSize;
 	}
 
 	public void summarizeResponse(BufferedResponse response)
 			throws MessageFormatException {
+		byte[] content = response.getContent();
+		int contentSize = content == null ? 0 : content.length;
+		summarizeResponse(response, contentSize);
+	}
+
+	public void summarizeResponse(ResponseHeader response, int contentSize)
+			throws MessageFormatException {
 		responseStatus = response.getStatus();
 		responseReason = response.getReason();
 		responseContentType = response.getHeader("Content-Type");
-		byte[] content = response.getContent();
-		responseContentSize = content == null ? 0 : content.length;
+		responseContentSize = contentSize;
 	}
 
 	public long getId() {

@@ -3,10 +3,9 @@ package org.owasp.httpclient.dao;
 import java.io.InputStream;
 import java.util.Collection;
 
-import org.owasp.httpclient.Conversation;
 import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.springframework.dao.DataAccessException;
 
@@ -53,5 +52,8 @@ public interface MessageDAO {
 			throws DataAccessException;
 
 	boolean deleteConversation(int id) throws DataAccessException;
+
+	ConversationSummary getConversationSummary(int id)
+			throws DataAccessException;
 
 }

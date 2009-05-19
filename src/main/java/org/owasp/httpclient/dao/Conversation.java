@@ -1,4 +1,4 @@
-package org.owasp.httpclient;
+package org.owasp.httpclient.dao;
 
 public class Conversation {
 
