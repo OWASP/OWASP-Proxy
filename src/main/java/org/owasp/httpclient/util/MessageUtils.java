@@ -92,6 +92,14 @@ public class MessageUtils {
 		if (content == null)
 			return content;
 		String codings = message.getHeader("Transfer-Coding");
+		content = decode(codings, content);
+		codings = message.getHeader("Content-Encoding");
+		content = decode(codings, content);
+		return content;
+	}
+
+	public static InputStream decode(String codings, InputStream content)
+			throws MessageFormatException {
 		if (codings == null || codings.trim().equals(""))
 			return content;
 		try {
@@ -107,7 +115,7 @@ public class MessageUtils {
 					// nothing to do
 				} else
 					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i], message.getHeader());
+							+ algos[i]);
 			}
 			return content;
 		} catch (IOException ioe) {
@@ -152,7 +160,15 @@ public class MessageUtils {
 	 */
 	public static InputStream encode(MessageHeader header, InputStream content)
 			throws MessageFormatException {
-		String codings = header.getHeader("Transfer-Coding");
+		String codings = header.getHeader("Content-Encoding");
+		content = encode(codings, content);
+		codings = header.getHeader("Transfer-Coding");
+		content = encode(codings, content);
+		return content;
+	}
+
+	public static InputStream encode(String codings, InputStream content)
+			throws MessageFormatException {
 		if (codings == null || codings.trim().equals(""))
 			return content;
 		String[] algos = codings.split("[ \t]*,[ \t]*");
@@ -167,7 +183,7 @@ public class MessageUtils {
 				// nothing to do
 			} else
 				throw new MessageFormatException("Unsupported coding : "
-						+ algos[i], header.getHeader());
+						+ algos[i]);
 		}
 		return content;
 	}
