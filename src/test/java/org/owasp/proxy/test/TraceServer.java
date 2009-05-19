@@ -34,9 +34,9 @@ import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.io.ChunkedOutputStream;
+import org.owasp.httpclient.io.CopyInputStream;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
-import org.owasp.proxy.io.CopyInputStream;
 
 public class TraceServer implements Runnable {
 

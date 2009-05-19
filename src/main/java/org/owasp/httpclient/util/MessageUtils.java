@@ -18,12 +18,13 @@ import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkingInputStream;
+import org.owasp.httpclient.io.CopyInputStream;
 import org.owasp.httpclient.io.EofNotifyingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.io.GunzipInputStream;
 import org.owasp.httpclient.io.GzipInputStream;
+import org.owasp.httpclient.io.SizeLimitExceededException;
 import org.owasp.httpclient.io.SizeLimitedByteArrayOutputStream;
-import org.owasp.proxy.io.CopyInputStream;
 
 public class MessageUtils {
 
@@ -240,34 +241,38 @@ public class MessageUtils {
 				.equals(status));
 	}
 
-	public static BufferedRequest buffer(StreamingRequest request)
-			throws IOException {
-		BufferedRequest buff = new BufferedRequest.Impl();
+	public static void buffer(StreamingRequest request, BufferedRequest buff,
+			int max) throws IOException, SizeLimitExceededException {
 		buff.setTarget(request.getTarget());
 		buff.setSsl(request.isSsl());
-		buffer(request, buff);
-		return buff;
+		buffer((StreamingMessage) request, buff, max);
 	}
 
-	public static BufferedResponse buffer(StreamingResponse response)
-			throws IOException {
-		BufferedResponse buff = new BufferedResponse.Impl();
-		buffer(response, buff);
-		return buff;
+	public static void buffer(StreamingResponse response,
+			BufferedResponse buff, int max) throws IOException,
+			SizeLimitExceededException {
+		buffer((StreamingMessage) response, buff, max);
 	}
 
-	public static void buffer(StreamingMessage message, BufferedMessage buffered)
-			throws IOException {
+	private static void buffer(StreamingMessage message,
+			BufferedMessage buffered, int max) throws IOException,
+			SizeLimitExceededException {
 		buffered.setHeader(message.getHeader());
 		InputStream in = message.getContent();
 		if (in != null) {
-			ByteArrayOutputStream copy = new ByteArrayOutputStream();
+			ByteArrayOutputStream copy;
+			copy = new SizeLimitedByteArrayOutputStream(max, false);
 			byte[] b = new byte[1024];
 			int got;
-			while ((got = in.read(b)) > -1) {
-				copy.write(b, 0, got);
+			try {
+				while ((got = in.read(b)) > -1) {
+					copy.write(b, 0, got);
+				}
+				buffered.setContent(copy.toByteArray());
+			} catch (SizeLimitExceededException slee) {
+				buffered.setContent(copy.toByteArray());
+				throw slee;
 			}
-			buffered.setContent(copy.toByteArray());
 		}
 	}
 

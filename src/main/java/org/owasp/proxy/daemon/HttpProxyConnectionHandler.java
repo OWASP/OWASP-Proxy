@@ -19,10 +19,10 @@ import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
+import org.owasp.httpclient.io.CopyInputStream;
 import org.owasp.httpclient.io.EofNotifyingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.util.AsciiString;
-import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.model.URI;
 
 public class HttpProxyConnectionHandler implements ConnectionHandler,

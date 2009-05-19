@@ -28,7 +28,7 @@ import java.io.InputStream;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.owasp.proxy.io.CopyInputStream;
+import org.owasp.httpclient.io.CopyInputStream;
 
 public class CopyInputStreamTest {
 

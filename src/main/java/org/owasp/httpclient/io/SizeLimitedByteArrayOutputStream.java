@@ -2,8 +2,7 @@ package org.owasp.httpclient.io;
 
 import java.io.ByteArrayOutputStream;
 
-public abstract class SizeLimitedByteArrayOutputStream extends
-		ByteArrayOutputStream {
+public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 
 	private int max;
 
@@ -32,7 +31,7 @@ public abstract class SizeLimitedByteArrayOutputStream extends
 	}
 
 	@Override
-	public void write(int b) {
+	public void write(int b) throws SizeLimitExceededException {
 		if (count < max || !hardLimit) {
 			super.write(b);
 			if (count >= max)
@@ -41,7 +40,7 @@ public abstract class SizeLimitedByteArrayOutputStream extends
 	}
 
 	@Override
-	public void write(byte[] b, int off, int len) {
+	public void write(byte[] b, int off, int len) throws SizeLimitExceededException {
 		if (count < max || !hardLimit) {
 			if (hardLimit)
 				len = Math.min(max - count, len);
@@ -51,6 +50,7 @@ public abstract class SizeLimitedByteArrayOutputStream extends
 		}
 	}
 
-	protected abstract void overflow();
-
+	protected void overflow() {
+		throw new SizeLimitExceededException(count + ">=" + max);
+	}
 }
