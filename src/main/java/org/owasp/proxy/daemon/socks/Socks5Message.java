@@ -193,12 +193,11 @@ public class Socks5Message extends ProxyMessage {
 			host = InetAddress.getByAddress(addr).getHostAddress();
 			break;
 		case SOCKS_ATYP_IPV6:
-			addr = new byte[SOCKS_IPV6_LENGTH];// I believe it is 16 bytes,huge!
+			addr = new byte[SOCKS_IPV6_LENGTH];
 			di.readFully(addr);
 			host = InetAddress.getByAddress(addr).getHostAddress();
 			break;
 		case SOCKS_ATYP_DOMAINNAME:
-			// System.out.println("Reading ATYP_DOMAINNAME");
 			addr = new byte[di.readUnsignedByte()];// Next byte shows the length
 			di.readFully(addr);
 			host = AsciiString.create(addr);
@@ -291,11 +290,6 @@ public class Socks5Message extends ProxyMessage {
 		doResolveIP = doResolve;
 		return old;
 	}
-
-	/*
-	 * private static final void debug(String s){ if(DEBUG) System.out.print(s);
-	 * } private static final boolean DEBUG = false;
-	 */
 
 	// SOCKS5 constants
 	public static final int SOCKS_VERSION = 5;
