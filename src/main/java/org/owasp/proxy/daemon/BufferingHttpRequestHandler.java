@@ -20,9 +20,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	private HttpRequestHandler next;
 
-	private int max = 0;
+	protected int max = 0;
 
-	private boolean decode = false;
+	protected boolean decode = false;
 
 	public BufferingHttpRequestHandler(HttpRequestHandler next) {
 		this.next = next;
