@@ -28,27 +28,17 @@ import org.owasp.httpclient.util.MessageUtils;
  * </ul>
  * 
  */
-public interface MessageHeader {
+public interface MessageHeader extends ReadOnlyMessageHeader {
 
 	void setId(int id);
 
-	int getId();
-
 	void setHeader(byte[] header);
-
-	byte[] getHeader();
 
 	void setStartLine(String line) throws MessageFormatException;
 
-	String getStartLine() throws MessageFormatException;
-
 	void setHeaders(NamedValue[] headers) throws MessageFormatException;
 
-	NamedValue[] getHeaders() throws MessageFormatException;
-
 	void setHeader(String name, String value) throws MessageFormatException;
-
-	String getHeader(String name) throws MessageFormatException;
 
 	void addHeader(String name, String value) throws MessageFormatException;
 

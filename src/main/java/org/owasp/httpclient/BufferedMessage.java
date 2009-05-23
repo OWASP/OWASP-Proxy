@@ -19,12 +19,7 @@
  */
 package org.owasp.httpclient;
 
-public interface BufferedMessage extends MessageHeader {
-
-	/**
-	 * @return
-	 */
-	byte[] getContent();
+public interface BufferedMessage extends ReadOnlyBufferedMessage, MessageHeader {
 
 	/**
 	 * @param content

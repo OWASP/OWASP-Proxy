@@ -2,9 +2,11 @@ package org.owasp.httpclient;
 
 import org.owasp.httpclient.util.AsciiString;
 
-public interface BufferedRequest extends RequestHeader, BufferedMessage {
+public interface BufferedRequest extends RequestHeader, BufferedMessage,
+		ReadOnlyBufferedRequest {
 
-	public static class Impl extends RequestHeader.Impl implements BufferedRequest {
+	public static class Impl extends RequestHeader.Impl implements
+			BufferedRequest {
 
 		private byte[] content;
 

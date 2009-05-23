@@ -1,18 +1,12 @@
 package org.owasp.httpclient;
 
-public interface ResponseHeader extends MessageHeader {
+public interface ResponseHeader extends ReadOnlyResponseHeader, MessageHeader {
 
 	void setVersion(String version) throws MessageFormatException;
 
-	String getVersion() throws MessageFormatException;
-
 	void setStatus(String status) throws MessageFormatException;
 
-	String getStatus() throws MessageFormatException;
-
 	void setReason(String reason) throws MessageFormatException;
-
-	String getReason() throws MessageFormatException;
 
 	public static class Impl extends MessageHeader.Impl implements
 			ResponseHeader {

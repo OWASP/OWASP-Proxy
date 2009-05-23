@@ -2,27 +2,17 @@ package org.owasp.httpclient;
 
 import java.net.InetSocketAddress;
 
-public interface RequestHeader extends MessageHeader {
+public interface RequestHeader extends ReadOnlyRequestHeader, MessageHeader {
 
 	void setTarget(InetSocketAddress target);
 
-	InetSocketAddress getTarget();
-
 	void setSsl(boolean ssl);
-
-	boolean isSsl();
 
 	void setMethod(String method) throws MessageFormatException;
 
-	String getMethod() throws MessageFormatException;
-
 	void setResource(String resource) throws MessageFormatException;
 
-	String getResource() throws MessageFormatException;
-
 	void setVersion(String version) throws MessageFormatException;
-
-	String getVersion() throws MessageFormatException;
 
 	public static class Impl extends MessageHeader.Impl implements
 			RequestHeader {
