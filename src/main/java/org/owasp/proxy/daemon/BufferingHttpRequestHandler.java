@@ -9,6 +9,9 @@ import java.net.InetAddress;
 import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.ReadOnlyBufferedRequest;
+import org.owasp.httpclient.ReadOnlyBufferedResponse;
+import org.owasp.httpclient.ReadOnlyRequestHeader;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
@@ -17,6 +20,10 @@ import org.owasp.httpclient.io.SizeLimitExceededException;
 import org.owasp.httpclient.util.MessageUtils;
 
 public class BufferingHttpRequestHandler implements HttpRequestHandler {
+
+	public enum Action {
+		BUFFER, STREAM, IGNORE
+	};
 
 	private HttpRequestHandler next;
 
@@ -52,48 +59,71 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		next.dispose();
 	}
 
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see
-	 * org.owasp.proxy.daemon.HttpRequestHandler#handleRequest(java.net.InetAddress
-	 * , org.owasp.httpclient.StreamingRequest)
-	 */
-	public StreamingResponse handleRequest(InetAddress source,
-			StreamingRequest request) throws IOException,
-			MessageFormatException {
-		boolean decode = this.decode;
-		BufferedRequest brq = new BufferedRequest.Impl();
-		try {
-			if (decode)
-				request.setContent(MessageUtils.decode(request));
-			MessageUtils.buffer(request, brq, max);
-			brq = processRequest(brq);
-			request = MessageUtils.stream(brq);
-			if (decode)
-				request.setContent(MessageUtils.encode(request));
-		} catch (SizeLimitExceededException slee) {
-			requestContentSizeExceeded(brq);
-			InputStream buffered = new ByteArrayInputStream(brq.getContent());
-			InputStream content = request.getContent();
-			content = new SequenceInputStream(buffered, content);
-			request.setContent(content);
-			if (decode)
-				request.setContent(MessageUtils.encode(request));
+	private void handleRequest(StreamingRequest request, boolean decode)
+			throws IOException, MessageFormatException {
+		Action action = directRequest(request);
+		final BufferedRequest brq;
+		switch (action) {
+		case BUFFER:
+			brq = new BufferedRequest.Impl();
+			try {
+				if (decode)
+					request.setContent(MessageUtils.decode(request));
+				MessageUtils.buffer(request, brq, max);
+				processRequest(brq);
+				MessageUtils.stream(brq, request);
+				if (decode)
+					request.setContent(MessageUtils.encode(request));
+			} catch (SizeLimitExceededException slee) {
+				requestContentSizeExceeded(brq);
+				InputStream buffered = new ByteArrayInputStream(brq
+						.getContent());
+				InputStream content = request.getContent();
+				content = new SequenceInputStream(buffered, content);
+				request.setContent(content);
+				if (decode)
+					request.setContent(MessageUtils.encode(request));
+			}
+			break;
+		case STREAM:
+			brq = new BufferedRequest.Impl();
+			MessageUtils.delayedCopy(request, brq, max,
+					new MessageUtils.DelayedCopyObserver() {
+						boolean overflow = false;
+
+						@Override
+						public void contentOverflow() {
+							requestContentSizeExceeded(brq);
+							overflow = true;
+						}
+
+						@Override
+						public void copyCompleted() {
+							if (!overflow)
+								requestStreamed(brq);
+						}
+					});
 		}
-		StreamingResponse response = next.handleRequest(source, request);
-		if (bufferResponse(brq, response)) {
-			BufferedResponse brs = new BufferedResponse.Impl();
+	}
+
+	private void handleResponse(final StreamingRequest request,
+			final StreamingResponse response, boolean decode)
+			throws IOException, MessageFormatException {
+		Action action = directResponse(request, response);
+		final BufferedResponse brs;
+		switch (action) {
+		case BUFFER:
+			brs = new BufferedResponse.Impl();
 			try {
 				if (decode)
 					response.setContent(MessageUtils.decode(response));
 				MessageUtils.buffer(response, brs, max);
-				brs = processResponse(brq, brs);
-				response = MessageUtils.stream(brs);
+				processResponse(request, brs);
+				MessageUtils.stream(brs, response);
 				if (decode)
 					response.setContent(MessageUtils.encode(response));
 			} catch (SizeLimitExceededException slee) {
-				responseContentSizeExceeded(brq, brs);
+				responseContentSizeExceeded(request, brs);
 				InputStream buffered = new ByteArrayInputStream(brs
 						.getContent());
 				InputStream content = response.getContent();
@@ -102,29 +132,159 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 				if (decode)
 					response.setContent(MessageUtils.encode(response));
 			}
+			break;
+		case STREAM:
+			brs = new BufferedResponse.Impl();
+			MessageUtils.delayedCopy(response, brs, max,
+					new MessageUtils.DelayedCopyObserver() {
+						private boolean overflow = false;
+
+						@Override
+						public void contentOverflow() {
+							responseContentSizeExceeded(request, brs);
+							overflow = true;
+						}
+
+						@Override
+						public void copyCompleted() {
+							if (!overflow)
+								responseStreamed(request, brs);
+						}
+
+					});
+			break;
 		}
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.HttpRequestHandler#handleRequest(java.net.InetAddress
+	 * , org.owasp.httpclient.StreamingRequest)
+	 */
+	final public StreamingResponse handleRequest(InetAddress source,
+			final StreamingRequest request) throws IOException,
+			MessageFormatException {
+		boolean decode = this.decode;
+		handleRequest(request, decode);
+		StreamingResponse response = next.handleRequest(source, request);
+		handleResponse(request, response, decode);
 		return response;
 	}
 
-	protected boolean bufferResponse(BufferedRequest request,
+	/**
+	 * Called to determine what to do with the request. Implementations can
+	 * choose to buffer the request to allow for modification, stream the
+	 * request directly to the server, or ignore the request entirely.
+	 * 
+	 * Note that even if the request is ignored,
+	 * {@link #directResponse(RequestHeader, ResponseHeader)} will still be
+	 * called.
+	 * 
+	 * @param request
+	 *            the request
+	 * @return the desired Action
+	 */
+	protected Action directRequest(RequestHeader request) {
+		return Action.BUFFER;
+	}
+
+	/**
+	 * Called if the return value from {@link #directRequest(RequestHeader)} is
+	 * BUFFER, once the request has been completely buffered. The request may be
+	 * modified within this method. This method will not be called if the
+	 * message content is larger than max bytes.
+	 * 
+	 * @param request
+	 *            the request
+	 */
+	protected void processRequest(BufferedRequest request) {
+	}
+
+	/**
+	 * Called if the return value from {@link #directRequest(RequestHeader)} is
+	 * BUFFER or STREAM, and the request body is larger than the maximum message
+	 * body specified
+	 * 
+	 * @param request
+	 *            the request, containing max bytes of partial content
+	 */
+	protected void requestContentSizeExceeded(ReadOnlyBufferedRequest request) {
+	}
+
+	/**
+	 * Called if the return value from {@link #directRequest(RequestHeader)} was
+	 * STREAM, once the request has been completely sent to the server, and
+	 * buffered. This method will not be called if the message content is larger
+	 * than max bytes.
+	 * 
+	 * @param request
+	 */
+	protected void requestStreamed(ReadOnlyBufferedRequest request) {
+	}
+
+	/**
+	 * Called to determine what to do with the response. Implementations can
+	 * choose to buffer the response to allow for modification, stream the
+	 * response directly to the client, or ignore the response entirely.
+	 * 
+	 * @param request
+	 *            the request
+	 * @param response
+	 *            the response
+	 * @return the desired Action
+	 */
+	protected Action directResponse(RequestHeader request,
 			ResponseHeader response) {
-		return true;
+		return Action.BUFFER;
 	}
 
-	protected BufferedRequest processRequest(BufferedRequest request) {
-		return request;
-	}
-
-	protected BufferedResponse processResponse(BufferedRequest request,
+	/**
+	 * Called if the return value from
+	 * {@link #directResponse(RequestHeader, ResponseHeader)} is BUFFER, once
+	 * the response has been completely buffered. The response may be modified
+	 * within this method. This method will not be called if the message content
+	 * is larger than max bytes.
+	 * 
+	 * @param request
+	 *            the request
+	 * @param response
+	 *            the response
+	 */
+	protected void processResponse(ReadOnlyRequestHeader request,
 			BufferedResponse response) {
-		return response;
 	}
 
-	protected void requestContentSizeExceeded(RequestHeader request) {
+	/**
+	 * Called if the return value from
+	 * {@link #directResponse(RequestHeader, ResponseHeader)} is BUFFER or
+	 * STREAM, and the response body is larger than the maximum message body
+	 * specified
+	 * 
+	 * @param request
+	 *            the request
+	 * @param response
+	 *            the response, containing max bytes of partial content
+	 */
+	protected void responseContentSizeExceeded(ReadOnlyRequestHeader request,
+			ReadOnlyBufferedResponse response) {
 	}
 
-	protected void responseContentSizeExceeded(RequestHeader request,
-			ResponseHeader response) {
+	/**
+	 * Called if the return value from
+	 * {@link #directResponse(RequestHeader, ResponseHeader)} was STREAM, once
+	 * the response has been completely sent to the client, and buffered. This
+	 * method will not be called if the message content is larger than max
+	 * bytes.
+	 * 
+	 * @param request
+	 *            the request
+	 * @param response
+	 *            the response
+	 */
+	protected void responseStreamed(ReadOnlyRequestHeader request,
+			ReadOnlyBufferedResponse response) {
 	}
 
 }
