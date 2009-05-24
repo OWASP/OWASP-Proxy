@@ -277,7 +277,7 @@ public class MessageUtils {
 		InputStream in = message.getContent();
 		if (in != null) {
 			ByteArrayOutputStream copy;
-			copy = new SizeLimitedByteArrayOutputStream(max, false);
+			copy = new SizeLimitedByteArrayOutputStream(max);
 			byte[] b = new byte[1024];
 			int got;
 			try {
@@ -292,21 +292,18 @@ public class MessageUtils {
 		}
 	}
 
-	public static StreamingRequest stream(BufferedRequest request) {
-		StreamingRequest stream = new StreamingRequest.Impl();
+	public static void stream(BufferedRequest request, StreamingRequest stream) {
 		stream.setTarget(request.getTarget());
 		stream.setSsl(request.isSsl());
 		stream(request, stream);
-		return stream;
 	}
 
-	public static StreamingResponse stream(BufferedResponse response) {
-		StreamingResponse stream = new StreamingResponse.Impl();
-		stream(response, stream);
-		return stream;
+	public static void stream(BufferedResponse response,
+			StreamingResponse stream) {
+		stream((BufferedMessage) response, stream);
 	}
 
-	public static void stream(BufferedMessage message, StreamingMessage stream) {
+	private static void stream(BufferedMessage message, StreamingMessage stream) {
 		stream.setHeader(message.getHeader());
 		byte[] content = message.getContent();
 		if (content != null && content.length > 0)

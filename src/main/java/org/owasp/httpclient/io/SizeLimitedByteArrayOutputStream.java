@@ -6,17 +6,9 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 
 	private int max;
 
-	private boolean hardLimit = true;
-
 	public SizeLimitedByteArrayOutputStream(int max) {
 		super();
 		this.max = max;
-	}
-
-	public SizeLimitedByteArrayOutputStream(int max, boolean hardLimit) {
-		super();
-		this.max = max;
-		this.hardLimit = hardLimit;
 	}
 
 	public SizeLimitedByteArrayOutputStream(int size, int max) {
@@ -24,15 +16,9 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 		this.max = max;
 	}
 
-	public SizeLimitedByteArrayOutputStream(int size, int max, boolean hardLimit) {
-		super(size);
-		this.max = max;
-		this.hardLimit = hardLimit;
-	}
-
 	@Override
 	public void write(int b) throws SizeLimitExceededException {
-		if (count < max || !hardLimit) {
+		if (count < max) {
 			super.write(b);
 			if (count >= max)
 				overflow();
@@ -40,10 +26,9 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 	}
 
 	@Override
-	public void write(byte[] b, int off, int len) throws SizeLimitExceededException {
-		if (count < max || !hardLimit) {
-			if (hardLimit)
-				len = Math.min(max - count, len);
+	public void write(byte[] b, int off, int len)
+			throws SizeLimitExceededException {
+		if (count < max) {
 			super.write(b, off, len);
 			if (count >= max)
 				overflow();
