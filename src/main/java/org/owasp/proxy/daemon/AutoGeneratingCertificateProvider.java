@@ -140,7 +140,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		PrivateKey key = keygen.getPrivateKey();
 
 		java.security.cert.X509Certificate certificate = keygen
-				.getSelfCertificate(caName, 5L * 365L * 24L * 60L * 60L * 1000L);
+				.getSelfCertificate(caName, 10L * 365L * 24L * 60L * 60L);
 
 		certificate.checkValidity();
 		keystore.setKeyEntry(CA, key, password,
