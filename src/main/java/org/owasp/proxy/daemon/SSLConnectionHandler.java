@@ -99,7 +99,10 @@ public class SSLConnectionHandler implements TargetedConnectionHandler {
 				if (socket == null)
 					return;
 			} catch (GeneralSecurityException gse) {
-				throw new IOException("Error obtaining the certificate");
+				IOException ioe = new IOException(
+						"Error obtaining the certificate");
+				ioe.initCause(gse);
+				throw ioe;
 			}
 		}
 
