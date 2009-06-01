@@ -120,6 +120,8 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 	}
 
 	private void saveKeystore() {
+		if (filename == null)
+			return;
 		try {
 			OutputStream out = new FileOutputStream(filename);
 			keystore.store(out, password);
