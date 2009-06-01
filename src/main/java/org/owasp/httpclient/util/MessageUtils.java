@@ -295,7 +295,7 @@ public class MessageUtils {
 	public static void stream(BufferedRequest request, StreamingRequest stream) {
 		stream.setTarget(request.getTarget());
 		stream.setSsl(request.isSsl());
-		stream(request, stream);
+		stream((BufferedMessage) request, stream);
 	}
 
 	public static void stream(BufferedResponse response,
