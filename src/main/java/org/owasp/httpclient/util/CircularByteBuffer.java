@@ -35,7 +35,7 @@ public class CircularByteBuffer {
 				System.arraycopy(buff, start, t, 0, length);
 			} else if (start + length > buff.length) {
 				System.arraycopy(buff, start, t, 0, buff.length - start);
-				System.arraycopy(buff, 0, t, start, length
+				System.arraycopy(buff, 0, t, (buff.length - start), length
 						- (buff.length - start));
 			}
 			start = 0;
@@ -113,11 +113,11 @@ public class CircularByteBuffer {
 		if (length == 0)
 			return -1;
 
-		byte b = buff[start];
+		int i = buff[start] & 0xFF;
 		start = (start + 1) % buff.length;
 		length--;
 
-		return b & 0xFF;
+		return i;
 	}
 
 	public int remove(byte[] b) {
