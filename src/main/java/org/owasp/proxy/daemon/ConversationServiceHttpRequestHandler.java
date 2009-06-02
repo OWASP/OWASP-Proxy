@@ -30,6 +30,8 @@ public class ConversationServiceHttpRequestHandler implements
 			.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text/xml\r\n\r\n");
 	private static final byte[] SUCCESS_OCTET = AsciiString
 			.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: application/octet-stream\r\n\r\n");
+	private static final byte[] SUCCESS_HTML = AsciiString
+			.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text/html\r\n\r\n");
 
 	private static final String CONVERSATIONS = "/conversations";
 	private static final String SUMMARIES = "/summaries";
@@ -38,6 +40,11 @@ public class ConversationServiceHttpRequestHandler implements
 	private static final String RESPONSE_HEADER = "/responseHeader";
 	private static final String REQUEST_CONTENT = "/requestContent";
 	private static final String RESPONSE_CONTENT = "/responseContent";
+
+	private static final String INDEX_PAGE = "<html><a href='" + CONVERSATIONS
+			+ "'>Conversations</a><p>" + "<form target='" + CONVERSATIONS
+			+ "'>Since: <input type='text' name='since'></input></form><p>"
+			+ "</html>";
 
 	private String hostname;
 	private MessageDAO dao;
@@ -88,6 +95,8 @@ public class ConversationServiceHttpRequestHandler implements
 	private StreamingResponse handleLocalRequest(StreamingRequest request) {
 		try {
 			String resource = request.getResource();
+			if ("/".equals(resource))
+				return getIndexPage();
 			int q = resource.indexOf('?');
 			NamedValue[] parameters = null;
 			if (q > -1) {
@@ -143,6 +152,10 @@ public class ConversationServiceHttpRequestHandler implements
 		return err_404();
 	}
 
+	private StreamingResponse getIndexPage() {
+		return conversation(SUCCESS_HTML, INDEX_PAGE);
+	}
+
 	private ConversationSummary loadConversationSummary(int id) {
 		ConversationSummary cs = summaryCache.get(id);
 		if (cs != null)
@@ -171,7 +184,7 @@ public class ConversationServiceHttpRequestHandler implements
 					"</conversation>");
 		}
 		buff.append("</conversations>");
-		return successXML(buff.toString());
+		return conversation(SUCCESS_XML, buff.toString());
 	}
 
 	private StreamingResponse getSummary(int id) {
@@ -180,7 +193,7 @@ public class ConversationServiceHttpRequestHandler implements
 		buff.append("<summaries>");
 		xml(buff, summary);
 		buff.append("</summaries>");
-		return successXML(buff.toString());
+		return conversation(SUCCESS_XML, buff.toString());
 	}
 
 	private StreamingResponse getSummaries(int since) {
@@ -192,7 +205,7 @@ public class ConversationServiceHttpRequestHandler implements
 			xml(buff, it.next());
 		}
 		buff.append("</summaries>");
-		return successXML(buff.toString());
+		return conversation(SUCCESS_XML, buff.toString());
 	}
 
 	private void xml(StringBuilder buff, ConversationSummary summary) {
@@ -270,7 +283,7 @@ public class ConversationServiceHttpRequestHandler implements
 		if (r == null)
 			return err_404();
 
-		return successOctet(r.getHeader());
+		return conversation(SUCCESS_OCTET, r.getHeader());
 	}
 
 	private StreamingResponse getResponseHeader(int id)
@@ -279,7 +292,7 @@ public class ConversationServiceHttpRequestHandler implements
 		if (r == null)
 			return err_404();
 
-		return successOctet(r.getHeader());
+		return conversation(SUCCESS_OCTET, r.getHeader());
 	}
 
 	private StreamingResponse getRequestContent(int id, boolean decode)
@@ -291,10 +304,14 @@ public class ConversationServiceHttpRequestHandler implements
 		byte[] content = dao.loadMessageContent(contentId);
 		if (decode) {
 			RequestHeader request = dao.loadRequestHeader(id);
-			return successOctet(MessageUtils.decode(request,
-					new ByteArrayInputStream(content)));
+			try {
+				return conversation(SUCCESS_OCTET, MessageUtils.decode(request,
+						new ByteArrayInputStream(content)));
+			} catch (IOException ioe) {
+				return err_500();
+			}
 		}
-		return successOctet(content);
+		return conversation(SUCCESS_OCTET, content);
 	}
 
 	private StreamingResponse getResponseContent(int id, boolean decode)
@@ -306,60 +323,55 @@ public class ConversationServiceHttpRequestHandler implements
 		byte[] content = dao.loadMessageContent(contentId);
 		if (decode) {
 			ResponseHeader response = dao.loadResponseHeader(id);
-			return successOctet(MessageUtils.decode(response,
-					new ByteArrayInputStream(content)));
+			try {
+				return conversation(SUCCESS_OCTET, MessageUtils.decode(
+						response, new ByteArrayInputStream(content)));
+			} catch (IOException ioe) {
+				return err_500();
+			}
 		}
-		return successOctet(content);
+		return conversation(SUCCESS_OCTET, content);
 	}
 
 	private StreamingResponse err_400() {
-		StreamingResponse response = new StreamingResponse.Impl();
-		response.setHeader(AsciiString
-				.getBytes("HTTP/1.0 400 Bad request\r\n\r\n"));
-		response.setContent(content("Bad request"));
-		return response;
+		return conversation("HTTP/1.0 400 Bad request\r\n\r\n", "Bad request");
 	}
 
 	private StreamingResponse err_404() {
-		StreamingResponse response = new StreamingResponse.Impl();
-		response.setHeader(AsciiString
-				.getBytes("HTTP/1.0 404 Resource not found\r\n\r\n"));
-		response.setContent(content("Resource not found"));
-		return response;
+		return conversation("HTTP/1.0 404 Resource not found\r\n\r\n",
+				"Resource not found");
 	}
 
 	private StreamingResponse err_500() {
-		StreamingResponse response = new StreamingResponse.Impl();
-		response.setHeader(AsciiString
-				.getBytes("HTTP/1.0 500 Error processing request\r\n\r\n"));
-		response.setContent(content("Error processing request"));
-		return response;
+		return conversation("HTTP/1.0 500 Error processing request\r\n\r\n",
+				"Error processing request");
 	}
 
-	private StreamingResponse successXML(String content) {
-		StreamingResponse response = new StreamingResponse.Impl();
-		response.setHeader(SUCCESS_XML);
-		response.setContent(content(content));
-		return response;
+	private StreamingResponse conversation(String header, String content) {
+		return conversation(AsciiString.getBytes(header), content);
 	}
 
-	private StreamingResponse successOctet(byte[] content) {
-		return successOctet(new ByteArrayInputStream(content));
+	private StreamingResponse conversation(byte[] header, String content) {
+		return conversation(header, stream(content));
 	}
 
-	private StreamingResponse successOctet(InputStream content) {
+	private StreamingResponse conversation(byte[] header, byte[] content) {
+		return conversation(header, stream(content));
+	}
+
+	private StreamingResponse conversation(byte[] header, InputStream content) {
 		StreamingResponse response = new StreamingResponse.Impl();
-		response.setHeader(SUCCESS_OCTET);
+		response.setHeader(header);
 		response.setContent(content);
 		return response;
 	}
 
-	private InputStream content(byte[] content) {
+	private InputStream stream(byte[] content) {
 		return new ByteArrayInputStream(content);
 	}
 
-	private InputStream content(String content) {
-		return content(AsciiString.getBytes(content));
+	private InputStream stream(String content) {
+		return stream(AsciiString.getBytes(content));
 	}
 
 }
