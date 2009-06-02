@@ -9,13 +9,10 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
 import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
-import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
@@ -68,6 +65,8 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 
 	private char[] password;
 
+	private boolean reuseKeys = false;
+
 	private Map<String, SSLContext> contextCache = new HashMap<String, SSLContext>();
 
 	private X500Name caName = new X500Name("CA", "OWASP Custom CA", "OWASP",
@@ -98,6 +97,10 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		}
 	}
 
+	public void setReuseKeys(boolean reuse) {
+		reuseKeys = reuse;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -110,7 +113,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		SSLContext sslcontext = contextCache.get(host);
 		if (sslcontext == null) {
 			if (!keystore.containsAlias(host))
-				generate(host);
+				generate(host, reuseKeys);
 			sslcontext = SSLContext.getInstance("SSLv3");
 			HostKeyManager km = new HostKeyManager(host);
 			sslcontext.init(new KeyManager[] { km }, null, null);
@@ -148,16 +151,18 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		saveKeystore();
 	}
 
-	private void generate(String cname) throws GeneralSecurityException {
+	private void generate(String cname, boolean reuseKeys)
+			throws GeneralSecurityException {
 		try {
 			PrivateKey caKey = (PrivateKey) keystore.getKey(CA, password);
 			PublicKey caPubKey = keystore.getCertificate(CA).getPublicKey();
 			Certificate[] caCertChain = keystore.getCertificateChain(CA);
+			X509Certificate caCert = (X509Certificate) caCertChain[0];
 
 			PrivateKey privKey = caKey;
 			PublicKey pubKey = caPubKey;
 
-			if (false) {
+			if (!reuseKeys) {
 				CertAndKeyGen keygen = new CertAndKeyGen("RSA", "SHA1WithRSA");
 				keygen.generate(1024);
 				privKey = keygen.getPrivateKey();
@@ -170,8 +175,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 			X500Signer issuer = new X500Signer(signature, caName);
 
 			Date begin = new Date();
-			Date ends = new Date(begin.getTime() + 365L * 24L * 60L * 60L
-					* 1000L);
+			Date ends = caCert.getNotAfter();
 			CertificateValidity valid = new CertificateValidity(begin, ends);
 			X500Name subject = new X500Name(cname, caName
 					.getOrganizationalUnit(), caName.getOrganization(), caName
@@ -274,8 +278,28 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 
 		private String host;
 
-		public HostKeyManager(String host) {
+		private PrivateKey pk;
+
+		private X509Certificate[] certs;
+
+		public HostKeyManager(String host) throws GeneralSecurityException {
 			this.host = host;
+			Certificate[] chain = keystore.getCertificateChain(host);
+			if (certs != null) {
+				certs = new X509Certificate[certs.length];
+				for (int i = 0; i < certs.length; i++) {
+					certs[i] = (X509Certificate) chain[i];
+				}
+			} else
+				throw new IllegalStateException(
+						"Internal error: certificate chain for " + host
+								+ " not found!");
+
+			pk = (PrivateKey) keystore.getKey(host, password);
+			if (pk == null)
+				throw new RuntimeException("Internal error: private key for "
+						+ host + " is null!");
+
 		}
 
 		public String chooseClientAlias(String[] keyType, Principal[] issuers,
@@ -289,20 +313,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		}
 
 		public X509Certificate[] getCertificateChain(String alias) {
-			X509Certificate[] chain = null;
-			try {
-				Certificate[] certs = keystore.getCertificateChain(alias);
-				if (certs != null) {
-					chain = new X509Certificate[certs.length];
-					for (int i = 0; i < certs.length; i++) {
-						chain[i] = (X509Certificate) certs[i];
-					}
-				}
-			} catch (KeyStoreException e) {
-				throw new RuntimeException("Internal error: " + e.getMessage(),
-						e);
-			}
-			return chain;
+			return certs;
 		}
 
 		public String[] getClientAliases(String keyType, Principal[] issuers) {
@@ -310,23 +321,6 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		}
 
 		public PrivateKey getPrivateKey(String alias) {
-			PrivateKey pk = null;
-			try {
-				pk = (PrivateKey) keystore.getKey(alias, password);
-				if (pk == null)
-					throw new RuntimeException(
-							"Internal error: private key for " + alias
-									+ " is null!");
-			} catch (KeyStoreException e) {
-				throw new RuntimeException("Internal error: " + e.getMessage(),
-						e);
-			} catch (NoSuchAlgorithmException e) {
-				throw new RuntimeException("Internal error: " + e.getMessage(),
-						e);
-			} catch (UnrecoverableKeyException e) {
-				throw new RuntimeException("Internal error: " + e.getMessage(),
-						e);
-			}
 			return pk;
 		}
 
