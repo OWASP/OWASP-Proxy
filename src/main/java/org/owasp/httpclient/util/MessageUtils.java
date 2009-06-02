@@ -61,7 +61,7 @@ public class MessageUtils {
 	 * @throws MessageFormatException
 	 */
 	public static InputStream decode(StreamingMessage message)
-			throws MessageFormatException {
+			throws IOException, MessageFormatException {
 		return decode(message, message.getContent());
 	}
 
@@ -88,10 +88,10 @@ public class MessageUtils {
 	}
 
 	public static InputStream decode(MessageHeader message, InputStream content)
-			throws MessageFormatException {
+			throws IOException, MessageFormatException {
 		if (content == null)
 			return content;
-		String codings = message.getHeader("Transfer-Coding");
+		String codings = message.getHeader("Transfer-Encoding");
 		content = decode(codings, content);
 		codings = message.getHeader("Content-Encoding");
 		content = decode(codings, content);
@@ -99,28 +99,24 @@ public class MessageUtils {
 	}
 
 	public static InputStream decode(String codings, InputStream content)
-			throws MessageFormatException {
+			throws IOException, MessageFormatException {
 		if (codings == null || codings.trim().equals(""))
 			return content;
-		try {
-			String[] algos = codings.split("[ \t]*,[ \t]*");
-			if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
-				return content;
-			for (int i = 0; i < algos.length; i++) {
-				if ("chunked".equalsIgnoreCase(algos[i])) {
-					content = new ChunkedInputStream(content);
-				} else if ("gzip".equalsIgnoreCase(algos[i])) {
-					content = new GunzipInputStream(content);
-				} else if ("identity".equalsIgnoreCase(algos[i])) {
-					// nothing to do
-				} else
-					throw new MessageFormatException("Unsupported coding : "
-							+ algos[i]);
-			}
+		String[] algos = codings.split("[ \t]*,[ \t]*");
+		if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
 			return content;
-		} catch (IOException ioe) {
-			throw new MessageFormatException("Error decoding content", ioe);
+		for (int i = 0; i < algos.length; i++) {
+			if ("chunked".equalsIgnoreCase(algos[i])) {
+				content = new ChunkedInputStream(content);
+			} else if ("gzip".equalsIgnoreCase(algos[i])) {
+				content = new GunzipInputStream(content);
+			} else if ("identity".equalsIgnoreCase(algos[i])) {
+				// nothing to do
+			} else
+				throw new MessageFormatException("Unsupported coding : "
+						+ algos[i]);
 		}
+		return content;
 	}
 
 	/**
@@ -134,22 +130,16 @@ public class MessageUtils {
 		return encode(message, message.getContent());
 	}
 
-	public static byte[] encode(BufferedMessage message)
-			throws MessageFormatException {
-		try {
-			InputStream content = new ByteArrayInputStream(message.getContent());
-			content = encode(message, content);
-			ByteArrayOutputStream copy = new ByteArrayOutputStream();
-			byte[] buff = new byte[4096];
-			int got;
-			while ((got = content.read(buff)) > 0)
-				copy.write(buff, 0, got);
-			return copy.toByteArray();
-		} catch (IOException ioe) {
-			throw new MessageFormatException("Malformed encoded content: "
-					+ ioe.getMessage(), ioe);
-
-		}
+	public static byte[] encode(BufferedMessage message) throws IOException,
+			MessageFormatException {
+		InputStream content = new ByteArrayInputStream(message.getContent());
+		content = encode(message, content);
+		ByteArrayOutputStream copy = new ByteArrayOutputStream();
+		byte[] buff = new byte[4096];
+		int got;
+		while ((got = content.read(buff)) > 0)
+			copy.write(buff, 0, got);
+		return copy.toByteArray();
 	}
 
 	/**
@@ -162,7 +152,7 @@ public class MessageUtils {
 			throws MessageFormatException {
 		String codings = header.getHeader("Content-Encoding");
 		content = encode(codings, content);
-		codings = header.getHeader("Transfer-Coding");
+		codings = header.getHeader("Transfer-Encoding");
 		content = encode(codings, content);
 		return content;
 	}
