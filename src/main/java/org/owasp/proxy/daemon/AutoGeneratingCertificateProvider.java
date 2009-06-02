@@ -59,6 +59,18 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 
 	private static final String SIGALG = "SHA1withRSA";
 
+	private static X500Name CA_NAME;
+
+	static {
+		try {
+			CA_NAME = new X500Name("CA", "OWASP Custom CA", "OWASP", "OWASP",
+					"OWASP", "OWASP");
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			CA_NAME = null;
+		}
+	}
+
 	private String filename;
 
 	private KeyStore keystore;
@@ -69,13 +81,24 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 
 	private Map<String, SSLContext> contextCache = new HashMap<String, SSLContext>();
 
-	private X500Name caName = new X500Name("CA", "OWASP Custom CA", "OWASP",
-			"OWASP", "OWASP", "OWASP");
+	private X500Name caName;
+
+	public AutoGeneratingCertificateProvider() throws GeneralSecurityException,
+			IOException {
+		this(null, "JKS", "password".toCharArray());
+	}
 
 	public AutoGeneratingCertificateProvider(String filename, String type,
 			char[] password) throws GeneralSecurityException, IOException {
+		this(filename, type, password, CA_NAME);
+	}
+
+	public AutoGeneratingCertificateProvider(String filename, String type,
+			char[] password, X500Name caName) throws GeneralSecurityException,
+			IOException {
 		this.filename = filename;
 		this.password = password;
+		this.caName = caName;
 		keystore = KeyStore.getInstance(type);
 		File file = new File(filename);
 		if (filename == null) {
@@ -97,6 +120,18 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		}
 	}
 
+	/**
+	 * Determines whether the public and private key generated for the CA will
+	 * be reused for other hosts as well.
+	 * 
+	 * This is mostly just a performance optimisation, to save time generating a
+	 * key pair for each host. Paranoid clients may have an issue with this, in
+	 * theory.
+	 * 
+	 * @param reuse
+	 *            true to reuse the CA key pair, false to generate a new key
+	 *            pair for each host
+	 */
 	public void setReuseKeys(boolean reuse) {
 		reuseKeys = reuse;
 	}
@@ -137,7 +172,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 	}
 
 	private void generateCA() throws GeneralSecurityException, IOException {
-		CertAndKeyGen keygen = new CertAndKeyGen("RSA", "SHA1WithRSA");
+		CertAndKeyGen keygen = new CertAndKeyGen("RSA", SIGALG);
 		keygen.generate(1024);
 
 		PrivateKey key = keygen.getPrivateKey();
@@ -163,7 +198,7 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 			PublicKey pubKey = caPubKey;
 
 			if (!reuseKeys) {
-				CertAndKeyGen keygen = new CertAndKeyGen("RSA", "SHA1WithRSA");
+				CertAndKeyGen keygen = new CertAndKeyGen("RSA", SIGALG);
 				keygen.generate(1024);
 				privKey = keygen.getPrivateKey();
 				pubKey = keygen.getPublicKey();
@@ -285,21 +320,23 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 		public HostKeyManager(String host) throws GeneralSecurityException {
 			this.host = host;
 			Certificate[] chain = keystore.getCertificateChain(host);
-			if (certs != null) {
-				certs = new X509Certificate[certs.length];
-				for (int i = 0; i < certs.length; i++) {
+			if (chain != null) {
+				certs = new X509Certificate[chain.length];
+				for (int i = 0; i < chain.length; i++) {
 					certs[i] = (X509Certificate) chain[i];
 				}
-			} else
-				throw new IllegalStateException(
+			} else {
+				throw new GeneralSecurityException(
 						"Internal error: certificate chain for " + host
 								+ " not found!");
+			}
 
 			pk = (PrivateKey) keystore.getKey(host, password);
-			if (pk == null)
-				throw new RuntimeException("Internal error: private key for "
-						+ host + " is null!");
-
+			if (pk == null) {
+				throw new GeneralSecurityException(
+						"Internal error: private key for " + host
+								+ " not found!");
+			}
 		}
 
 		public String chooseClientAlias(String[] keyType, Principal[] issuers,
