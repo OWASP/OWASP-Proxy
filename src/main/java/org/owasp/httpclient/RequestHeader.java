@@ -119,7 +119,7 @@ public interface RequestHeader extends ReadOnlyRequestHeader, MessageHeader {
 
 		@Override
 		public String toString() {
-			return ssl ? "SSL " : "" + target + "\n" + super.toString();
+			return (ssl ? "SSL " : "") + target + "\n" + super.toString();
 		}
 	}
 }
