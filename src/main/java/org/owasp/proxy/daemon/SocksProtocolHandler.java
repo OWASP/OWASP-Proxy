@@ -10,6 +10,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
+import java.net.UnknownHostException;
 
 import org.owasp.proxy.daemon.socks.ProxyMessage;
 import org.owasp.proxy.daemon.socks.ServerAuthenticator;
@@ -127,7 +128,12 @@ public class SocksProtocolHandler {
 
 		if (msg.ip == null) {
 			if (msg instanceof Socks5Message) {
-				msg.ip = InetAddress.getByName(msg.host);
+				try {
+					msg.ip = InetAddress.getByName(msg.host);
+				} catch (UnknownHostException uhe) {
+					throw new SocksException(
+							SocksConstants.SOCKS_ADDR_NOT_SUPPORTED);
+				}
 			} else
 				throw new SocksException(SocksConstants.SOCKS_FAILURE);
 		}
