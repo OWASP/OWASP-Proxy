@@ -106,7 +106,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		}
 	}
 
-	private void handleResponse(final StreamingRequest request,
+	private void handleResponse(final ReadOnlyRequestHeader request,
 			final StreamingResponse response, boolean decode)
 			throws IOException, MessageFormatException {
 		Action action = directResponse(request, response);
@@ -115,8 +115,23 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		case BUFFER:
 			brs = new BufferedResponse.Impl();
 			try {
-				if (decode)
-					response.setContent(MessageUtils.decode(response));
+				if (decode) {
+					try {
+						response.setContent(MessageUtils.decode(response));
+					} catch (MessageFormatException mfe) {
+						throw new MessageFormatException(
+								"Error decoding response for "
+										+ request.getTarget()
+										+ request.getResource(), mfe);
+					} catch (IOException ioe) {
+						IOException e = new IOException(
+								"Error decoding response for "
+										+ request.getTarget()
+										+ request.getResource());
+						e.initCause(ioe);
+						throw e;
+					}
+				}
 				MessageUtils.buffer(response, brs, max);
 				processResponse(request, brs);
 				MessageUtils.stream(brs, response);
@@ -235,9 +250,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 *            the response
 	 * @return the desired Action
 	 */
-	protected Action directResponse(RequestHeader request,
+	protected Action directResponse(ReadOnlyRequestHeader request,
 			ResponseHeader response) {
-		return Action.BUFFER;
+		return Action.STREAM;
 	}
 
 	/**

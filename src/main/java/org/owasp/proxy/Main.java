@@ -14,9 +14,13 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 
 import org.owasp.httpclient.Client;
+import org.owasp.httpclient.ReadOnlyRequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.dao.JdbcMessageDAO;
+import org.owasp.proxy.daemon.AutoGeneratingCertificateProvider;
+import org.owasp.proxy.daemon.BufferingHttpRequestHandler;
+import org.owasp.proxy.daemon.CertificateProvider;
 import org.owasp.proxy.daemon.ConversationServiceHttpRequestHandler;
-import org.owasp.proxy.daemon.DefaultCertificateProvider;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
 import org.owasp.proxy.daemon.HttpRequestHandler;
@@ -134,10 +138,19 @@ public class Main {
 		dao.createTables();
 		rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
 		rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
+		rh = new BufferingHttpRequestHandler(rh, 10240, true) {
+			@Override
+			protected Action directResponse(ReadOnlyRequestHeader request,
+					ResponseHeader response) {
+				return Action.BUFFER;
+			}
+		};
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		TargetedConnectionHandler tch = new SSLConnectionHandler(
-				new DefaultCertificateProvider(), true, hpch);
+		// CertificateProvider cp = new DefaultCertificateProvider();
+		CertificateProvider cp = new AutoGeneratingCertificateProvider(
+				".keystore", "JKS", "password".toCharArray());
+		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
 		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
 		hpch.setConnectHandler(tch);
 		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
