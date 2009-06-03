@@ -99,7 +99,8 @@ public class Server {
 				try {
 					socket.setSoTimeout(socketTimeout);
 					connectionHandler.handleConnection(socket);
-				} catch (IOException ignore) {
+				} catch (Exception ignore) {
+					ignore.printStackTrace();
 				} finally {
 					try {
 						if (!socket.isClosed())
