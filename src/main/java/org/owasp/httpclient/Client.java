@@ -129,9 +129,9 @@ public class Client {
 					if (got == -1)
 						return false;
 					if (got > 0) {
-						System.err
-								.println("Unexpected data read from socket:\n\n"
-										+ AsciiString.create(buff, 0, got));
+						logger.warning("Unexpected data read from socket ("
+								+ got + " bytes):\n"
+								+ AsciiString.create(buff, 0, got));
 						socket.close();
 						return false;
 					}
@@ -158,11 +158,12 @@ public class Client {
 				.getInputStream()));
 		String line = br.readLine();
 		if (line == null)
-			throw new IOException("Proxy closed connection without replying");
+			throw new IOException(
+					"Upstream proxy closed connection without replying");
 		int pos = "HTTP/1.x ".length();
 		String status = line.substring(pos);
 		if (!status.startsWith("200 "))
-			throw new IOException("Proxy responded: " + status);
+			throw new IOException("Upstream proxy responded: " + status);
 		do {
 			line = br.readLine();
 		} while (br != null && !"".equals(line));
@@ -358,7 +359,7 @@ public class Client {
 					|| !expectResponseContent) {
 				responseContent = NO_CONTENT;
 			} else {
-				String transferCoding = rh.getHeader("Transfer-Coding");
+				String transferCoding = rh.getHeader("Transfer-Encoding");
 				String contentLength = rh.getHeader("Content-Length");
 				if (transferCoding != null
 						&& transferCoding.trim().equalsIgnoreCase("chunked")) {
