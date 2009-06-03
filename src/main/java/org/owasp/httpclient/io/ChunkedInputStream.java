@@ -107,26 +107,26 @@ public class ChunkedInputStream extends FilterInputStream {
 		}
 	}
 
+	private boolean isEmptyBuffer() {
+		return buffer == null || buffer.length() == 0;
+	}
+
 	public int read() throws IOException {
-		if (buffer == null || buffer.length() == 0) {
-			if (eof)
-				return -1;
-			readChunk();
-		}
-		if (buffer == null || buffer.length() == 0)
+		if (eof && isEmptyBuffer())
 			return -1;
-		return buffer.remove();
+		int i = buffer.remove();
+		while (!eof && isEmptyBuffer())
+			readChunk();
+		return i;
 	}
 
 	public int read(byte[] b, int off, int len) throws IOException {
-		if (buffer == null || buffer.length() == 0) {
-			if (eof)
-				return -1;
-			readChunk();
-		}
-		if (buffer == null || buffer.length() == 0)
+		if (eof && isEmptyBuffer())
 			return -1;
-		return buffer.remove(b, off, len);
+		int got = buffer.remove(b, off, len);
+		while (!eof && isEmptyBuffer())
+			readChunk();
+		return got;
 	}
 
 	public int available() throws IOException {
