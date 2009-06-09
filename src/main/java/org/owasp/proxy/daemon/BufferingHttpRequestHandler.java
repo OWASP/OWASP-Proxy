@@ -17,9 +17,13 @@ import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.SizeLimitExceededException;
+import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
 
 public class BufferingHttpRequestHandler implements HttpRequestHandler {
+
+	private static byte[] CONTINUE = AsciiString
+			.getBytes("HTTP/1.1 100 Continue\r\n\r\n");
 
 	public enum Action {
 		BUFFER, STREAM, IGNORE
@@ -179,12 +183,41 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
 	final public StreamingResponse handleRequest(InetAddress source,
-			final StreamingRequest request, boolean isContinue) throws IOException,
+			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
 		boolean decode = this.decode;
+		if (!isContinue && isExpectContinue(request))
+			return get100Continue();
+
 		handleRequest(request, decode);
-		StreamingResponse response = next.handleRequest(source, request, isContinue);
+		isContinue = false;
+
+		StreamingResponse response = null;
+		if (isExpectContinue(request)) {
+			StreamingRequest cont = new StreamingRequest.Impl(request);
+			response = next.handleRequest(source, cont, false);
+			isContinue = isContinue(response);
+			if (!isContinue)
+				return response;
+		}
+		response = next.handleRequest(source, request, isContinue);
 		handleResponse(request, response, decode);
+		return response;
+	}
+
+	private boolean isExpectContinue(StreamingRequest request)
+			throws MessageFormatException {
+		return "continue".equalsIgnoreCase(request.getHeader("Expect"));
+	}
+
+	private boolean isContinue(StreamingResponse response)
+			throws MessageFormatException {
+		return "100".equals(response.getStatus());
+	}
+
+	private StreamingResponse get100Continue() {
+		StreamingResponse response = new StreamingResponse.Impl();
+		response.setHeader(CONTINUE);
 		return response;
 	}
 
