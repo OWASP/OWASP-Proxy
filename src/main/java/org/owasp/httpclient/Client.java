@@ -73,6 +73,8 @@ public class Client {
 
 	private InputStream responseContent = null;
 
+	private byte[] requestContinueHeader = null;
+
 	public Client() {
 	}
 
@@ -259,6 +261,13 @@ public class Client {
 
 	public void sendRequestHeader(byte[] header) throws IOException,
 			MessageFormatException {
+		if (state == State.RESPONSE_CONTINUE) {
+			if (header == requestContinueHeader)
+				return;
+			throw new IllegalStateException(
+					"Cannot start a new request when the "
+							+ "previous request content has not yet been sent");
+		}
 		if (state != State.CONNECTED && state != State.RESPONSE_CONTENT_READ)
 			throw new IllegalStateException(
 					"Illegal state. Can't send request headers when state is "
@@ -299,7 +308,8 @@ public class Client {
 	}
 
 	public void sendRequestContent(byte[] content) throws IOException {
-		if (state != State.REQUEST_HEADER_SENT)
+		if (state != State.REQUEST_HEADER_SENT
+				&& state != State.RESPONSE_CONTINUE)
 			throw new IllegalStateException(
 					"Ilegal state. Can't send request content when state is "
 							+ state);
@@ -307,29 +317,47 @@ public class Client {
 			OutputStream os = socket.getOutputStream();
 			os.write(content);
 			os.flush();
-		}
+		} else if (state == State.RESPONSE_CONTINUE)
+			throw new IllegalStateException(
+					"Cannot send null content after a 100 Continue response!");
 		state = State.REQUEST_CONTENT_SENT;
 	}
 
 	public void sendRequestContent(InputStream content) throws IOException {
-		if (state != State.REQUEST_HEADER_SENT)
+		if (state != State.REQUEST_HEADER_SENT
+				&& state != State.RESPONSE_CONTINUE)
 			throw new IllegalStateException(
 					"Ilegal state. Can't send request content when state is "
 							+ state);
-		OutputStream os = socket.getOutputStream();
-		byte[] buff = new byte[1024];
-		int got;
-		while ((got = content.read(buff)) > 0)
-			os.write(buff, 0, got);
-		os.flush();
+		if (content != null) {
+			OutputStream os = socket.getOutputStream();
+			byte[] buff = new byte[1024];
+			int got;
+			while ((got = content.read(buff)) > 0)
+				os.write(buff, 0, got);
+			os.flush();
+		} else if (state == State.RESPONSE_CONTINUE)
+			throw new IllegalStateException(
+					"Cannot send null content after a 100 Continue response!");
 		state = State.REQUEST_CONTENT_SENT;
 	}
 
+	/**
+	 * returns the bytes of the response header.
+	 * 
+	 * NB: The response header may be a "100 Continue" response. Callers MUST
+	 * check if the response code is "100", and be prepared to call getHeader()
+	 * again to retrieve the real response headers, BEFORE calling
+	 * getResponseContent().
+	 * 
+	 * @return
+	 * @throws IOException
+	 * @throws MessageFormatException
+	 */
 	public byte[] getResponseHeader() throws IOException,
 			MessageFormatException {
 		if (state != State.REQUEST_HEADER_SENT
-				&& state != State.REQUEST_CONTENT_SENT
-				&& state != State.RESPONSE_CONTINUE)
+				&& state != State.REQUEST_CONTENT_SENT)
 			throw new IllegalStateException(
 					"Ilegal state. Can't read response header when state is "
 							+ state);
@@ -383,6 +411,9 @@ public class Client {
 	}
 
 	public InputStream getResponseContent() throws IOException {
+		if (state == State.RESPONSE_CONTINUE)
+			throw new IllegalStateException(
+					"Cannot read response content when state is " + state);
 		if (state != State.RESPONSE_HEADER_READ)
 			throw new IllegalStateException(
 					"Illegal state. Can't read response body when state is "

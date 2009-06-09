@@ -234,16 +234,8 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		try {
 			InetAddress source = socket.getInetAddress();
 
-			InputStream in;
-			OutputStream out;
-			try {
-				in = socket.getInputStream();
-				out = socket.getOutputStream();
-			} catch (IOException ioe) {
-				// shouldn't happen
-				ioe.printStackTrace();
-				return;
-			}
+			InputStream in = socket.getInputStream();
+			OutputStream out = socket.getOutputStream();
 
 			boolean close;
 			String version = null, connection = null;
@@ -281,6 +273,9 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 									.getHeader());
 				}
 
+				boolean expectContinue = "continue".equalsIgnoreCase(request
+						.getHeader("Expect"));
+
 				InputStream requestContent = request.getContent();
 				if (requestContent != null) {
 					request.setContent(new EofNotifyingInputStream(
@@ -297,11 +292,40 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 				}
 
 				StreamingResponse response = null;
-				try {
-					response = requestHandler.handleRequest(source, request);
-					holder.state = State.RESPONSE_HEADER;
-				} catch (IOException ioe) {
-					response = createErrorResponse(request, ioe);
+				if (expectContinue) {
+					try {
+						response = requestHandler.handleRequest(source,
+								request, false);
+						holder.state = State.RESPONSE_HEADER;
+					} catch (IOException ioe) {
+						response = createErrorResponse(request, ioe);
+					}
+					if ("100".equals(response.getStatus())) {
+						try {
+							out.write(response.getHeader());
+						} catch (IOException ioe) { // client gone
+							return;
+						}
+						StreamingRequest cont = new StreamingRequest.Impl();
+						cont.setTarget(request.getTarget());
+						cont.setSsl(request.isSsl());
+						cont.setHeader(request.getHeader());
+						cont.setContent(requestContent);
+						request = cont;
+					}
+				}
+
+				boolean isContinue = response != null
+						&& "100".equals(response.getStatus());
+
+				if (response == null || isContinue) {
+					try {
+						response = requestHandler.handleRequest(source,
+								request, isContinue);
+						holder.state = State.RESPONSE_HEADER;
+					} catch (IOException ioe) {
+						response = createErrorResponse(request, ioe);
+					}
 				}
 
 				try {
@@ -330,7 +354,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 						logger.fine("Incomplete response content because "
 								+ ioe.getMessage());
 						logger.fine("Read " + count + " bytes");
-						return;
+						throw ioe;
 					}
 				}
 				holder.state = State.READY;

@@ -9,7 +9,7 @@ import org.owasp.httpclient.StreamingResponse;
 
 public interface HttpRequestHandler {
 
-	StreamingResponse handleRequest(InetAddress source, StreamingRequest request)
+	StreamingResponse handleRequest(InetAddress source, StreamingRequest request, boolean isContinue)
 			throws IOException, MessageFormatException;
 
 	void dispose() throws IOException;

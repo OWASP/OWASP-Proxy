@@ -50,9 +50,9 @@ public class LoggingHttpRequestHandler implements HttpRequestHandler {
 	 * (java.net.InetAddress, org.owasp.httpclient.StreamingRequest)
 	 */
 	public StreamingResponse handleRequest(final InetAddress source,
-			final StreamingRequest request) throws IOException,
+			final StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
-		final StreamingResponse response = next.handleRequest(source, request);
+		final StreamingResponse response = next.handleRequest(source, request, isContinue);
 		if (response.getContent() != null) {
 			final CountingInputStream cis = new CountingInputStream(response
 					.getContent());

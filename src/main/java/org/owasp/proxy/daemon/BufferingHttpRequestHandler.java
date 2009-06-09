@@ -179,11 +179,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
 	final public StreamingResponse handleRequest(InetAddress source,
-			final StreamingRequest request) throws IOException,
+			final StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
 		boolean decode = this.decode;
 		handleRequest(request, decode);
-		StreamingResponse response = next.handleRequest(source, request);
+		StreamingResponse response = next.handleRequest(source, request, isContinue);
 		handleResponse(request, response, decode);
 		return response;
 	}

@@ -43,7 +43,7 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
 	public StreamingResponse handleRequest(final InetAddress source,
-			StreamingRequest request) throws IOException,
+			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
 		BufferedRequest req = new BufferedRequest.Impl();
 		BufferedResponse resp = new BufferedResponse.Impl();
@@ -51,7 +51,7 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 				resp);
 		MessageUtils.delayedCopy(request, req, max, observer
 				.getRequestObserver());
-		StreamingResponse response = next.handleRequest(source, request);
+		StreamingResponse response = next.handleRequest(source, request, isContinue);
 		MessageUtils.delayedCopy(response, resp, max, observer
 				.getResponseObserver());
 		return response;

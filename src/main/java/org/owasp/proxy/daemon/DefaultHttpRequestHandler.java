@@ -69,13 +69,17 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
 	public StreamingResponse handleRequest(InetAddress source,
-			StreamingRequest request) throws IOException,
+			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
 		Client client = this.client.get();
-		client.connect(request.getTarget(), request.isSsl());
-		client.sendRequestHeader(request.getHeader());
-		if (request.getContent() != null)
+		if (isContinue) {
 			client.sendRequestContent(request.getContent());
+		} else {
+			client.connect(request.getTarget(), request.isSsl());
+			client.sendRequestHeader(request.getHeader());
+			if (request.getContent() != null)
+				client.sendRequestContent(request.getContent());
+		}
 		StreamingResponse response = new StreamingResponse.Impl();
 		response.setHeader(client.getResponseHeader());
 		response.setContent(client.getResponseContent());

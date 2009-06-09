@@ -82,14 +82,14 @@ public class ConversationServiceHttpRequestHandler implements
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
 	public StreamingResponse handleRequest(InetAddress source,
-			StreamingRequest request) throws IOException,
+			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
 		if (next == null
 				|| (hostname != null && hostname.equals(request.getTarget()
 						.getHostName()))) {
 			return handleLocalRequest(request);
 		}
-		return next.handleRequest(source, request);
+		return next.handleRequest(source, request, isContinue);
 	}
 
 	private StreamingResponse handleLocalRequest(StreamingRequest request) {
