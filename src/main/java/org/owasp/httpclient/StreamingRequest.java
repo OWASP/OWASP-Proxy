@@ -2,10 +2,18 @@ package org.owasp.httpclient;
 
 import java.io.InputStream;
 
-
 public interface StreamingRequest extends RequestHeader, StreamingMessage {
 
 	public class Impl extends RequestHeader.Impl implements StreamingRequest {
+
+		public Impl() {
+		}
+
+		public Impl(RequestHeader header) {
+			setTarget(header.getTarget());
+			setSsl(header.isSsl());
+			setHeader(header.getHeader());
+		}
 
 		private InputStream content;
 
