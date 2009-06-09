@@ -290,15 +290,17 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 					// nonexistent content has been read :-)
 					holder.state = State.REQUEST_CONTENT;
 				}
+				request.setContent(requestContent);
 
 				StreamingResponse response = null;
 				if (expectContinue) {
+					StreamingRequest cont = new StreamingRequest.Impl(request);
 					try {
-						response = requestHandler.handleRequest(source,
-								request, false);
+						response = requestHandler.handleRequest(source, cont,
+								false);
 						holder.state = State.RESPONSE_HEADER;
 					} catch (IOException ioe) {
-						response = createErrorResponse(request, ioe);
+						response = createErrorResponse(cont, ioe);
 					}
 					if ("100".equals(response.getStatus())) {
 						try {
@@ -306,12 +308,6 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 						} catch (IOException ioe) { // client gone
 							return;
 						}
-						StreamingRequest cont = new StreamingRequest.Impl();
-						cont.setTarget(request.getTarget());
-						cont.setSsl(request.isSsl());
-						cont.setHeader(request.getHeader());
-						cont.setContent(requestContent);
-						request = cont;
 					}
 				}
 
