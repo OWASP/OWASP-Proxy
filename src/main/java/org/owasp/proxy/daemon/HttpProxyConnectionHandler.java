@@ -294,6 +294,10 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 
 				StreamingResponse response = null;
 				if (expectContinue) {
+					System.err
+							.println("Expecting a Continue response for "
+									+ request.getTarget() + " "
+									+ request.getResource());
 					StreamingRequest cont = new StreamingRequest.Impl(request);
 					try {
 						response = requestHandler.handleRequest(source, cont,
