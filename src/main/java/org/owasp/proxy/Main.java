@@ -16,10 +16,10 @@ import java.util.logging.Logger;
 import org.owasp.httpclient.Client;
 import org.owasp.httpclient.ReadOnlyRequestHeader;
 import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.httpclient.dao.JdbcMessageDAO;
-import org.owasp.proxy.daemon.AutoGeneratingCertificateProvider;
+import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
 import org.owasp.proxy.daemon.BufferingHttpRequestHandler;
-import org.owasp.proxy.daemon.CertificateProvider;
 import org.owasp.proxy.daemon.ConversationServiceHttpRequestHandler;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
 import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
@@ -148,7 +148,7 @@ public class Main {
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		// CertificateProvider cp = new DefaultCertificateProvider();
-		CertificateProvider cp = new AutoGeneratingCertificateProvider(
+		SSLContextSelector cp = new AutoGeneratingContextSelector(
 				".keystore", "JKS", "password".toCharArray());
 		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
 		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);

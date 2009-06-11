@@ -5,6 +5,8 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.owasp.httpclient.SSLContextSelector;
+
 public class AutoGeneratingCertificateProviderTest {
 
 	public static void main(String[] args) throws Exception {
@@ -24,7 +26,7 @@ public class AutoGeneratingCertificateProviderTest {
 		// System.exit(0);
 		// }
 
-		CertificateProvider cp = new AutoGeneratingCertificateProvider(
+		SSLContextSelector cp = new AutoGeneratingContextSelector(
 				"/Users/rogan/workspace/owasp-proxy/keystore.jks", "JKS",
 				"password".toCharArray());
 		EncryptedConnectionHandler ech = new EncryptedConnectionHandler() {

@@ -6,22 +6,24 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
 
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
+import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.proxy.io.PushbackSocket;
 
 public class SSLConnectionHandler implements TargetedConnectionHandler {
 
-	private CertificateProvider certificateProvider;
+	private SSLContextSelector sslContextSelector;
 
 	private boolean detect;
 
 	private EncryptedConnectionHandler next;
 
-	public SSLConnectionHandler(CertificateProvider certificateProvider,
+	public SSLConnectionHandler(SSLContextSelector sslContextSelector,
 			boolean detect, EncryptedConnectionHandler next) {
-		this.certificateProvider = certificateProvider;
+		this.sslContextSelector = sslContextSelector;
 		this.detect = detect;
 		this.next = next;
 	}
@@ -46,10 +48,9 @@ public class SSLConnectionHandler implements TargetedConnectionHandler {
 
 	protected SSLSocketFactory getSSLSocketFactory(InetSocketAddress target)
 			throws IOException, GeneralSecurityException {
-		String host = target == null ? null : target.getHostName();
-		int port = target == null ? -1 : target.getPort();
-		return certificateProvider == null ? null : certificateProvider
-				.getSocketFactory(host, port);
+		SSLContext sslContext = sslContextSelector == null ? null
+				: sslContextSelector.select(target);
+		return sslContext == null ? null : sslContext.getSocketFactory();
 	}
 
 	protected SSLSocket negotiateSSL(Socket socket, SSLSocketFactory factory)

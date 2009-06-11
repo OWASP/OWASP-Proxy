@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -24,8 +25,9 @@ import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.X509KeyManager;
+
+import org.owasp.httpclient.SSLContextSelector;
 
 import sun.security.util.ObjectIdentifier;
 import sun.security.x509.AlgorithmId;
@@ -50,10 +52,10 @@ import sun.security.x509.X500Signer;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
-public class AutoGeneratingCertificateProvider implements CertificateProvider {
+public class AutoGeneratingContextSelector implements SSLContextSelector {
 
 	private static Logger logger = Logger
-			.getLogger(AutoGeneratingCertificateProvider.class.getName());
+			.getLogger(AutoGeneratingContextSelector.class.getName());
 
 	private static final String CA = "CA";
 
@@ -83,17 +85,17 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 
 	private X500Name caName;
 
-	public AutoGeneratingCertificateProvider() throws GeneralSecurityException,
+	public AutoGeneratingContextSelector() throws GeneralSecurityException,
 			IOException {
 		this(null, "JKS", "password".toCharArray());
 	}
 
-	public AutoGeneratingCertificateProvider(String filename, String type,
+	public AutoGeneratingContextSelector(String filename, String type,
 			char[] password) throws GeneralSecurityException, IOException {
 		this(filename, type, password, CA_NAME);
 	}
 
-	public AutoGeneratingCertificateProvider(String filename, String type,
+	public AutoGeneratingContextSelector(String filename, String type,
 			char[] password, X500Name caName) throws GeneralSecurityException,
 			IOException {
 		this.filename = filename;
@@ -143,18 +145,23 @@ public class AutoGeneratingCertificateProvider implements CertificateProvider {
 	 * org.owasp.proxy.daemon.CertificateProvider#getSocketFactory(java.lang
 	 * .String, int)
 	 */
-	public synchronized SSLSocketFactory getSocketFactory(String host, int port)
-			throws IOException, GeneralSecurityException {
-		SSLContext sslcontext = contextCache.get(host);
-		if (sslcontext == null) {
-			if (!keystore.containsAlias(host))
-				generate(host, reuseKeys);
-			sslcontext = SSLContext.getInstance("SSLv3");
-			HostKeyManager km = new HostKeyManager(host);
-			sslcontext.init(new KeyManager[] { km }, null, null);
-			contextCache.put(host, sslcontext);
+	public synchronized SSLContext select(InetSocketAddress target) {
+		String host = target.getHostName();
+		SSLContext sslContext = contextCache.get(host);
+		if (sslContext == null) {
+			try {
+				if (!keystore.containsAlias(host))
+					generate(host, reuseKeys);
+				sslContext = SSLContext.getInstance("SSLv3");
+				HostKeyManager km = new HostKeyManager(host);
+				sslContext.init(new KeyManager[] { km }, null, null);
+				contextCache.put(host, sslContext);
+			} catch (GeneralSecurityException gse) {
+				logger.warning("Error obtaining the SSLContext: "
+						+ gse.getLocalizedMessage());
+			}
 		}
-		return sslcontext.getSocketFactory();
+		return sslContext;
 	}
 
 	private void saveKeystore() {

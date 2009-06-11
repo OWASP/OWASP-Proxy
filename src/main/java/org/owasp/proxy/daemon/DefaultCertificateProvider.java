@@ -2,16 +2,18 @@ package org.owasp.proxy.daemon;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
 
-public class DefaultCertificateProvider implements CertificateProvider {
+import org.owasp.httpclient.SSLContextSelector;
 
-	private SSLSocketFactory sslSocketFactory = null;
+public class DefaultCertificateProvider implements SSLContextSelector {
+
+	private SSLContext sslContext = null;
 
 	public DefaultCertificateProvider() throws GeneralSecurityException,
 			IOException {
@@ -34,9 +36,8 @@ public class DefaultCertificateProvider implements CertificateProvider {
 			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 			char[] kp = keyPassword.toCharArray();
 			kmf.init(ks, kp);
-			SSLContext sslcontext = SSLContext.getInstance("SSLv3");
-			sslcontext.init(kmf.getKeyManagers(), null, null);
-			sslSocketFactory = sslcontext.getSocketFactory();
+			sslContext = SSLContext.getInstance("SSLv3");
+			sslContext.init(kmf.getKeyManagers(), null, null);
 		} else
 			throw new GeneralSecurityException("Couldn't find resource: "
 					+ resource);
@@ -45,19 +46,14 @@ public class DefaultCertificateProvider implements CertificateProvider {
 	/**
 	 * This default implementation uses the same certificate for all hosts.
 	 * 
-	 * @param host
-	 *            the host that the client wishes to CONNECT to
-	 * @param port
-	 *            the port that the client wishes to CONNECT to
 	 * @return an SSLSocketFactory generated from the relevant server key
 	 *         material
 	 */
-	public SSLSocketFactory getSocketFactory(String host, int port)
-			throws IOException {
-		if (sslSocketFactory == null) {
-			throw new NullPointerException("sslSocketFactory is null!");
+	public SSLContext select(InetSocketAddress target) {
+		if (sslContext == null) {
+			throw new NullPointerException("sslContext is null!");
 		}
-		return sslSocketFactory;
+		return sslContext;
 	}
 
 }
