@@ -65,8 +65,9 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 
 	static {
 		try {
-			CA_NAME = new X500Name("CA", "OWASP Custom CA", "OWASP", "OWASP",
-					"OWASP", "OWASP");
+			CA_NAME = new X500Name("OWASP Custom CA for "
+					+ java.net.InetAddress.getLocalHost().getHostName(),
+					"OWASP Custom CA", "OWASP", "OWASP", "OWASP", "OWASP");
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			CA_NAME = null;
@@ -102,22 +103,22 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		this.password = password;
 		this.caName = caName;
 		keystore = KeyStore.getInstance(type);
-		File file = new File(filename);
 		if (filename == null) {
 			logger
 					.info("No keystore provided, keys and certificates will be transient!");
-		}
-		if (file.exists()) {
-			logger.fine("Loading keys from " + filename);
-			InputStream is = new FileInputStream(file);
-			keystore.load(is, password);
-			if (keystore.getKey(CA, password) == null) {
-				logger.warning("Keystore does not contain an entry for '" + CA
-						+ "'");
-			}
-		} else {
-			logger.info("Generating CA key");
 			keystore.load(null, password);
+		} else {
+			File file = new File(filename);
+			if (file.exists()) {
+				logger.fine("Loading keys from " + filename);
+				InputStream is = new FileInputStream(file);
+				keystore.load(is, password);
+			} else {
+				logger.info("keystore '" + filename + "' will be created");
+			}
+		}
+		if (keystore.getKey(CA, password) == null) {
+			logger.info("Generating CA key");
 			generateCA();
 		}
 	}

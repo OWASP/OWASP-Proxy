@@ -26,8 +26,7 @@ public class AutoGeneratingCertificateProviderTest {
 		// System.exit(0);
 		// }
 
-		SSLContextSelector cp = new AutoGeneratingContextSelector(
-				"/Users/rogan/workspace/owasp-proxy/keystore.jks", "JKS",
+		SSLContextSelector cp = new AutoGeneratingContextSelector(null, "JKS",
 				"password".toCharArray());
 		EncryptedConnectionHandler ech = new EncryptedConnectionHandler() {
 
@@ -52,7 +51,7 @@ public class AutoGeneratingCertificateProviderTest {
 		TargetedConnectionHandler sslch = new SSLConnectionHandler(cp, false,
 				ech);
 		Proxy proxy = new Proxy(new InetSocketAddress("localhost", 4433),
-				sslch, new InetSocketAddress("www.fnb.co.za", 443));
+				sslch, new InetSocketAddress("www.example.com", 443));
 		proxy.start();
 		System.out.println("Started");
 		System.in.read();
