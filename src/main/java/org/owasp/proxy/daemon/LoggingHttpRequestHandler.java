@@ -5,8 +5,8 @@ import java.io.PrintStream;
 import java.net.InetAddress;
 
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.CountingInputStream;
@@ -69,8 +69,8 @@ public class LoggingHttpRequestHandler implements HttpRequestHandler {
 		return response;
 	}
 
-	protected void log(InetAddress source, RequestHeader request,
-			ResponseHeader response, int bytes) {
+	protected void log(InetAddress source, MutableRequestHeader request,
+			MutableResponseHeader response, int bytes) {
 		try {
 			StringBuilder buff = new StringBuilder();
 			buff.append(source.getHostAddress()).append(" - - ");

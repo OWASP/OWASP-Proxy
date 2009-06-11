@@ -376,7 +376,7 @@ public class Client {
 		}
 		if (i == -1)
 			throw new IOException("Unexpected end of stream reading header");
-		ResponseHeader.Impl rh = new ResponseHeader.Impl();
+		MutableResponseHeader.Impl rh = new MutableResponseHeader.Impl();
 		rh.setHeader(header.toByteArray());
 		String status = rh.getStatus();
 		if (status.equals("100")) {

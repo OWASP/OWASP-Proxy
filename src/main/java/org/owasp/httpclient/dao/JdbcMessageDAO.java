@@ -9,12 +9,12 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.Collections;
 
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MessageHeader;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.MutableMessageHeader;
+import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -43,8 +43,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	private static final String RESPONSE_HEADER_TIME = "responseHeaderTime";
 	private static final String RESPONSE_CONTENT_TIME = "responseContentTime";
 
-	private static final ParameterizedRowMapper<BufferedRequest> REQUEST_MAPPER = new RequestMapper();
-	private static final ParameterizedRowMapper<BufferedResponse> RESPONSE_MAPPER = new ResponseMapper();
+	private static final ParameterizedRowMapper<MutableBufferedRequest> REQUEST_MAPPER = new RequestMapper();
+	private static final ParameterizedRowMapper<MutableBufferedResponse> RESPONSE_MAPPER = new ResponseMapper();
 	private static final ParameterizedRowMapper<byte[]> CONTENT_MAPPER = new ContentMapper();
 	private static final ParameterizedRowMapper<Integer> ID_MAPPER = new IdMapper();
 	private static final ParameterizedRowMapper<Conversation> CONVERSATION_MAPPER = new ConversationMapper();
@@ -237,14 +237,14 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			return null;
 		ConversationSummary cs = new ConversationSummary();
 		cs.setId(id);
-		RequestHeader rqh = loadRequestHeader(c.getRequestId());
+		MutableRequestHeader rqh = loadRequestHeader(c.getRequestId());
 		try {
 			cs.summarizeRequest(rqh, getMessageContentSize(c.getRequestId()));
 		} catch (MessageFormatException ignored) {
 			// Return an empty request summary if it cannot be parsed
 			// The detailed request is still available
 		}
-		ResponseHeader rph = loadResponseHeader(c.getResponseId());
+		MutableResponseHeader rph = loadResponseHeader(c.getResponseId());
 		try {
 			cs.summarizeResponse(rph, getMessageContentSize(c.getResponseId()));
 		} catch (MessageFormatException ignored) {
@@ -277,8 +277,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadRequest(int)
 	 */
-	public BufferedRequest loadRequest(int id) throws DataAccessException {
-		BufferedRequest request = (BufferedRequest) loadRequestHeader(id);
+	public MutableBufferedRequest loadRequest(int id) throws DataAccessException {
+		MutableBufferedRequest request = (MutableBufferedRequest) loadRequestHeader(id);
 		if (request == null)
 			return null;
 		int contentId = getMessageContentId(id);
@@ -292,7 +292,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadRequestHeader(int)
 	 */
-	public RequestHeader loadRequestHeader(int id) throws DataAccessException {
+	public MutableRequestHeader loadRequestHeader(int id) throws DataAccessException {
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		try {
 			params.addValue(ID, id, Types.INTEGER);
@@ -310,8 +310,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadResponse(int)
 	 */
-	public BufferedResponse loadResponse(int id) throws DataAccessException {
-		BufferedResponse response = (BufferedResponse) loadResponseHeader(id);
+	public MutableBufferedResponse loadResponse(int id) throws DataAccessException {
+		MutableBufferedResponse response = (MutableBufferedResponse) loadResponseHeader(id);
 		if (response == null)
 			return null;
 		int contentId = getMessageContentId(id);
@@ -325,7 +325,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadResponseHeader(int)
 	 */
-	public ResponseHeader loadResponseHeader(int id) throws DataAccessException {
+	public MutableResponseHeader loadResponseHeader(int id) throws DataAccessException {
 		try {
 			MapSqlParameterSource params = new MapSqlParameterSource();
 			params.addValue(ID, id, Types.INTEGER);
@@ -383,7 +383,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveRequest(org.owasp.httpclient.
 	 * Request)
 	 */
-	public void saveRequest(BufferedRequest request) throws DataAccessException {
+	public void saveRequest(MutableBufferedRequest request) throws DataAccessException {
 		int contentId = -1;
 		if (request.getContent() != null)
 			contentId = saveMessageContent(request.getContent());
@@ -397,7 +397,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveRequestHeader(org.owasp.httpclient
 	 * .RequestHeader, int)
 	 */
-	public void saveRequestHeader(RequestHeader requestHeader, int contentId)
+	public void saveRequestHeader(MutableRequestHeader requestHeader, int contentId)
 			throws DataAccessException {
 		saveMessageHeader(requestHeader, contentId);
 		MapSqlParameterSource params = new MapSqlParameterSource();
@@ -417,7 +417,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveResponse(org.owasp.httpclient
 	 * .Response)
 	 */
-	public void saveResponse(BufferedResponse response)
+	public void saveResponse(MutableBufferedResponse response)
 			throws DataAccessException {
 		int contentId = -1;
 		if (response.getContent() != null)
@@ -432,12 +432,12 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveResponseHeader(org.owasp.httpclient
 	 * .ResponseHeader, int)
 	 */
-	public void saveResponseHeader(ResponseHeader responseHeader, int contentId)
+	public void saveResponseHeader(MutableResponseHeader responseHeader, int contentId)
 			throws DataAccessException {
 		saveMessageHeader(responseHeader, contentId);
 	}
 
-	private void saveMessageHeader(MessageHeader header, int contentId) {
+	private void saveMessageHeader(MutableMessageHeader header, int contentId) {
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue(HEADER, header.getHeader(), Types.LONGVARBINARY);
 		params.addValue(CONTENTID, contentId != -1 ? contentId : null,
@@ -448,9 +448,9 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	}
 
 	private static class RequestMapper implements
-			ParameterizedRowMapper<BufferedRequest> {
+			ParameterizedRowMapper<MutableBufferedRequest> {
 
-		public BufferedRequest mapRow(ResultSet rs, int rowNum)
+		public MutableBufferedRequest mapRow(ResultSet rs, int rowNum)
 				throws SQLException {
 			int id = rs.getInt(ID);
 
@@ -458,7 +458,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			int port = rs.getInt(PORT);
 			boolean ssl = rs.getBoolean(SSL);
 
-			BufferedRequest request = new BufferedRequest.Impl();
+			MutableBufferedRequest request = new MutableBufferedRequest.Impl();
 			request.setId(id);
 			request.setTarget(InetSocketAddress.createUnresolved(host, port));
 			request.setSsl(ssl);
@@ -469,13 +469,13 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	}
 
 	private static class ResponseMapper implements
-			ParameterizedRowMapper<BufferedResponse> {
+			ParameterizedRowMapper<MutableBufferedResponse> {
 
-		public BufferedResponse mapRow(ResultSet rs, int rowNum)
+		public MutableBufferedResponse mapRow(ResultSet rs, int rowNum)
 				throws SQLException {
 			int id = rs.getInt(ID);
 
-			BufferedResponse response = new BufferedResponse.Impl();
+			MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 			response.setId(id);
 			response.setHeader(rs.getBytes(HEADER));
 			return response;

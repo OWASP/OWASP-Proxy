@@ -19,16 +19,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.owasp.httpclient.BufferedMessage;
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MutableBufferedMessage;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.ReadOnlyBufferedRequest;
-import org.owasp.httpclient.ReadOnlyBufferedResponse;
-import org.owasp.httpclient.ReadOnlyRequestHeader;
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.util.AsciiString;
@@ -82,7 +82,7 @@ public class BufferingHttpRequestHandlerTest {
 								+ "Host: ajax.googleapis.com\r\n\r\n"));
 		HttpRequestHandler rh = new DefaultHttpRequestHandler();
 		StreamingResponse response = rh.handleRequest(null, request, false);
-		BufferedResponse brs = new BufferedResponse.Impl();
+		MutableBufferedResponse brs = new MutableBufferedResponse.Impl();
 		MessageUtils.buffer(response, brs, Integer.MAX_VALUE);
 		byte[] content = MessageUtils.decode(brs);
 		MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -107,7 +107,7 @@ public class BufferingHttpRequestHandlerTest {
 								+ "Host: ajax.googleapis.com\r\n\r\n"));
 
 		response = rh.handleRequest(null, request, false);
-		brs = new BufferedResponse.Impl();
+		brs = new MutableBufferedResponse.Impl();
 		MessageUtils.buffer(response, brs, Integer.MAX_VALUE);
 		content = MessageUtils.decode(brs);
 		// System.out.write(content);
@@ -200,30 +200,30 @@ public class BufferingHttpRequestHandlerTest {
 
 	private void test(BufferMock bm, boolean chunked, boolean gzipped, int size)
 			throws Exception {
-		BufferedRequest brq = createRequest("/?chunked=" + chunked
+		MutableBufferedRequest brq = createRequest("/?chunked=" + chunked
 				+ "&gzipped=" + gzipped + "&size=" + size, size);
 		StreamingRequest srq = new StreamingRequest.Impl();
 		MessageUtils.stream(brq, srq);
 
 		StreamingResponse srs = bm.handleRequest(null, srq, false);
 
-		BufferedResponse brs = new BufferedResponse.Impl();
+		MutableBufferedResponse brs = new MutableBufferedResponse.Impl();
 		MessageUtils.buffer(srs, brs, Integer.MAX_VALUE);
 
 		compare(brq, bm.result.request);
 		compare(brs, bm.result.response);
 	}
 
-	private void compare(BufferedMessage a, BufferedMessage b) {
+	private void compare(MutableBufferedMessage a, MutableBufferedMessage b) {
 		assertTrue(Arrays.equals(a.getHeader(), b.getHeader()));
 		if (!(a.getContent() == b.getContent() && a.getContent() == null)) {
 			assertTrue(Arrays.equals(a.getContent(), b.getContent()));
 		}
 	}
 
-	private BufferedRequest createRequest(String resource, int size)
+	private MutableBufferedRequest createRequest(String resource, int size)
 			throws MessageFormatException {
-		BufferedRequest request = new BufferedRequest.Impl();
+		MutableBufferedRequest request = new MutableBufferedRequest.Impl();
 		request.setStartLine("POST " + resource + " HTTP/1.1");
 		request.setHeader("Content-Length", Integer.toString(size));
 		byte[] content = new byte[size];
@@ -239,8 +239,8 @@ public class BufferingHttpRequestHandlerTest {
 	}
 
 	private static class Result {
-		public BufferedRequest request = null;
-		public BufferedResponse response = null;
+		public MutableBufferedRequest request = null;
+		public MutableBufferedResponse response = null;
 		public boolean requestOverflow = false;
 		public boolean responseOverflow = false;
 
@@ -261,36 +261,36 @@ public class BufferingHttpRequestHandlerTest {
 		}
 
 		@Override
-		protected Action directRequest(RequestHeader request) {
+		protected Action directRequest(MutableRequestHeader request) {
 			return Action.BUFFER;
 		}
 
 		@Override
-		protected Action directResponse(ReadOnlyRequestHeader request,
-				ResponseHeader response) {
+		protected Action directResponse(RequestHeader request,
+				MutableResponseHeader response) {
 			return Action.BUFFER;
 		}
 
 		@Override
-		protected void processRequest(BufferedRequest request) {
+		protected void processRequest(MutableBufferedRequest request) {
 			result.request = request;
 		}
 
 		@Override
-		protected void processResponse(ReadOnlyRequestHeader request,
-				BufferedResponse response) {
+		protected void processResponse(RequestHeader request,
+				MutableBufferedResponse response) {
 			result.response = response;
 		}
 
 		@Override
 		protected void requestContentSizeExceeded(
-				ReadOnlyBufferedRequest request) {
+				BufferedRequest request) {
 			result.requestOverflow = true;
 		}
 
 		@Override
 		protected void responseContentSizeExceeded(
-				ReadOnlyRequestHeader request, ReadOnlyBufferedResponse response) {
+				RequestHeader request, BufferedResponse response) {
 			result.responseOverflow = true;
 		}
 

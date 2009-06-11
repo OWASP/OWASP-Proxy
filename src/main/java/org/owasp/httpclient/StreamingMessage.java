@@ -2,7 +2,7 @@ package org.owasp.httpclient;
 
 import java.io.InputStream;
 
-public interface StreamingMessage extends MessageHeader {
+public interface StreamingMessage extends MutableMessageHeader {
 
 	InputStream getContent();
 

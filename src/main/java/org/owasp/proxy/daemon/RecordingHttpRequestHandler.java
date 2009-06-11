@@ -3,8 +3,8 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
@@ -45,8 +45,8 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 	public StreamingResponse handleRequest(final InetAddress source,
 			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
-		BufferedRequest req = new BufferedRequest.Impl();
-		BufferedResponse resp = new BufferedResponse.Impl();
+		MutableBufferedRequest req = new MutableBufferedRequest.Impl();
+		MutableBufferedResponse resp = new MutableBufferedResponse.Impl();
 		ConversationObserver observer = new ConversationObserver(source, req,
 				resp);
 		MessageUtils.delayedCopy(request, req, max, observer
@@ -57,8 +57,8 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		return response;
 	}
 
-	protected void record(InetAddress source, BufferedRequest request,
-			BufferedResponse response, long requestTime,
+	protected void record(InetAddress source, MutableBufferedRequest request,
+			MutableBufferedResponse response, long requestTime,
 			long responseHeaderTime, long responseContentTime) {
 		dao.saveRequest(request);
 		dao.saveResponse(response);
@@ -69,15 +69,15 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 	private class ConversationObserver {
 
 		private InetAddress source;
-		private BufferedRequest request;
-		private BufferedResponse response;
+		private MutableBufferedRequest request;
+		private MutableBufferedResponse response;
 
 		private long requestTime, responseHeaderTime, responseContentTime;
 
 		private boolean requestContentOverflow, responseContentOverflow;
 
 		public ConversationObserver(InetAddress source,
-				BufferedRequest request, BufferedResponse response) {
+				MutableBufferedRequest request, MutableBufferedResponse response) {
 			this.source = source;
 			this.request = request;
 			this.response = response;

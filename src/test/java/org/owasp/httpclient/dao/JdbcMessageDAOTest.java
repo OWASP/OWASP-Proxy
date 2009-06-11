@@ -14,10 +14,10 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.BufferedResponse;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.MutableBufferedResponse;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.util.AsciiString;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -68,12 +68,12 @@ public class JdbcMessageDAOTest {
 
 	@Test
 	public void testSaveMessageContent() {
-		BufferedRequest request = new BufferedRequest.Impl();
+		MutableBufferedRequest request = new MutableBufferedRequest.Impl();
 		request.setTarget(InetSocketAddress.createUnresolved("localhost", 80));
 		request.setSsl(false);
 		request.setHeader(AsciiString
 				.getBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"));
-		BufferedResponse response = new BufferedResponse.Impl();
+		MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 		response.setHeader(AsciiString
 				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text\r\n\r\n"));
 		byte[] cont = AsciiString.getBytes("Some content");
@@ -91,8 +91,8 @@ public class JdbcMessageDAOTest {
 
 		Conversation c = dao.getConversation(id);
 
-		RequestHeader reqh = dao.loadRequestHeader(c.getRequestId());
-		ResponseHeader resph = dao.loadResponseHeader(c.getResponseId());
+		MutableRequestHeader reqh = dao.loadRequestHeader(c.getRequestId());
+		MutableResponseHeader resph = dao.loadResponseHeader(c.getResponseId());
 
 		assertTrue(Arrays.equals(request.getHeader(), reqh.getHeader()));
 		assertEquals(request.getTarget(), reqh.getTarget());

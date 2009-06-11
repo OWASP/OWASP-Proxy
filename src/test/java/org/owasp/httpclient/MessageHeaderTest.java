@@ -54,22 +54,22 @@ public class MessageHeaderTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getMessage()}.
+	 * Test method for {@link org.owasp.httpclient.MutableBufferedMessage#getMessage()}.
 	 */
 	@Test
 	public void testGetSetHeader() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
 		String s = AsciiString.create(m.getHeader());
 		assertEquals(get + CRLFCRLF, s);
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getStartLine()}.
+	 * Test method for {@link org.owasp.httpclient.MutableBufferedMessage#getStartLine()}.
 	 */
 	@Test
 	public void testGetFirstLine() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
 		assertEquals(get, m.getStartLine());
 		m.setHeader(AsciiString.getBytes(get3 + CRLFCRLF));
@@ -78,21 +78,21 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#setStartLine(java.lang.String)}.
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#setStartLine(java.lang.String)}.
 	 */
 	@Test
 	public void testSetFirstLine() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setStartLine(get);
 		assertEquals(get + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
-	 * Test method for {@link org.owasp.httpclient.BufferedMessage#getHeaders()}.
+	 * Test method for {@link org.owasp.httpclient.MutableBufferedMessage#getHeaders()}.
 	 */
 	@Test
 	public void testGetHeaders() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals(post, m.getStartLine() + CRLF
 				+ NamedValue.join(m.getHeaders(), CRLF));
@@ -100,12 +100,12 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#setHeaders(org.owasp.httpclient.NamedValue[])}
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#setHeaders(org.owasp.httpclient.NamedValue[])}
 	 * .
 	 */
 	@Test
 	public void testSetHeaders() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		String first = post.substring(0, post.indexOf(CRLF));
 		NamedValue[] h = NamedValue.parse(post.substring(first.length()
 				+ CRLF.length()), CRLF, " *: *");
@@ -123,23 +123,23 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#getHeader(java.lang.String)}.
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#getHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testGetHeaderString() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("cookie"));
 	}
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#setHeader(java.lang.String, java.lang.String)}
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#setHeader(java.lang.String, java.lang.String)}
 	 * .
 	 */
 	@Test
 	public void testSetHeaderStringString() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.setHeader("Cookie", "a=c");
 		assertEquals("a=c", m.getHeader("cookie"));
@@ -147,12 +147,12 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#addHeader(java.lang.String, java.lang.String)}
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#addHeader(java.lang.String, java.lang.String)}
 	 * .
 	 */
 	@Test
 	public void testAddHeader() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.addHeader("Cookie", "b=c");
 		NamedValue[] headers = m.getHeaders();
@@ -172,11 +172,11 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.httpclient.BufferedMessage#deleteHeader(java.lang.String)}.
+	 * {@link org.owasp.httpclient.MutableBufferedMessage#deleteHeader(java.lang.String)}.
 	 */
 	@Test
 	public void testDeleteHeader() throws Exception {
-		MessageHeader m = new MessageHeader.Impl();
+		MutableMessageHeader m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		m.deleteHeader("cookie");

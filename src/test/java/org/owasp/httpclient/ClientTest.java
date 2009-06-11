@@ -82,7 +82,7 @@ public class ClientTest {
 						+ "Host: localhost\r\nContent-Length: 20\r\nExpect: continue\r\n\r\n");
 		byte[] content = AsciiString.getBytes("01234567890123456789");
 		client.sendRequestHeader(header);
-		ResponseHeader resp = new ResponseHeader.Impl();
+		MutableResponseHeader resp = new MutableResponseHeader.Impl();
 		resp.setHeader(client.getResponseHeader());
 		assertEquals("Expected continue", "100", resp.getStatus());
 		client.sendRequestContent(content);
@@ -112,7 +112,7 @@ public class ClientTest {
 		client.sendRequestHeader(request.getBytes());
 		byte[] responseHeader = client.getResponseHeader();
 		logger.finer(AsciiString.create(responseHeader));
-		MessageHeader mh = new MessageHeader.Impl();
+		MutableMessageHeader mh = new MutableMessageHeader.Impl();
 		mh.setHeader(responseHeader);
 		InputStream is = client.getResponseContent();
 		if ("chunked".equalsIgnoreCase(mh.getHeader("Transfer-Encoding")))

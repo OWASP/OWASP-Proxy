@@ -6,13 +6,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.owasp.httpclient.BufferedMessage;
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MutableBufferedMessage;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MessageHeader;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.MutableMessageHeader;
+import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.StreamingMessage;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
@@ -65,12 +65,12 @@ public class MessageUtils {
 		return decode(message, message.getContent());
 	}
 
-	public static byte[] decode(BufferedMessage message)
+	public static byte[] decode(MutableBufferedMessage message)
 			throws MessageFormatException {
 		return decode(message, message.getContent());
 	}
 
-	public static byte[] decode(MessageHeader message, byte[] content)
+	public static byte[] decode(MutableMessageHeader message, byte[] content)
 			throws MessageFormatException {
 		try {
 			InputStream is = new ByteArrayInputStream(content);
@@ -87,7 +87,7 @@ public class MessageUtils {
 		}
 	}
 
-	public static InputStream decode(MessageHeader message, InputStream content)
+	public static InputStream decode(MutableMessageHeader message, InputStream content)
 			throws IOException, MessageFormatException {
 		if (content == null)
 			return content;
@@ -130,7 +130,7 @@ public class MessageUtils {
 		return encode(message, message.getContent());
 	}
 
-	public static byte[] encode(BufferedMessage message) throws IOException,
+	public static byte[] encode(MutableBufferedMessage message) throws IOException,
 			MessageFormatException {
 		InputStream content = new ByteArrayInputStream(message.getContent());
 		content = encode(message, content);
@@ -148,7 +148,7 @@ public class MessageUtils {
 	 * @return
 	 * @throws MessageFormatException
 	 */
-	public static InputStream encode(MessageHeader header, InputStream content)
+	public static InputStream encode(MutableMessageHeader header, InputStream content)
 			throws MessageFormatException {
 		String codings = header.getHeader("Content-Encoding");
 		content = encode(codings, content);
@@ -178,12 +178,12 @@ public class MessageUtils {
 		return content;
 	}
 
-	public static boolean flushContent(MessageHeader header, InputStream in)
+	public static boolean flushContent(MutableMessageHeader header, InputStream in)
 			throws MessageFormatException, IOException {
 		return flushContent(header, in, null);
 	}
 
-	public static boolean flushContent(MessageHeader header, InputStream in,
+	public static boolean flushContent(MutableMessageHeader header, InputStream in,
 			OutputStream out) throws MessageFormatException, IOException {
 		boolean read = false;
 		String te = header.getHeader("Transfer-Encoding");
@@ -221,7 +221,7 @@ public class MessageUtils {
 	 * 
 	 * @return the internal byte[] representing the contents of this message.
 	 */
-	public static byte[] getMessage(BufferedMessage message) {
+	public static byte[] getMessage(MutableBufferedMessage message) {
 		byte[] header = message.getHeader();
 		byte[] content = message.getContent();
 		if (content != null && content.length > 0) {
@@ -233,21 +233,21 @@ public class MessageUtils {
 		return header;
 	}
 
-	public static boolean expectContent(RequestHeader request)
+	public static boolean expectContent(MutableRequestHeader request)
 			throws MessageFormatException {
 		String method = request.getMethod();
 		return "POST".equals(method) || "PUT".equals(method);
 	}
 
-	public static boolean expectContent(RequestHeader request,
-			ResponseHeader response) throws MessageFormatException {
+	public static boolean expectContent(MutableRequestHeader request,
+			MutableResponseHeader response) throws MessageFormatException {
 		String method = request.getMethod();
 		String status = response.getStatus();
 		return !("HEAD".equals(method) || "204".equals(status) || "304"
 				.equals(status));
 	}
 
-	public static void buffer(StreamingRequest request, BufferedRequest buff,
+	public static void buffer(StreamingRequest request, MutableBufferedRequest buff,
 			int max) throws IOException, SizeLimitExceededException {
 		buff.setTarget(request.getTarget());
 		buff.setSsl(request.isSsl());
@@ -255,13 +255,13 @@ public class MessageUtils {
 	}
 
 	public static void buffer(StreamingResponse response,
-			BufferedResponse buff, int max) throws IOException,
+			MutableBufferedResponse buff, int max) throws IOException,
 			SizeLimitExceededException {
 		buffer((StreamingMessage) response, buff, max);
 	}
 
 	private static void buffer(StreamingMessage message,
-			BufferedMessage buffered, int max) throws IOException,
+			MutableBufferedMessage buffered, int max) throws IOException,
 			SizeLimitExceededException {
 		buffered.setHeader(message.getHeader());
 		InputStream in = message.getContent();
@@ -282,18 +282,18 @@ public class MessageUtils {
 		}
 	}
 
-	public static void stream(BufferedRequest request, StreamingRequest stream) {
+	public static void stream(MutableBufferedRequest request, StreamingRequest stream) {
 		stream.setTarget(request.getTarget());
 		stream.setSsl(request.isSsl());
-		stream((BufferedMessage) request, stream);
+		stream((MutableBufferedMessage) request, stream);
 	}
 
-	public static void stream(BufferedResponse response,
+	public static void stream(MutableBufferedResponse response,
 			StreamingResponse stream) {
-		stream((BufferedMessage) response, stream);
+		stream((MutableBufferedMessage) response, stream);
 	}
 
-	private static void stream(BufferedMessage message, StreamingMessage stream) {
+	private static void stream(MutableBufferedMessage message, StreamingMessage stream) {
 		stream.setHeader(message.getHeader());
 		byte[] content = message.getContent();
 		if (content != null && content.length > 0)
@@ -301,21 +301,21 @@ public class MessageUtils {
 	}
 
 	public static void delayedCopy(StreamingRequest message,
-			BufferedRequest copy, int max, DelayedCopyObserver observer) {
+			MutableBufferedRequest copy, int max, DelayedCopyObserver observer) {
 		copy.setTarget(message.getTarget());
 		copy.setSsl(message.isSsl());
-		delayedCopy((StreamingMessage) message, (BufferedMessage) copy, max,
+		delayedCopy((StreamingMessage) message, (MutableBufferedMessage) copy, max,
 				observer);
 	}
 
 	public static void delayedCopy(StreamingResponse message,
-			BufferedResponse copy, int max, DelayedCopyObserver observer) {
-		delayedCopy((StreamingMessage) message, (BufferedMessage) copy, max,
+			MutableBufferedResponse copy, int max, DelayedCopyObserver observer) {
+		delayedCopy((StreamingMessage) message, (MutableBufferedMessage) copy, max,
 				observer);
 	}
 
 	public static void delayedCopy(StreamingMessage message,
-			final BufferedMessage copy, int max,
+			final MutableBufferedMessage copy, int max,
 			final DelayedCopyObserver observer) {
 		if (observer == null)
 			throw new NullPointerException("Observer may not be null");

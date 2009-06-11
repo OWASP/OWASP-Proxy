@@ -15,7 +15,7 @@ import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
@@ -102,7 +102,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		return response;
 	}
 
-	private void doConnect(Socket socket, RequestHeader request)
+	private void doConnect(Socket socket, MutableRequestHeader request)
 			throws IOException, GeneralSecurityException,
 			MessageFormatException {
 		String resource = request.getResource();
@@ -187,7 +187,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		return request;
 	}
 
-	private void extractTargetFromResource(RequestHeader request)
+	private void extractTargetFromResource(MutableRequestHeader request)
 			throws MessageFormatException {
 		String resource = request.getResource();
 		try {
@@ -203,7 +203,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		}
 	}
 
-	private void extractTargetFromHost(RequestHeader request)
+	private void extractTargetFromHost(MutableRequestHeader request)
 			throws MessageFormatException {
 		String host = request.getHeader("Host");
 		int colon = host.indexOf(':');

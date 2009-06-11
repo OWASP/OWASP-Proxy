@@ -30,8 +30,8 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.io.ChunkedOutputStream;
 import org.owasp.httpclient.io.CopyInputStream;
@@ -143,7 +143,7 @@ public class TraceServer implements Runnable {
 				boolean close = true;
 				do {
 					copy.reset();
-					BufferedRequest request = null;
+					MutableBufferedRequest request = null;
 					// read the whole header. Each line gets written into the
 					// copy defined
 					// above
@@ -157,7 +157,7 @@ public class TraceServer implements Runnable {
 						if (headerBytes == null || headerBytes.length == 0)
 							return;
 
-						request = new BufferedRequest.Impl();
+						request = new MutableBufferedRequest.Impl();
 						request.setHeader(headerBytes);
 					}
 
@@ -180,7 +180,7 @@ public class TraceServer implements Runnable {
 									.create(request.getContent()));
 					}
 
-					BufferedResponse response = new BufferedResponse.Impl();
+					MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 					response.setStartLine(version + " 200 Ok");
 					if (chunked) {
 						response.setHeader("Transfer-Encoding", "chunked");

@@ -14,8 +14,8 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 
 import org.owasp.httpclient.Client;
-import org.owasp.httpclient.ReadOnlyRequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.httpclient.dao.JdbcMessageDAO;
 import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
@@ -130,8 +130,6 @@ public class Main {
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
 		dataSource.setDriverClassName("org.h2.Driver");
 		dataSource.setUrl("jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1");
-		// dataSource.setUsername("sa");
-		// dataSource.setPassword("");
 		JdbcMessageDAO dao = new JdbcMessageDAO();
 		dao.setDataSource(dataSource);
 		dao.setDataSource(dataSource);
@@ -140,16 +138,15 @@ public class Main {
 		rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
 		rh = new BufferingHttpRequestHandler(rh, 10240, true) {
 			@Override
-			protected Action directResponse(ReadOnlyRequestHeader request,
-					ResponseHeader response) {
+			protected Action directResponse(RequestHeader request,
+					MutableResponseHeader response) {
 				return Action.BUFFER;
 			}
 		};
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		// CertificateProvider cp = new DefaultCertificateProvider();
-		SSLContextSelector cp = new AutoGeneratingContextSelector(
-				".keystore", "JKS", "password".toCharArray());
+		SSLContextSelector cp = new AutoGeneratingContextSelector(".keystore",
+				"JKS", "password".toCharArray());
 		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
 		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
 		hpch.setConnectHandler(tch);
