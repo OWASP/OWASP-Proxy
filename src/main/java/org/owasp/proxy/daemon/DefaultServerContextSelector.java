@@ -11,16 +11,16 @@ import javax.net.ssl.SSLContext;
 
 import org.owasp.httpclient.SSLContextSelector;
 
-public class DefaultCertificateProvider implements SSLContextSelector {
+public class DefaultServerContextSelector implements SSLContextSelector {
 
 	private SSLContext sslContext = null;
 
-	public DefaultCertificateProvider() throws GeneralSecurityException,
+	public DefaultServerContextSelector() throws GeneralSecurityException,
 			IOException {
 		this(null, "password", "password");
 	}
 
-	public DefaultCertificateProvider(String resource, String storePassword,
+	public DefaultServerContextSelector(String resource, String storePassword,
 			String keyPassword) throws GeneralSecurityException, IOException {
 		if (resource == null) {
 			resource = getClass().getPackage().getName().replace('.', '/')
