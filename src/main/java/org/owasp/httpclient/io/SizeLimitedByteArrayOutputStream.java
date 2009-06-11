@@ -8,6 +8,8 @@ public class SizeLimitedByteArrayOutputStream extends ByteArrayOutputStream {
 
 	public SizeLimitedByteArrayOutputStream(int max) {
 		super();
+		if (max <= 0)
+			throw new IllegalArgumentException("max cannot be zero or negative");
 		this.max = max;
 	}
 
