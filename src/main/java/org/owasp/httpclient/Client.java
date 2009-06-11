@@ -412,8 +412,7 @@ public class Client {
 
 	public InputStream getResponseContent() throws IOException {
 		if (state == State.RESPONSE_CONTINUE)
-			throw new IllegalStateException(
-					"Cannot read response content when state is " + state);
+			return null;
 		if (state != State.RESPONSE_HEADER_READ)
 			throw new IllegalStateException(
 					"Illegal state. Can't read response body when state is "
