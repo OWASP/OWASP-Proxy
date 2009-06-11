@@ -22,7 +22,10 @@ package org.owasp.httpclient;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.junit.AfterClass;
@@ -68,6 +71,35 @@ public class ClientTest {
 		while ((got = is.read(buff)) > 0)
 			read = read + got;
 		assertEquals(request.length(), read);
+	}
+
+	@Test
+	public void testContinue() throws Exception {
+		Client client = new Client();
+		client.connect("localhost", 9999, false);
+		byte[] header = AsciiString
+				.getBytes("POST /target HTTP/1.1\r\n"
+						+ "Host: localhost\r\nContent-Length: 20\r\nExpect: continue\r\n\r\n");
+		byte[] content = AsciiString.getBytes("01234567890123456789");
+		client.sendRequestHeader(header);
+		ResponseHeader resp = new ResponseHeader.Impl();
+		resp.setHeader(client.getResponseHeader());
+		assertEquals("Expected continue", "100", resp.getStatus());
+		client.sendRequestContent(content);
+		resp.setHeader(client.getResponseHeader());
+		assertEquals("Expected OK", "200", resp.getStatus());
+		InputStream rc = client.getResponseContent();
+		assertTrue("Content is encorrect!", Arrays.equals(content, toArray(rc)));
+	}
+
+	private byte[] toArray(InputStream in) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		byte[] buff = new byte[1024];
+		int got;
+		while ((got = in.read(buff)) > -1)
+			baos.write(buff, 0, got);
+		in.close();
+		return baos.toByteArray();
 	}
 
 	@Test

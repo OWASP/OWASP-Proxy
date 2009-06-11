@@ -161,6 +161,12 @@ public class TraceServer implements Runnable {
 						request.setHeader(headerBytes);
 					}
 
+					boolean expectContinue = "continue"
+							.equalsIgnoreCase(request.getHeader("Expect"));
+					if (expectContinue)
+						out.write(AsciiString.getBytes(version
+								+ " 100 Continue\r\n\r\n"));
+
 					// Get the request content (if any) from the stream,
 					copy.reset();
 					if (MessageUtils.expectContent(request)
@@ -187,7 +193,9 @@ public class TraceServer implements Runnable {
 						cos.close();
 						response.setContent(baos.toByteArray());
 					} else {
-						response.setContent(MessageUtils.getMessage(request));
+						byte[] content = request.getContent() == null ? request
+								.getHeader() : request.getContent();
+						response.setContent(content);
 					}
 					if (verbose) {
 						logger.info(AsciiString.create(response.getHeader()));

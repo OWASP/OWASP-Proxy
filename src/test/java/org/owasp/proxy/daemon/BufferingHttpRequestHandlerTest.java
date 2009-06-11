@@ -1,9 +1,12 @@
 package org.owasp.proxy.daemon;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.MessageDigest;
@@ -11,7 +14,9 @@ import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.owasp.httpclient.BufferedMessage;
@@ -28,10 +33,28 @@ import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.test.TraceServer;
 
 public class BufferingHttpRequestHandlerTest {
 
 	private static Mock mock = new Mock();
+
+	private static TraceServer ts = null;
+
+	@BeforeClass
+	public static void setUpBeforeClass() throws Exception {
+		ts = new TraceServer(9999);
+		Thread t = new Thread(ts);
+		t.setDaemon(false);
+		t.start();
+	}
+
+	@AfterClass
+	public static void tearDownAfterClass() throws Exception {
+		ts.stop();
+		Thread.sleep(1000);
+		assertTrue("TraceServer shutdown failed!", ts.isStopped());
+	}
 
 	@Before
 	public void setUp() throws Exception {
@@ -128,6 +151,41 @@ public class BufferingHttpRequestHandlerTest {
 		// + " chunked: " + chunkedBytes[i]);
 		// }
 		//
+	}
+
+	@Test
+	public void testContinue() throws Exception {
+		HttpRequestHandler rh = new DefaultHttpRequestHandler();
+		rh = new LoggingHttpRequestHandler(rh);
+		rh = new BufferingHttpRequestHandler(rh, 1024, false);
+
+		StreamingRequest req = new StreamingRequest.Impl();
+		req.setTarget(new InetSocketAddress("localhost", 9999));
+		req.setSsl(false);
+		req
+				.setHeader(AsciiString
+						.getBytes("POST /target HTTP/1.1\r\n"
+								+ "Host: localhost\r\nContent-Length: 20\r\nExpect: continue\r\n\r\n"));
+		byte[] content = AsciiString.getBytes("01234567890123456789");
+		StreamingResponse resp = rh.handleRequest(req.getTarget().getAddress(),
+				req, false);
+		assertEquals("Expected continue", "100", resp.getStatus());
+		req = new StreamingRequest.Impl(req);
+		req.setContent(new ByteArrayInputStream(content));
+		resp = rh.handleRequest(req.getTarget().getAddress(), req, true);
+		assertEquals("Expected OK", "200", resp.getStatus());
+		InputStream rc = resp.getContent();
+		assertTrue("Content is encorrect!", Arrays.equals(content, toArray(rc)));
+	}
+
+	private byte[] toArray(InputStream in) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		byte[] buff = new byte[1024];
+		int got;
+		while ((got = in.read(buff)) > -1)
+			baos.write(buff, 0, got);
+		in.close();
+		return baos.toByteArray();
 	}
 
 	@Test
