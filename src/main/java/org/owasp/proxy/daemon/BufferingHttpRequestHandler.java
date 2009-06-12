@@ -6,14 +6,14 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.BufferedRequest;
 import org.owasp.httpclient.BufferedResponse;
-import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.MessageFormatException;
+import org.owasp.httpclient.MutableBufferedRequest;
+import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.SizeLimitExceededException;
@@ -205,9 +205,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		return response;
 	}
 
-	private boolean isExpectContinue(StreamingRequest request)
+	private boolean isExpectContinue(RequestHeader request)
 			throws MessageFormatException {
-		return "continue".equalsIgnoreCase(request.getHeader("Expect"));
+		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
 	}
 
 	private boolean isContinue(StreamingResponse response)
@@ -227,8 +227,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * request directly to the server, or ignore the request entirely.
 	 * 
 	 * Note that even if the request is ignored,
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} will still be
-	 * called.
+	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} will
+	 * still be called.
 	 * 
 	 * @param request
 	 *            the request
@@ -239,10 +239,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	}
 
 	/**
-	 * Called if the return value from {@link #directRequest(MutableRequestHeader)} is
-	 * BUFFER, once the request has been completely buffered. The request may be
-	 * modified within this method. This method will not be called if the
-	 * message content is larger than max bytes.
+	 * Called if the return value from
+	 * {@link #directRequest(MutableRequestHeader)} is BUFFER, once the request
+	 * has been completely buffered. The request may be modified within this
+	 * method. This method will not be called if the message content is larger
+	 * than max bytes.
 	 * 
 	 * @param request
 	 *            the request
@@ -251,9 +252,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	}
 
 	/**
-	 * Called if the return value from {@link #directRequest(MutableRequestHeader)} is
-	 * BUFFER or STREAM, and the request body is larger than the maximum message
-	 * body specified
+	 * Called if the return value from
+	 * {@link #directRequest(MutableRequestHeader)} is BUFFER or STREAM, and the
+	 * request body is larger than the maximum message body specified
 	 * 
 	 * @param request
 	 *            the request, containing max bytes of partial content
@@ -262,10 +263,10 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	}
 
 	/**
-	 * Called if the return value from {@link #directRequest(MutableRequestHeader)} was
-	 * STREAM, once the request has been completely sent to the server, and
-	 * buffered. This method will not be called if the message content is larger
-	 * than max bytes.
+	 * Called if the return value from
+	 * {@link #directRequest(MutableRequestHeader)} was STREAM, once the request
+	 * has been completely sent to the server, and buffered. This method will
+	 * not be called if the message content is larger than max bytes.
 	 * 
 	 * @param request
 	 */
@@ -290,10 +291,10 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	/**
 	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is BUFFER, once
-	 * the response has been completely buffered. The response may be modified
-	 * within this method. This method will not be called if the message content
-	 * is larger than max bytes.
+	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is
+	 * BUFFER, once the response has been completely buffered. The response may
+	 * be modified within this method. This method will not be called if the
+	 * message content is larger than max bytes.
 	 * 
 	 * @param request
 	 *            the request
@@ -306,9 +307,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	/**
 	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is BUFFER or
-	 * STREAM, and the response body is larger than the maximum message body
-	 * specified
+	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is
+	 * BUFFER or STREAM, and the response body is larger than the maximum
+	 * message body specified
 	 * 
 	 * @param request
 	 *            the request
@@ -321,10 +322,10 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	/**
 	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} was STREAM, once
-	 * the response has been completely sent to the client, and buffered. This
-	 * method will not be called if the message content is larger than max
-	 * bytes.
+	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} was
+	 * STREAM, once the response has been completely sent to the client, and
+	 * buffered. This method will not be called if the message content is larger
+	 * than max bytes.
 	 * 
 	 * @param request
 	 *            the request

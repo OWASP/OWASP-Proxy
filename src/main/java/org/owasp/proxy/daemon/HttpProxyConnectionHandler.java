@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableRequestHeader;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
@@ -273,9 +274,6 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 									.getHeader());
 				}
 
-				boolean expectContinue = "continue".equalsIgnoreCase(request
-						.getHeader("Expect"));
-
 				InputStream requestContent = request.getContent();
 				if (requestContent != null) {
 					request.setContent(new EofNotifyingInputStream(
@@ -293,7 +291,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 				request.setContent(requestContent);
 
 				StreamingResponse response = null;
-				if (expectContinue) {
+				if (isExpectContinue(request)) {
 					System.err
 							.println("Expecting a Continue response for "
 									+ request.getTarget() + " "
@@ -390,6 +388,11 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 			}
 		}
 
+	}
+
+	private boolean isExpectContinue(RequestHeader request)
+			throws MessageFormatException {
+		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
 	}
 
 	private static class StateHolder {
