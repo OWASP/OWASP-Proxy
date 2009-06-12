@@ -85,6 +85,8 @@ public class NamedValue {
 
 	public static NamedValue[] parse(String string, String delimiter,
 			String separator) throws MessageFormatException {
+		if (string == null)
+			return null;
 		String[] nvs = string.split(delimiter);
 		NamedValue[] values = new NamedValue[nvs.length];
 		for (int i = 0; i < values.length; i++)
