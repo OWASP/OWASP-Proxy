@@ -100,7 +100,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 			char[] password, X500Name caName) throws GeneralSecurityException,
 			IOException {
 		this.filename = filename;
-		this.password = password;
+		this.password = new char[password.length];
+		System.arraycopy(password, 0, this.password, 0, password.length);
 		this.caName = caName;
 		keystore = KeyStore.getInstance(type);
 		if (filename == null) {
@@ -110,9 +111,20 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		} else {
 			File file = new File(filename);
 			if (file.exists()) {
-				logger.fine("Loading keys from " + filename);
-				InputStream is = new FileInputStream(file);
-				keystore.load(is, password);
+				InputStream is = null;
+				try {
+					logger.fine("Loading keys from " + filename);
+					is = new FileInputStream(file);
+					keystore.load(is, password);
+				} finally {
+					if (is != null) {
+						try {
+							is.close();
+						} catch (IOException ioe) {
+							ioe.printStackTrace();
+						}
+					}
+				}
 			} else {
 				logger.info("keystore '" + filename + "' will be created");
 			}
@@ -135,7 +147,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 	 *            true to reuse the CA key pair, false to generate a new key
 	 *            pair for each host
 	 */
-	public void setReuseKeys(boolean reuse) {
+	public synchronized void setReuseKeys(boolean reuse) {
 		reuseKeys = reuse;
 	}
 
@@ -168,14 +180,22 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 	private void saveKeystore() {
 		if (filename == null)
 			return;
+		OutputStream out = null;
 		try {
-			OutputStream out = new FileOutputStream(filename);
+			out = new FileOutputStream(filename);
 			keystore.store(out, password);
-			out.close();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		} catch (GeneralSecurityException gse) {
 			gse.printStackTrace();
+		} finally {
+			if (out != null) {
+				try {
+					out.close();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+				}
+			}
 		}
 	}
 
