@@ -19,16 +19,16 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableBufferedMessage;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
-import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.NamedValue;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.util.AsciiString;
@@ -252,7 +252,7 @@ public class BufferingHttpRequestHandlerTest {
 		}
 	}
 
-	private class BufferMock extends BufferingHttpRequestHandler {
+	private static class BufferMock extends BufferingHttpRequestHandler {
 
 		private Result result = new Result();
 
@@ -283,14 +283,13 @@ public class BufferingHttpRequestHandlerTest {
 		}
 
 		@Override
-		protected void requestContentSizeExceeded(
-				BufferedRequest request) {
+		protected void requestContentSizeExceeded(BufferedRequest request) {
 			result.requestOverflow = true;
 		}
 
 		@Override
-		protected void responseContentSizeExceeded(
-				RequestHeader request, BufferedResponse response) {
+		protected void responseContentSizeExceeded(RequestHeader request,
+				BufferedResponse response) {
 			result.responseOverflow = true;
 		}
 

@@ -15,9 +15,9 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.util.AsciiString;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -91,8 +91,8 @@ public class JdbcMessageDAOTest {
 
 		Conversation c = dao.getConversation(id);
 
-		MutableRequestHeader reqh = dao.loadRequestHeader(c.getRequestId());
-		MutableResponseHeader resph = dao.loadResponseHeader(c.getResponseId());
+		RequestHeader reqh = dao.loadRequestHeader(c.getRequestId());
+		ResponseHeader resph = dao.loadResponseHeader(c.getResponseId());
 
 		assertTrue(Arrays.equals(request.getHeader(), reqh.getHeader()));
 		assertEquals(request.getTarget(), reqh.getTarget());

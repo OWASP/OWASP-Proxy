@@ -3,10 +3,14 @@ package org.owasp.httpclient.dao;
 import java.io.InputStream;
 import java.util.Collection;
 
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 import org.springframework.dao.DataAccessException;
 
 public interface MessageDAO {
@@ -16,7 +20,8 @@ public interface MessageDAO {
 	void saveRequestHeader(MutableRequestHeader requestHeader, int contentId)
 			throws DataAccessException;
 
-	void saveResponse(MutableBufferedResponse response) throws DataAccessException;
+	void saveResponse(MutableBufferedResponse response)
+			throws DataAccessException;
 
 	void saveResponseHeader(MutableResponseHeader responseHeader, int contentId)
 			throws DataAccessException;
@@ -26,13 +31,13 @@ public interface MessageDAO {
 
 	int saveMessageContent(byte[] messageContent) throws DataAccessException;
 
-	MutableBufferedRequest loadRequest(int id) throws DataAccessException;
+	BufferedRequest loadRequest(int id) throws DataAccessException;
 
-	MutableRequestHeader loadRequestHeader(int id) throws DataAccessException;
+	RequestHeader loadRequestHeader(int id) throws DataAccessException;
 
-	MutableBufferedResponse loadResponse(int id) throws DataAccessException;
+	BufferedResponse loadResponse(int id) throws DataAccessException;
 
-	MutableResponseHeader loadResponseHeader(int id) throws DataAccessException;
+	ResponseHeader loadResponseHeader(int id) throws DataAccessException;
 
 	byte[] loadMessageContent(int id) throws DataAccessException;
 

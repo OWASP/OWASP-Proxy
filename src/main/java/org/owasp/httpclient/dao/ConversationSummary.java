@@ -2,11 +2,11 @@ package org.owasp.httpclient.dao;
 
 import java.net.InetSocketAddress;
 
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 
 public class ConversationSummary {
 
@@ -26,14 +26,14 @@ public class ConversationSummary {
 	public ConversationSummary() {
 	}
 
-	public void summarizeRequest(MutableBufferedRequest request)
+	public void summarizeRequest(BufferedRequest request)
 			throws MessageFormatException {
 		byte[] content = request.getContent();
 		int contentSize = content == null ? 0 : content.length;
 		summarizeRequest(request, contentSize);
 	}
 
-	public void summarizeRequest(MutableRequestHeader request, int contentSize)
+	public void summarizeRequest(RequestHeader request, int contentSize)
 			throws MessageFormatException {
 		target = request.getTarget();
 		ssl = request.isSsl();
@@ -43,14 +43,14 @@ public class ConversationSummary {
 		requestContentSize = contentSize;
 	}
 
-	public void summarizeResponse(MutableBufferedResponse response)
+	public void summarizeResponse(BufferedResponse response)
 			throws MessageFormatException {
 		byte[] content = response.getContent();
 		int contentSize = content == null ? 0 : content.length;
 		summarizeResponse(response, contentSize);
 	}
 
-	public void summarizeResponse(MutableResponseHeader response, int contentSize)
+	public void summarizeResponse(ResponseHeader response, int contentSize)
 			throws MessageFormatException {
 		responseStatus = response.getStatus();
 		responseReason = response.getReason();

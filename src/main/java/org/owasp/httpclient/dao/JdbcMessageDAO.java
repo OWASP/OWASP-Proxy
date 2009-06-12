@@ -9,12 +9,14 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.Collections;
 
+import org.owasp.httpclient.BufferedRequest;
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableMessageHeader;
 import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -237,7 +239,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			return null;
 		ConversationSummary cs = new ConversationSummary();
 		cs.setId(id);
-		MutableRequestHeader rqh = loadRequestHeader(c.getRequestId());
+		RequestHeader rqh = loadRequestHeader(c.getRequestId());
 		try {
 			cs.summarizeRequest(rqh, getMessageContentSize(c.getRequestId()));
 		} catch (MessageFormatException ignored) {
@@ -277,7 +279,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadRequest(int)
 	 */
-	public MutableBufferedRequest loadRequest(int id) throws DataAccessException {
+	public BufferedRequest loadRequest(int id) throws DataAccessException {
 		MutableBufferedRequest request = (MutableBufferedRequest) loadRequestHeader(id);
 		if (request == null)
 			return null;
@@ -292,7 +294,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadRequestHeader(int)
 	 */
-	public MutableRequestHeader loadRequestHeader(int id) throws DataAccessException {
+	public RequestHeader loadRequestHeader(int id) throws DataAccessException {
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		try {
 			params.addValue(ID, id, Types.INTEGER);
@@ -310,7 +312,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadResponse(int)
 	 */
-	public MutableBufferedResponse loadResponse(int id) throws DataAccessException {
+	public MutableBufferedResponse loadResponse(int id)
+			throws DataAccessException {
 		MutableBufferedResponse response = (MutableBufferedResponse) loadResponseHeader(id);
 		if (response == null)
 			return null;
@@ -325,7 +328,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#loadResponseHeader(int)
 	 */
-	public MutableResponseHeader loadResponseHeader(int id) throws DataAccessException {
+	public MutableResponseHeader loadResponseHeader(int id)
+			throws DataAccessException {
 		try {
 			MapSqlParameterSource params = new MapSqlParameterSource();
 			params.addValue(ID, id, Types.INTEGER);
@@ -383,7 +387,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveRequest(org.owasp.httpclient.
 	 * Request)
 	 */
-	public void saveRequest(MutableBufferedRequest request) throws DataAccessException {
+	public void saveRequest(MutableBufferedRequest request)
+			throws DataAccessException {
 		int contentId = -1;
 		if (request.getContent() != null)
 			contentId = saveMessageContent(request.getContent());
@@ -397,8 +402,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveRequestHeader(org.owasp.httpclient
 	 * .RequestHeader, int)
 	 */
-	public void saveRequestHeader(MutableRequestHeader requestHeader, int contentId)
-			throws DataAccessException {
+	public void saveRequestHeader(MutableRequestHeader requestHeader,
+			int contentId) throws DataAccessException {
 		saveMessageHeader(requestHeader, contentId);
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue(ID, requestHeader.getId(), Types.INTEGER);
@@ -432,8 +437,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * org.owasp.httpclient.dao.MessageDAO#saveResponseHeader(org.owasp.httpclient
 	 * .ResponseHeader, int)
 	 */
-	public void saveResponseHeader(MutableResponseHeader responseHeader, int contentId)
-			throws DataAccessException {
+	public void saveResponseHeader(MutableResponseHeader responseHeader,
+			int contentId) throws DataAccessException {
 		saveMessageHeader(responseHeader, contentId);
 	}
 

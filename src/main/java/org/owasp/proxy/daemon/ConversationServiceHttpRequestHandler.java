@@ -12,8 +12,8 @@ import java.util.Map;
 
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.dao.ConversationSummary;
@@ -279,7 +279,7 @@ public class ConversationServiceHttpRequestHandler implements
 
 	private StreamingResponse getRequestHeader(int id)
 			throws MessageFormatException {
-		MutableRequestHeader r = dao.loadRequestHeader(id);
+		RequestHeader r = dao.loadRequestHeader(id);
 		if (r == null)
 			return err_404();
 
@@ -288,7 +288,7 @@ public class ConversationServiceHttpRequestHandler implements
 
 	private StreamingResponse getResponseHeader(int id)
 			throws MessageFormatException {
-		MutableResponseHeader r = dao.loadResponseHeader(id);
+		ResponseHeader r = dao.loadResponseHeader(id);
 		if (r == null)
 			return err_404();
 
@@ -303,7 +303,7 @@ public class ConversationServiceHttpRequestHandler implements
 
 		byte[] content = dao.loadMessageContent(contentId);
 		if (decode) {
-			MutableRequestHeader request = dao.loadRequestHeader(id);
+			RequestHeader request = dao.loadRequestHeader(id);
 			try {
 				return conversation(SUCCESS_OCTET, MessageUtils.decode(request,
 						new ByteArrayInputStream(content)));
@@ -322,7 +322,7 @@ public class ConversationServiceHttpRequestHandler implements
 
 		byte[] content = dao.loadMessageContent(contentId);
 		if (decode) {
-			MutableResponseHeader response = dao.loadResponseHeader(id);
+			ResponseHeader response = dao.loadResponseHeader(id);
 			try {
 				return conversation(SUCCESS_OCTET, MessageUtils.decode(
 						response, new ByteArrayInputStream(content)));
