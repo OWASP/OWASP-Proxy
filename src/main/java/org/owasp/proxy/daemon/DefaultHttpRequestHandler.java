@@ -1,6 +1,7 @@
 package org.owasp.proxy.daemon;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -9,6 +10,7 @@ import org.owasp.httpclient.Client;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
+import org.owasp.httpclient.io.TimingInputStream;
 
 public class DefaultHttpRequestHandler implements HttpRequestHandler {
 
@@ -80,9 +82,15 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 			if (request.getContent() != null)
 				client.sendRequestContent(request.getContent());
 		}
+		request.setSubmissionTime(client.getRequestSubmissionTime());
 		StreamingResponse response = new StreamingResponse.Impl();
 		response.setHeader(client.getResponseHeader());
-		response.setContent(client.getResponseContent());
+		response.setHeaderStartedTime(client.getResponseHeaderStartTime());
+		response.setHeaderCompletedTime(client.getResponseHeaderEndTime());
+		InputStream content = client.getResponseContent();
+		if (content != null)
+			content = new TimingInputStream(content, response);
+		response.setContent(content);
 		return response;
 	}
 

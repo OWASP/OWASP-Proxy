@@ -75,6 +75,9 @@ public class Client {
 
 	private byte[] requestContinueHeader = null;
 
+	private long requestSubmissionTime, responseHeaderStartTime,
+			responseHeaderEndTime;
+
 	public Client() {
 	}
 
@@ -305,6 +308,7 @@ public class Client {
 		}
 		os.flush();
 		state = State.REQUEST_HEADER_SENT;
+		requestSubmissionTime = System.currentTimeMillis();
 	}
 
 	public void sendRequestContent(byte[] content) throws IOException {
@@ -321,6 +325,7 @@ public class Client {
 			throw new IllegalStateException(
 					"Cannot send null content after a 100 Continue response!");
 		state = State.REQUEST_CONTENT_SENT;
+		requestSubmissionTime = System.currentTimeMillis();
 	}
 
 	public void sendRequestContent(InputStream content) throws IOException {
@@ -340,6 +345,7 @@ public class Client {
 			throw new IllegalStateException(
 					"Cannot send null content after a 100 Continue response!");
 		state = State.REQUEST_CONTENT_SENT;
+		requestSubmissionTime = System.currentTimeMillis();
 	}
 
 	/**
@@ -365,8 +371,13 @@ public class Client {
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
 		int i = -1;
 		try {
-			while (!header.isEndOfHeader() && (i = is.read()) > -1)
+			responseHeaderStartTime = responseHeaderEndTime = 0;
+			while (!header.isEndOfHeader() && (i = is.read()) > -1) {
+				if (responseHeaderStartTime == 0)
+					responseHeaderStartTime = System.currentTimeMillis();
 				header.write(i);
+			}
+			responseHeaderEndTime = System.currentTimeMillis();
 		} catch (SocketTimeoutException ste) {
 			logger.fine("Timeout reading response header. Had read "
 					+ header.size() + " bytes");
@@ -434,6 +445,18 @@ public class Client {
 			socket = null;
 			state = State.DISCONNECTED;
 		}
+	}
+
+	public long getRequestSubmissionTime() {
+		return requestSubmissionTime;
+	}
+
+	public long getResponseHeaderStartTime() {
+		return responseHeaderStartTime;
+	}
+
+	public long getResponseHeaderEndTime() {
+		return responseHeaderEndTime;
 	}
 
 	private static class HeaderByteArrayOutputStream extends
