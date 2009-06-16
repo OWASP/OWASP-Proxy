@@ -2,7 +2,8 @@ package org.owasp.httpclient;
 
 import java.net.InetSocketAddress;
 
-public interface MutableRequestHeader extends RequestHeader, MutableMessageHeader {
+public interface MutableRequestHeader extends RequestHeader,
+		MutableMessageHeader {
 
 	void setTarget(InetSocketAddress target);
 
@@ -14,12 +15,16 @@ public interface MutableRequestHeader extends RequestHeader, MutableMessageHeade
 
 	void setVersion(String version) throws MessageFormatException;
 
+	void setSubmissionTime(long time);
+
 	public static class Impl extends MutableMessageHeader.Impl implements
 			MutableRequestHeader {
 
 		private InetSocketAddress target;
 
 		private boolean ssl;
+
+		private long submissionTime = 0;
 
 		public InetSocketAddress getTarget() {
 			return target;
@@ -121,5 +126,25 @@ public interface MutableRequestHeader extends RequestHeader, MutableMessageHeade
 		public String toString() {
 			return (ssl ? "SSL " : "") + target + "\n" + super.toString();
 		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.httpclient.RequestHeader#getSubmissionTime()
+		 */
+		public long getSubmissionTime() {
+			return submissionTime;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see
+		 * org.owasp.httpclient.MutableRequestHeader#setSubmissionTime(long)
+		 */
+		public void setSubmissionTime(long time) {
+			submissionTime = time;
+		}
+
 	}
 }

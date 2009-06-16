@@ -2,9 +2,11 @@ package org.owasp.httpclient;
 
 import java.io.InputStream;
 
-public interface StreamingResponse extends MutableResponseHeader, StreamingMessage {
+public interface StreamingResponse extends MutableResponseHeader,
+		StreamingMessage {
 
-	public class Impl extends MutableResponseHeader.Impl implements StreamingResponse {
+	public class Impl extends MutableResponseHeader.Impl implements
+			StreamingResponse {
 
 		private InputStream content;
 

@@ -1,6 +1,7 @@
 package org.owasp.httpclient;
 
-public interface MutableResponseHeader extends ResponseHeader, MutableMessageHeader {
+public interface MutableResponseHeader extends ResponseHeader,
+		MutableMessageHeader {
 
 	void setVersion(String version) throws MessageFormatException;
 
@@ -8,8 +9,19 @@ public interface MutableResponseHeader extends ResponseHeader, MutableMessageHea
 
 	void setReason(String reason) throws MessageFormatException;
 
+	void setHeaderStartedTime(long time);
+
+	void setHeaderCompletedTime(long time);
+
+	void setContentStartedTime(long time);
+
+	void setContentCompletedTime(long time);
+
 	public static class Impl extends MutableMessageHeader.Impl implements
 			MutableResponseHeader {
+
+		private long headerStartedTime = 0, headerCompletedTime = 0,
+				contentStartedTime = 0, contentCompletedTime = 0;
 
 		public void setVersion(String version) throws MessageFormatException {
 			String[] parts = getStartParts();
@@ -77,5 +89,71 @@ public interface MutableResponseHeader extends ResponseHeader, MutableMessageHea
 				return null;
 			return "".equals(parts[2]) ? null : parts[2];
 		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see
+		 * org.owasp.httpclient.MutableResponseHeader#setHeaderCompletedTime
+		 * (long)
+		 */
+		public void setHeaderCompletedTime(long time) {
+			headerCompletedTime = time;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see
+		 * org.owasp.httpclient.MutableResponseHeader#setHeaderStartedTime(long)
+		 */
+		public void setHeaderStartedTime(long time) {
+			headerStartedTime = time;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.httpclient.ResponseHeader#getHeaderCompletedTime()
+		 */
+		public long getHeaderCompletedTime() {
+			return headerCompletedTime;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.httpclient.ResponseHeader#getHeaderStartedTime()
+		 */
+		public long getHeaderStartedTime() {
+			return headerStartedTime;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.httpclient.StreamingResponse#getContentCompletedTime()
+		 */
+		public long getContentCompletedTime() {
+			return contentCompletedTime;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.httpclient.StreamingResponse#getContentStartedTime()
+		 */
+		public long getContentStartedTime() {
+			return contentStartedTime;
+		}
+
+		public void setContentCompletedTime(long time) {
+			contentCompletedTime = time;
+		}
+
+		public void setContentStartedTime(long time) {
+			contentStartedTime = time;
+		}
+
 	}
 }

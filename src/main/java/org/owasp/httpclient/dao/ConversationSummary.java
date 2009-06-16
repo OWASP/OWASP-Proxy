@@ -41,6 +41,7 @@ public class ConversationSummary {
 		requestResource = request.getResource();
 		requestContentType = request.getHeader("Content-Type");
 		requestContentSize = contentSize;
+		requestTime = request.getSubmissionTime();
 	}
 
 	public void summarizeResponse(BufferedResponse response)
@@ -56,6 +57,8 @@ public class ConversationSummary {
 		responseReason = response.getReason();
 		responseContentType = response.getHeader("Content-Type");
 		responseContentSize = contentSize;
+		responseHeaderTime = response.getHeaderCompletedTime();
+		responseContentTime = response.getContentCompletedTime();
 	}
 
 	public long getId() {
