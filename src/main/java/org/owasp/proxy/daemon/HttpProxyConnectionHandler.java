@@ -165,7 +165,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 		StreamingRequest request = new StreamingRequest.Impl();
 		request.setHeader(headerBytes);
 
-		String transferCoding = request.getHeader("Transfer-Coding");
+		String transferCoding = request.getHeader("Transfer-Encoding");
 		String contentLength = request.getHeader("Content-Length");
 		if (transferCoding != null
 				&& transferCoding.trim().equalsIgnoreCase("chunked")) {
