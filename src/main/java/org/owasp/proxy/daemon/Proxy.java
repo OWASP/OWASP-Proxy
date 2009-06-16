@@ -3,6 +3,7 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.concurrent.Executor;
 
 /**
  * This class implements a Proxy server. The user is required to provide an
@@ -21,7 +22,13 @@ public class Proxy extends Server {
 	public Proxy(InetSocketAddress listen,
 			final TargetedConnectionHandler connectionHandler,
 			final InetSocketAddress target) throws IOException {
-		super(listen, connectionHandler == null ? null
+		this(listen, null, connectionHandler, target);
+	}
+
+	public Proxy(InetSocketAddress listen, Executor executor,
+			final TargetedConnectionHandler connectionHandler,
+			final InetSocketAddress target) throws IOException {
+		super(listen, executor, connectionHandler == null ? null
 				: new ConnectionHandler() {
 
 					/*

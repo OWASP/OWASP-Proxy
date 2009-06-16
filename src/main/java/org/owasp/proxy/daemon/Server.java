@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.logging.Logger;
 
 /**
@@ -34,7 +36,7 @@ import java.util.logging.Logger;
  * 
  * <code>
  * 	InetSocketAddress address = new InetSocketAddress("localhost", 8008);
- * 	Server echo = new server(address, new ConnectionHandler() {
+ * 	Server echo = new Server(address, new ConnectionHandler() {
  *  	protected void handleConnection(Socket socket) throws IOException {
  *  		InputStream in = socket.getInputStream();
  *  		OutputStream out = socket.getOutputStream();
@@ -67,14 +69,24 @@ public class Server {
 
 	private ConnectionHandler connectionHandler;
 
+	private Executor executor;
+
 	public Server(InetSocketAddress listen, ConnectionHandler connectionHandler)
 			throws IOException {
+		this(listen, null, connectionHandler);
+	}
+
+	public Server(InetSocketAddress listen, Executor executor,
+			ConnectionHandler connectionHandler) throws IOException {
 		if (listen == null)
 			throw new NullPointerException("listen may not be null");
+		if (executor == null)
+			executor = Executors.newCachedThreadPool();
 		if (connectionHandler == null)
 			throw new NullPointerException("connectionHandler may not be null");
 		socket = new ServerSocket(listen.getPort(), 20, listen.getAddress());
 		socket.setReuseAddress(true);
+		this.executor = executor;
 		this.connectionHandler = connectionHandler;
 	}
 
@@ -94,24 +106,7 @@ public class Server {
 	}
 
 	private void handleConnection(final Socket socket) throws IOException {
-		Thread thread = new Thread() {
-			public void run() {
-				try {
-					socket.setSoTimeout(socketTimeout);
-					connectionHandler.handleConnection(socket);
-				} catch (Exception ignore) {
-					ignore.printStackTrace();
-				} finally {
-					try {
-						if (!socket.isClosed())
-							socket.close();
-					} catch (IOException ignore) {
-					}
-				}
-			}
-		};
-		thread.setDaemon(true);
-		thread.start();
+		executor.execute(new SocketHandler(socket));
 	}
 
 	private AcceptThread acceptThread = null;
@@ -178,4 +173,26 @@ public class Server {
 		return acceptThread == null || !acceptThread.isAlive();
 	}
 
+	private class SocketHandler implements Runnable {
+		private Socket socket;
+
+		public SocketHandler(Socket socket) {
+			this.socket = socket;
+		}
+
+		public void run() {
+			try {
+				socket.setSoTimeout(socketTimeout);
+				connectionHandler.handleConnection(socket);
+			} catch (Exception ignore) {
+				ignore.printStackTrace();
+			} finally {
+				try {
+					if (!socket.isClosed())
+						socket.close();
+				} catch (IOException ignore) {
+				}
+			}
+		}
+	}
 }
