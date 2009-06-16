@@ -78,6 +78,8 @@ public class Client {
 	private long requestSubmissionTime, responseHeaderStartTime,
 			responseHeaderEndTime;
 
+	private int soTimeout = 10000;
+
 	public Client() {
 	}
 
@@ -89,6 +91,14 @@ public class Client {
 		if (proxySelector == null)
 			return NO_PROXY;
 		return proxySelector;
+	}
+
+	public void setSoTimeout(int timeout) {
+		this.soTimeout = timeout;
+	}
+
+	public int getSoTimeout() {
+		return soTimeout;
 	}
 
 	public void setSslContextSelector(SSLContextSelector contextSelector) {
@@ -109,8 +119,12 @@ public class Client {
 	private URI constructUri(boolean ssl, String host, int port)
 			throws IOException {
 		StringBuilder buff = new StringBuilder();
-		buff.append(ssl ? "https" : "http").append("://").append(host).append(
-				":").append(port);
+		if (ssl) {
+			buff.append("https");
+		} else {
+			buff.append("http");
+		}
+		buff.append("://").append(host).append(":").append(port);
 		try {
 			return new URI(buff.toString());
 		} catch (URISyntaxException use) {
@@ -121,8 +135,9 @@ public class Client {
 	}
 
 	private boolean isConnected(InetSocketAddress target) {
-		if (socket == null || socket.isClosed() || socket.isInputShutdown())
+		if (socket == null || socket.isClosed() || socket.isInputShutdown()) {
 			return false;
+		}
 		if (target.equals(this.target)) {
 			try {
 				// FIXME: This only works because we don't implement pipelining!
@@ -131,8 +146,9 @@ public class Client {
 					socket.setSoTimeout(1);
 					byte[] buff = new byte[1024];
 					int got = socket.getInputStream().read(buff);
-					if (got == -1)
+					if (got == -1) {
 						return false;
+					}
 					if (got > 0) {
 						logger.warning("Unexpected data read from socket ("
 								+ got + " bytes):\n"
@@ -162,13 +178,15 @@ public class Client {
 		BufferedReader br = new BufferedReader(new InputStreamReader(socket
 				.getInputStream()));
 		String line = br.readLine();
-		if (line == null)
+		if (line == null) {
 			throw new IOException(
 					"Upstream proxy closed connection without replying");
+		}
 		int pos = "HTTP/1.x ".length();
 		String status = line.substring(pos);
-		if (!status.startsWith("200 "))
+		if (!status.startsWith("200 ")) {
 			throw new IOException("Upstream proxy responded: " + status);
+		}
 		do {
 			line = br.readLine();
 		} while (br != null && !"".equals(line));
@@ -185,16 +203,18 @@ public class Client {
 			target = new InetSocketAddress(addr, target.getPort());
 		}
 
-		if (target.isUnresolved())
+		if (target.isUnresolved()) {
 			target = new InetSocketAddress(target.getHostName(), target
 					.getPort());
+		}
 
 		URI uri = constructUri(ssl, target.getHostName(), target.getPort());
 		List<Proxy> proxies = getProxySelector().select(uri);
 
 		if (isConnected(target)) {
-			if (state == State.RESPONSE_CONTENT_READ)
+			if (state == State.RESPONSE_CONTENT_READ) {
 				return;
+			}
 			disconnect();
 		} else if (socket != null && !socket.isClosed()) {
 			try {
@@ -215,19 +235,21 @@ public class Client {
 				validateTarget(addr);
 				if (proxy.type() == Proxy.Type.HTTP) {
 					socket = new Socket(Proxy.NO_PROXY);
-					socket.setSoTimeout(10000);
+					socket.setSoTimeout(soTimeout);
 					socket.connect(addr);
 					if (ssl) {
 						proxyConnect(target);
 						layerSsl(target);
-					} else
+					} else {
 						direct = false;
+					}
 				} else {
 					socket = new Socket(proxy);
-					socket.setSoTimeout(10000);
+					socket.setSoTimeout(soTimeout);
 					socket.connect(target);
-					if (ssl)
+					if (ssl) {
 						layerSsl(target);
+					}
 				}
 			} catch (IOException ioe) {
 				getProxySelector().connectFailed(uri, target, ioe);
@@ -243,21 +265,23 @@ public class Client {
 				return;
 			}
 		}
-		if (lastAttempt != null)
+		if (lastAttempt != null) {
 			throw lastAttempt;
+		}
 		throw new IOException("Couldn't connect to server");
 	}
 
 	private void layerSsl(InetSocketAddress target) throws IOException {
-		if (contextSelector == null)
+		if (contextSelector == null) {
 			throw new IllegalStateException(
 					"SSL Context Selector is null, SSL is not supported!");
+		}
 		SSLContext sslContext = contextSelector.select(target);
 		SSLSocketFactory factory = sslContext.getSocketFactory();
 		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket, socket
 				.getInetAddress().getHostName(), socket.getPort(), true);
 		sslsocket.setUseClientMode(true);
-		sslsocket.setSoTimeout(10000);
+		sslsocket.setSoTimeout(soTimeout);
 		sslsocket.startHandshake();
 		socket = sslsocket;
 	}
@@ -265,16 +289,18 @@ public class Client {
 	public void sendRequestHeader(byte[] header) throws IOException,
 			MessageFormatException {
 		if (state == State.RESPONSE_CONTINUE) {
-			if (header == requestContinueHeader)
+			if (header == requestContinueHeader) {
 				return;
+			}
 			throw new IllegalStateException(
 					"Cannot start a new request when the "
 							+ "previous request content has not yet been sent");
 		}
-		if (state != State.CONNECTED && state != State.RESPONSE_CONTENT_READ)
+		if (state != State.CONNECTED && state != State.RESPONSE_CONTENT_READ) {
 			throw new IllegalStateException(
 					"Illegal state. Can't send request headers when state is "
 							+ state);
+		}
 		OutputStream os = new BufferedOutputStream(socket.getOutputStream());
 
 		int resourceStart = -1;
@@ -288,9 +314,10 @@ public class Client {
 				resourceStart = i;
 				break;
 			}
-			if (header[i] == '\r' || header[i] == '\n')
+			if (header[i] == '\r' || header[i] == '\n') {
 				throw new MessageFormatException(
 						"Encountered CR or LF when parsing the URI!", header);
+			}
 		}
 		expectResponseContent = !"HEAD".equals(method);
 		if (!direct) {
@@ -313,33 +340,37 @@ public class Client {
 
 	public void sendRequestContent(byte[] content) throws IOException {
 		if (state != State.REQUEST_HEADER_SENT
-				&& state != State.RESPONSE_CONTINUE)
+				&& state != State.RESPONSE_CONTINUE) {
 			throw new IllegalStateException(
 					"Ilegal state. Can't send request content when state is "
 							+ state);
+		}
 		if (content != null) {
 			OutputStream os = socket.getOutputStream();
 			os.write(content);
 			os.flush();
-		} else if (state == State.RESPONSE_CONTINUE)
+		} else if (state == State.RESPONSE_CONTINUE) {
 			throw new IllegalStateException(
 					"Cannot send null content after a 100 Continue response!");
+		}
 		state = State.REQUEST_CONTENT_SENT;
 		requestSubmissionTime = System.currentTimeMillis();
 	}
 
 	public void sendRequestContent(InputStream content) throws IOException {
 		if (state != State.REQUEST_HEADER_SENT
-				&& state != State.RESPONSE_CONTINUE)
+				&& state != State.RESPONSE_CONTINUE) {
 			throw new IllegalStateException(
 					"Ilegal state. Can't send request content when state is "
 							+ state);
+		}
 		if (content != null) {
 			OutputStream os = socket.getOutputStream();
 			byte[] buff = new byte[1024];
 			int got;
-			while ((got = content.read(buff)) > 0)
+			while ((got = content.read(buff)) > 0) {
 				os.write(buff, 0, got);
+			}
 			os.flush();
 		} else if (state == State.RESPONSE_CONTINUE)
 			throw new IllegalStateException(
@@ -363,30 +394,34 @@ public class Client {
 	public byte[] getResponseHeader() throws IOException,
 			MessageFormatException {
 		if (state != State.REQUEST_HEADER_SENT
-				&& state != State.REQUEST_CONTENT_SENT)
+				&& state != State.REQUEST_CONTENT_SENT) {
 			throw new IllegalStateException(
 					"Ilegal state. Can't read response header when state is "
 							+ state);
+		}
 		InputStream is = socket.getInputStream();
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
 		int i = -1;
 		try {
 			responseHeaderStartTime = responseHeaderEndTime = 0;
 			while (!header.isEndOfHeader() && (i = is.read()) > -1) {
-				if (responseHeaderStartTime == 0)
+				if (responseHeaderStartTime == 0) {
 					responseHeaderStartTime = System.currentTimeMillis();
+				}
 				header.write(i);
 			}
 			responseHeaderEndTime = System.currentTimeMillis();
 		} catch (SocketTimeoutException ste) {
 			logger.fine("Timeout reading response header. Had read "
 					+ header.size() + " bytes");
-			if (header.size() > 0)
+			if (header.size() > 0) {
 				logger.fine(AsciiString.create(header.toByteArray()));
+			}
 			throw ste;
 		}
-		if (i == -1)
+		if (i == -1) {
 			throw new IOException("Unexpected end of stream reading header");
+		}
 		MutableResponseHeader.Impl rh = new MutableResponseHeader.Impl();
 		rh.setHeader(header.toByteArray());
 		String status = rh.getStatus();
@@ -422,12 +457,14 @@ public class Client {
 	}
 
 	public InputStream getResponseContent() throws IOException {
-		if (state == State.RESPONSE_CONTINUE)
+		if (state == State.RESPONSE_CONTINUE) {
 			return null;
-		if (state != State.RESPONSE_HEADER_READ)
+		}
+		if (state != State.RESPONSE_HEADER_READ) {
 			throw new IllegalStateException(
 					"Illegal state. Can't read response body when state is "
 							+ state);
+		}
 		state = State.RESPONSE_CONTENT_IN_PROGRESS;
 		return new EofNotifyingInputStream(responseContent) {
 			@Override
@@ -439,8 +476,9 @@ public class Client {
 
 	public void disconnect() throws IOException {
 		try {
-			if (socket != null && !socket.isClosed())
+			if (socket != null && !socket.isClosed()) {
 				socket.close();
+			}
 		} finally {
 			socket = null;
 			state = State.DISCONNECTED;
