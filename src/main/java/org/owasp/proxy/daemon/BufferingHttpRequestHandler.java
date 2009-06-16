@@ -22,25 +22,25 @@ import org.owasp.httpclient.util.MessageUtils;
 
 public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
-	private static byte[] CONTINUE = AsciiString
+	private static final byte[] CONTINUE = AsciiString
 			.getBytes("HTTP/1.1 100 Continue\r\n\r\n");
 
 	public enum Action {
 		BUFFER, STREAM, IGNORE
 	};
 
-	private HttpRequestHandler next;
+	private final HttpRequestHandler next;
 
 	protected int max = 0;
 
 	protected boolean decode = false;
 
-	public BufferingHttpRequestHandler(HttpRequestHandler next) {
+	public BufferingHttpRequestHandler(final HttpRequestHandler next) {
 		this.next = next;
 	}
 
-	public BufferingHttpRequestHandler(HttpRequestHandler next, int max,
-			boolean decode) {
+	public BufferingHttpRequestHandler(final HttpRequestHandler next,
+			final int max, final boolean decode) {
 		this.next = next;
 		this.max = max;
 		this.decode = decode;
@@ -59,41 +59,42 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * 
 	 * @see org.owasp.proxy.daemon.HttpRequestHandler#dispose()
 	 */
-	public void dispose() throws IOException {
+	public final void dispose() throws IOException {
 		next.dispose();
 	}
 
-	private void handleRequest(StreamingRequest request, boolean decode)
+	private void handleRequest(StreamingRequest request, final boolean decode)
 			throws IOException, MessageFormatException {
-		Action action = directRequest(request);
+		final Action action = directRequest(request);
 		final MutableBufferedRequest brq;
-		switch (action) {
-		case BUFFER:
+		if (Action.BUFFER.equals(action)) {
 			brq = new MutableBufferedRequest.Impl();
 			try {
-				if (decode)
+				if (decode) {
 					request.setContent(MessageUtils.decode(request));
+				}
 				MessageUtils.buffer(request, brq, max);
 				processRequest(brq);
 				MessageUtils.stream(brq, request);
-				if (decode)
+				if (decode) {
 					request.setContent(MessageUtils.encode(request));
+				}
 			} catch (SizeLimitExceededException slee) {
 				requestContentSizeExceeded(brq);
-				InputStream buffered = new ByteArrayInputStream(brq
+				final InputStream buffered = new ByteArrayInputStream(brq
 						.getContent());
 				InputStream content = request.getContent();
 				content = new SequenceInputStream(buffered, content);
 				request.setContent(content);
-				if (decode)
+				if (decode) {
 					request.setContent(MessageUtils.encode(request));
+				}
 			}
-			break;
-		case STREAM:
+		} else if (Action.STREAM.equals(action)) {
 			brq = new MutableBufferedRequest.Impl();
 			MessageUtils.delayedCopy(request, brq, max,
 					new MessageUtils.DelayedCopyObserver() {
-						boolean overflow = false;
+						private boolean overflow = false;
 
 						@Override
 						public void contentOverflow() {
@@ -103,8 +104,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 						@Override
 						public void copyCompleted() {
-							if (!overflow)
+							if (!overflow) {
 								requestStreamed(brq);
+							}
 						}
 					});
 		}
@@ -115,8 +117,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			throws IOException, MessageFormatException {
 		Action action = directResponse(request, response);
 		final MutableBufferedResponse brs;
-		switch (action) {
-		case BUFFER:
+		if (Action.BUFFER.equals(action)) {
 			brs = new MutableBufferedResponse.Impl();
 			try {
 				if (decode) {
@@ -139,8 +140,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 				MessageUtils.buffer(response, brs, max);
 				processResponse(request, brs);
 				MessageUtils.stream(brs, response);
-				if (decode)
+				if (decode) {
 					response.setContent(MessageUtils.encode(response));
+				}
 			} catch (SizeLimitExceededException slee) {
 				responseContentSizeExceeded(request, brs);
 				InputStream buffered = new ByteArrayInputStream(brs
@@ -148,11 +150,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 				InputStream content = response.getContent();
 				content = new SequenceInputStream(buffered, content);
 				response.setContent(content);
-				if (decode)
+				if (decode) {
 					response.setContent(MessageUtils.encode(response));
+				}
 			}
-			break;
-		case STREAM:
+		} else if (Action.STREAM.equals(action)) {
 			brs = new MutableBufferedResponse.Impl();
 			MessageUtils.delayedCopy(response, brs, max,
 					new MessageUtils.DelayedCopyObserver() {
@@ -166,12 +168,12 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 						@Override
 						public void copyCompleted() {
-							if (!overflow)
+							if (!overflow) {
 								responseStreamed(request, brs);
+							}
 						}
 
 					});
-			break;
 		}
 	}
 
@@ -182,12 +184,13 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * org.owasp.proxy.daemon.HttpRequestHandler#handleRequest(java.net.InetAddress
 	 * , org.owasp.httpclient.StreamingRequest)
 	 */
-	final public StreamingResponse handleRequest(InetAddress source,
-			StreamingRequest request, boolean isContinue) throws IOException,
-			MessageFormatException {
+	final public StreamingResponse handleRequest(final InetAddress source,
+			final StreamingRequest request, boolean isContinue)
+			throws IOException, MessageFormatException {
 		boolean decode = this.decode;
-		if (!isContinue && isExpectContinue(request))
+		if (!isContinue && isExpectContinue(request)) {
 			return get100Continue();
+		}
 
 		handleRequest(request, decode);
 		isContinue = false;
@@ -197,15 +200,16 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			StreamingRequest cont = new StreamingRequest.Impl(request);
 			response = next.handleRequest(source, cont, false);
 			isContinue = isContinue(response);
-			if (!isContinue)
+			if (!isContinue) {
 				return response;
+			}
 		}
 		response = next.handleRequest(source, request, isContinue);
 		handleResponse(request, response, decode);
 		return response;
 	}
 
-	private boolean isExpectContinue(RequestHeader request)
+	private boolean isExpectContinue(final RequestHeader request)
 			throws MessageFormatException {
 		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
 	}
@@ -234,7 +238,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 *            the request
 	 * @return the desired Action
 	 */
-	protected Action directRequest(MutableRequestHeader request) {
+	protected Action directRequest(final MutableRequestHeader request) {
 		return Action.BUFFER;
 	}
 
@@ -248,7 +252,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * @param request
 	 *            the request
 	 */
-	protected void processRequest(MutableBufferedRequest request) {
+	protected void processRequest(final MutableBufferedRequest request) {
 	}
 
 	/**
@@ -259,7 +263,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * @param request
 	 *            the request, containing max bytes of partial content
 	 */
-	protected void requestContentSizeExceeded(BufferedRequest request) {
+	protected void requestContentSizeExceeded(final BufferedRequest request) {
 	}
 
 	/**
@@ -269,8 +273,9 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * not be called if the message content is larger than max bytes.
 	 * 
 	 * @param request
+	 *            the request
 	 */
-	protected void requestStreamed(BufferedRequest request) {
+	protected void requestStreamed(final BufferedRequest request) {
 	}
 
 	/**
@@ -284,8 +289,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 *            the response
 	 * @return the desired Action
 	 */
-	protected Action directResponse(RequestHeader request,
-			MutableResponseHeader response) {
+	protected Action directResponse(final RequestHeader request,
+			final MutableResponseHeader response) {
 		return Action.STREAM;
 	}
 
@@ -301,8 +306,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * @param response
 	 *            the response
 	 */
-	protected void processResponse(RequestHeader request,
-			MutableBufferedResponse response) {
+	protected void processResponse(final RequestHeader request,
+			final MutableBufferedResponse response) {
 	}
 
 	/**
@@ -316,8 +321,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * @param response
 	 *            the response, containing max bytes of partial content
 	 */
-	protected void responseContentSizeExceeded(RequestHeader request,
-			BufferedResponse response) {
+	protected void responseContentSizeExceeded(final RequestHeader request,
+			final BufferedResponse response) {
 	}
 
 	/**
@@ -332,8 +337,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * @param response
 	 *            the response
 	 */
-	protected void responseStreamed(RequestHeader request,
-			BufferedResponse response) {
+	protected void responseStreamed(final RequestHeader request,
+			final BufferedResponse response) {
 	}
 
 }

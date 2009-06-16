@@ -61,7 +61,7 @@ public class SSLConnectionHandler implements TargetedConnectionHandler {
 		return sslsock;
 	}
 
-	protected boolean isSSL(byte[] sniff) {
+	protected final boolean isSSL(byte[] sniff) {
 		for (int i = 0; i < sniff.length; i++)
 			if (sniff[i] == 0x03)
 				return true;

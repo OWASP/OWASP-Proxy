@@ -70,7 +70,7 @@ public class CopyInputStream extends FilterInputStream {
 	@Override
 	public int read() throws IOException {
 		int ret = super.read();
-		if (ret > -1)
+		if (ret > -1) {
 			for (int i = 0; i < copy.length; i++) {
 				if (copy[i] == null)
 					continue;
@@ -80,6 +80,7 @@ public class CopyInputStream extends FilterInputStream {
 					copy[i] = null;
 				}
 			}
+		}
 		return ret;
 	}
 
@@ -91,7 +92,7 @@ public class CopyInputStream extends FilterInputStream {
 	@Override
 	public int read(byte[] b, int off, int len) throws IOException {
 		int ret = super.read(b, off, len);
-		if (ret > 0)
+		if (ret > 0) {
 			for (int i = 0; i < copy.length; i++) {
 				if (copy[i] == null)
 					continue;
@@ -102,17 +103,8 @@ public class CopyInputStream extends FilterInputStream {
 					copy[i] = null;
 				}
 			}
+		}
 		return ret;
-	}
-
-	/*
-	 * (non-Javadoc)
-	 * 
-	 * @see java.io.FilterInputStream#read(byte[])
-	 */
-	@Override
-	public int read(byte[] b) throws IOException {
-		return this.read(b, 0, b.length);
 	}
 
 	/**
@@ -123,8 +115,6 @@ public class CopyInputStream extends FilterInputStream {
 	 * should i.e. into the next line, which could be a message body, or the
 	 * next message!
 	 * 
-	 * @param is
-	 *            The InputStream to read the line from
 	 * @throws IOException
 	 *             if an IOException occurs while reading from the supplied
 	 *             InputStream
@@ -133,19 +123,19 @@ public class CopyInputStream extends FilterInputStream {
 	public String readLine() throws IOException {
 		StringBuilder line = new StringBuilder();
 		int i;
-		char c = 0x00;
+		char c;
 		i = read();
 		if (i == -1)
 			return null;
-		while (i > -1 && i != 10 && i != 13) {
+		while (i > -1 && i != '\n' && i != '\r') {
 			// Convert the int to a char
 			c = (char) (i & 0xFF);
 			line = line.append(c);
 			i = read();
 		}
-		if (i == 13) { // 10 is unix LF, but DOS does 13+10, so read the 10 if
+		if (i == '\r') { // 10 is unix LF, but DOS does 13+10, so read the 10 if
 			// we got 13
-			if ((i = read()) != 10)
+			if ((i = read()) != '\n')
 				throw new IOException("Unexpected character "
 						+ Integer.toHexString(i) + ". Expected 0x0d. Had read "
 						+ line);
