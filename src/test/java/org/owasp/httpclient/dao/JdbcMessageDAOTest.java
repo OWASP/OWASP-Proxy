@@ -58,6 +58,7 @@ public class JdbcMessageDAOTest {
 		dump("SELECT * FROM contents");
 		dump("SELECT * FROM headers");
 		dump("SELECT * FROM requests");
+		dump("SELECT * FROM responses");
 		dump("SELECT * FROM conversations");
 	}
 
@@ -73,17 +74,21 @@ public class JdbcMessageDAOTest {
 		request.setSsl(false);
 		request.setHeader(AsciiString
 				.getBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"));
+		request.setSubmissionTime(1);
 		MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 		response.setHeader(AsciiString
 				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text\r\n\r\n"));
 		byte[] cont = AsciiString.getBytes("Some content");
 		response.setContent(cont);
+		response.setHeaderStartedTime(2);
+		response.setHeaderCompletedTime(3);
+		response.setContentStartedTime(4);
+		response.setContentCompletedTime(5);
 
 		dao.saveRequest(request);
 		dao.saveResponse(response);
 
-		int id = dao.saveConversation(request.getId(), response.getId(), 0, 0,
-				0);
+		int id = dao.saveConversation(request.getId(), response.getId());
 
 		logger.fine("ADDED conversation");
 		dump();
@@ -97,9 +102,18 @@ public class JdbcMessageDAOTest {
 		assertTrue(Arrays.equals(request.getHeader(), reqh.getHeader()));
 		assertEquals(request.getTarget(), reqh.getTarget());
 		assertEquals(request.isSsl(), reqh.isSsl());
+		assertEquals(request.getSubmissionTime(), reqh.getSubmissionTime());
+
 		assertTrue("Response headers differ", Arrays.equals(response
 				.getHeader(), resph.getHeader()));
-
+		assertEquals(response.getHeaderStartedTime(), resph
+				.getHeaderStartedTime());
+		assertEquals(response.getHeaderCompletedTime(), resph
+				.getHeaderCompletedTime());
+		assertEquals(response.getContentStartedTime(), resph
+				.getContentStartedTime());
+		assertEquals(response.getContentCompletedTime(), resph
+				.getContentCompletedTime());
 		byte[] content = dao.loadMessageContent(dao.getMessageContentId(c
 				.getRequestId()));
 

@@ -21,7 +21,9 @@ public class ConversationSummary {
 
 	private int requestContentSize, responseContentSize;
 
-	private long requestTime, responseHeaderTime, responseContentTime;
+	private long requestTime, responseHeaderStartedTime,
+			responseHeaderCompletedTime, responseContentStartedTime,
+			responseContentCompletedTime;
 
 	public ConversationSummary() {
 	}
@@ -57,8 +59,10 @@ public class ConversationSummary {
 		responseReason = response.getReason();
 		responseContentType = response.getHeader("Content-Type");
 		responseContentSize = contentSize;
-		responseHeaderTime = response.getHeaderCompletedTime();
-		responseContentTime = response.getContentCompletedTime();
+		responseHeaderStartedTime = response.getHeaderStartedTime();
+		responseHeaderCompletedTime = response.getHeaderCompletedTime();
+		responseContentStartedTime = response.getContentStartedTime();
+		responseContentCompletedTime = response.getContentCompletedTime();
 	}
 
 	public long getId() {
@@ -157,28 +161,28 @@ public class ConversationSummary {
 		this.responseContentSize = responseContentSize;
 	}
 
-	public long getRequestTime() {
+	public long getRequestSubmissionTime() {
 		return requestTime;
 	}
 
-	public void setRequestTime(long requestTime) {
-		this.requestTime = requestTime;
+	public void setRequestSubmissionTime(long time) {
+		this.requestTime = time;
 	}
 
-	public long getResponseHeaderTime() {
-		return responseHeaderTime;
+	public long getResponseHeaderCompletedTime() {
+		return responseHeaderCompletedTime;
 	}
 
-	public void setResponseHeaderTime(long responseHeaderTime) {
-		this.responseHeaderTime = responseHeaderTime;
+	public void setResponseHeaderCompletedTime(long time) {
+		this.responseHeaderCompletedTime = time;
 	}
 
-	public long getResponseContentTime() {
-		return responseContentTime;
+	public long getResponseContentCompletedTime() {
+		return responseContentCompletedTime;
 	}
 
-	public void setResponseContentTime(long responseContentTime) {
-		this.responseContentTime = responseContentTime;
+	public void setResponseContentCompletedTime(long time) {
+		this.responseContentCompletedTime = time;
 	}
 
 }

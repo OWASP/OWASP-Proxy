@@ -165,7 +165,7 @@ public class BufferingHttpRequestHandlerTest {
 		req
 				.setHeader(AsciiString
 						.getBytes("POST /target HTTP/1.1\r\n"
-								+ "Host: localhost\r\nContent-Length: 20\r\nExpect: continue\r\n\r\n"));
+								+ "Host: localhost\r\nContent-Length: 20\r\nExpect: 100-continue\r\n\r\n"));
 		byte[] content = AsciiString.getBytes("01234567890123456789");
 		StreamingResponse resp = rh.handleRequest(req.getTarget().getAddress(),
 				req, false);

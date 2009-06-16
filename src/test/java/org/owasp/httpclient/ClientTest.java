@@ -79,7 +79,7 @@ public class ClientTest {
 		client.connect("localhost", 9999, false);
 		byte[] header = AsciiString
 				.getBytes("POST /target HTTP/1.1\r\n"
-						+ "Host: localhost\r\nContent-Length: 20\r\nExpect: continue\r\n\r\n");
+						+ "Host: localhost\r\nContent-Length: 20\r\nExpect: 100-continue\r\n\r\n");
 		byte[] content = AsciiString.getBytes("01234567890123456789");
 		client.sendRequestHeader(header);
 		MutableResponseHeader resp = new MutableResponseHeader.Impl();

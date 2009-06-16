@@ -41,9 +41,11 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	private static final String CONTENTID = "contentId";
 	private static final String REQUESTID = "requestId";
 	private static final String RESPONSEID = "responseId";
-	private static final String REQUEST_TIME = "requestTime";
-	private static final String RESPONSE_HEADER_TIME = "responseHeaderTime";
-	private static final String RESPONSE_CONTENT_TIME = "responseContentTime";
+	private static final String REQUEST_SUBMISSION_TIME = "submissionTime";
+	private static final String RESPONSE_HEADER_STARTED_TIME = "headerStartedTime";
+	private static final String RESPONSE_HEADER_COMPLETED_TIME = "headerCompletedTime";
+	private static final String RESPONSE_CONTENT_STARTED_TIME = "contentStartedTime";
+	private static final String RESPONSE_CONTENT_COMPLETED_TIME = "contentCompletedTime";
 
 	private static final ParameterizedRowMapper<MutableBufferedRequest> REQUEST_MAPPER = new RequestMapper();
 	private static final ParameterizedRowMapper<MutableBufferedResponse> RESPONSE_MAPPER = new ResponseMapper();
@@ -61,19 +63,21 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 
 	private final static String INSERT_HEADER = "INSERT INTO headers (header, contentId) VALUES (:header, :contentId)";
 
-	private final static String SELECT_HEADER = "SELECT id, header FROM headers WHERE id = :id";
-
 	private final static String SELECT_CONTENT_ID = "SELECT contentId FROM headers WHERE id = :id";
 
-	private final static String INSERT_REQUEST = "INSERT INTO requests (id, host, port, ssl) VALUES (:id, :host, :port, :ssl)";
+	private final static String INSERT_REQUEST = "INSERT INTO requests (id, host, port, ssl, submissionTime) VALUES (:id, :host, :port, :ssl, :submissionTime)";
 
-	private final static String SELECT_REQUEST = "SELECT requests.id AS id, host, port, ssl, header FROM requests, headers WHERE requests.id = headers.id AND headers.id = :id";
+	private final static String SELECT_REQUEST = "SELECT requests.id AS id, host, port, ssl, submissionTime, header FROM requests, headers WHERE requests.id = headers.id AND headers.id = :id";
 
-	private final static String INSERT_CONVERSATION = "INSERT INTO conversations (requestId, responseId, requestTime, responseHeaderTime, responseContentTime) VALUES (:requestId, :responseId, :requestTime, :responseHeaderTime, :responseContentTime)";
+	private final static String INSERT_RESPONSE = "INSERT INTO responses (id, headerStartedTime, headerCompletedTime, contentStartedTime, contentCompletedTime) VALUES (:id, :headerStartedTime, :headerCompletedTime, :contentStartedTime, :contentCompletedTime)";
+
+	private final static String SELECT_RESPONSE = "SELECT responses.id AS id, headerStartedTime, headerCompletedTime, contentStartedTime, contentCompletedTime, header FROM responses, headers WHERE responses.id = headers.id AND headers.id = :id";
+
+	private final static String INSERT_CONVERSATION = "INSERT INTO conversations (requestId, responseId) VALUES (:requestId, :responseId)";
 
 	private final static String DELETE_CONVERSATION = "DELETE FROM conversations WHERE id = :id";
 
-	private final static String SELECT_SUMMARY = "SELECT id, requestId, responseId, requestTime, responseHeaderTime, responseContentTime FROM conversations WHERE id = :id";
+	private final static String SELECT_SUMMARY = "SELECT id, requestId, responseId FROM conversations WHERE id = :id";
 
 	private final static String SELECT_CONVERSATIONS = "SELECT id FROM conversations WHERE id > :id";
 
@@ -87,20 +91,26 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			+ "contentId INTEGER,"
 			+ "CONSTRAINT content_fk FOREIGN KEY (contentId) REFERENCES contents(id) ON DELETE CASCADE)";
 
+	private final static String CREATE_RESPONSES_TABLE = "CREATE TABLE responses ("
+			+ "id INTEGER NOT NULL PRIMARY KEY,"
+			+ "headerStartedTime TIMESTAMP, "
+			+ "headerCompletedTime TIMESTAMP, "
+			+ "contentStartedTime TIMESTAMP, "
+			+ "contentCompletedTime TIMESTAMP, "
+			+ "CONSTRAINT response_header_fk FOREIGN KEY (id) REFERENCES headers(id) ON DELETE CASCADE)";
+
 	private final static String CREATE_REQUESTS_TABLE = "CREATE TABLE requests ("
 			+ "id INTEGER NOT NULL PRIMARY KEY,"
 			+ "host VARCHAR(255) NOT NULL,"
 			+ "port INTEGER NOT NULL,"
 			+ "ssl BIT NOT NULL,"
-			+ "CONSTRAINT header_fk FOREIGN KEY (id) REFERENCES headers(id) ON DELETE CASCADE)";
+			+ "submissionTime TIMESTAMP, "
+			+ "CONSTRAINT request_header_fk FOREIGN KEY (id) REFERENCES headers(id) ON DELETE CASCADE)";
 
 	private final static String CREATE_CONVERSATIONS_TABLE = "CREATE TABLE conversations ("
 			+ "id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
 			+ "requestId INTEGER NOT NULL,"
 			+ "responseId INTEGER NOT NULL,"
-			+ "requestTime TIMESTAMP, "
-			+ "responseHeaderTime TIMESTAMP, "
-			+ "responseContentTime TIMESTAMP, "
 			+ "CONSTRAINT request_fk FOREIGN KEY (requestId) REFERENCES requests(id) ON DELETE CASCADE,"
 			+ "CONSTRAINT response_fk FOREIGN KEY (responseId) REFERENCES headers(id) ON DELETE CASCADE)";
 
@@ -109,6 +119,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 		template.execute(CREATE_CONTENTS_TABLE);
 		template.execute(CREATE_HEADERS_TABLE);
 		template.execute(CREATE_REQUESTS_TABLE);
+		template.execute(CREATE_RESPONSES_TABLE);
 		template.execute(CREATE_CONVERSATIONS_TABLE);
 	}
 
@@ -117,18 +128,11 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	 * 
 	 * @see org.owasp.httpclient.dao.MessageDAO#addConversation(int, int)
 	 */
-	public int saveConversation(int requestId, int responseId,
-			long requestTime, long responseHeaderTime, long responseContentTime)
+	public int saveConversation(int requestId, int responseId)
 			throws DataAccessException {
 		MapSqlParameterSource params = new MapSqlParameterSource();
 		params.addValue(REQUESTID, requestId, Types.INTEGER);
 		params.addValue(RESPONSEID, responseId, Types.INTEGER);
-		params.addValue(REQUEST_TIME, requestTime == 0 ? null : new Timestamp(
-				requestTime), Types.TIMESTAMP);
-		params.addValue(RESPONSE_HEADER_TIME, responseHeaderTime == 0 ? null
-				: new Timestamp(responseHeaderTime), Types.TIMESTAMP);
-		params.addValue(RESPONSE_CONTENT_TIME, responseContentTime == 0 ? null
-				: new Timestamp(responseContentTime), Types.TIMESTAMP);
 
 		KeyHolder key = new GeneratedKeyHolder();
 		getNamedParameterJdbcTemplate()
@@ -335,7 +339,7 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			params.addValue(ID, id, Types.INTEGER);
 			SimpleJdbcTemplate template = new SimpleJdbcTemplate(
 					getNamedParameterJdbcTemplate());
-			return template.queryForObject(SELECT_HEADER, RESPONSE_MAPPER,
+			return template.queryForObject(SELECT_RESPONSE, RESPONSE_MAPPER,
 					params);
 		} catch (EmptyResultDataAccessException erdae) {
 			return null;
@@ -412,6 +416,8 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 		params.addValue(PORT, requestHeader.getTarget().getPort(),
 				Types.INTEGER);
 		params.addValue(SSL, requestHeader.isSsl(), Types.BIT);
+		addTimestamp(params, REQUEST_SUBMISSION_TIME, requestHeader
+				.getSubmissionTime());
 		getNamedParameterJdbcTemplate().update(INSERT_REQUEST, params);
 	}
 
@@ -440,6 +446,23 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	public void saveResponseHeader(MutableResponseHeader responseHeader,
 			int contentId) throws DataAccessException {
 		saveMessageHeader(responseHeader, contentId);
+		MapSqlParameterSource params = new MapSqlParameterSource();
+		params.addValue(ID, responseHeader.getId(), Types.INTEGER);
+		addTimestamp(params, RESPONSE_HEADER_STARTED_TIME, responseHeader
+				.getHeaderStartedTime());
+		addTimestamp(params, RESPONSE_HEADER_COMPLETED_TIME, responseHeader
+				.getHeaderCompletedTime());
+		addTimestamp(params, RESPONSE_CONTENT_STARTED_TIME, responseHeader
+				.getContentStartedTime());
+		addTimestamp(params, RESPONSE_CONTENT_COMPLETED_TIME, responseHeader
+				.getContentCompletedTime());
+		getNamedParameterJdbcTemplate().update(INSERT_RESPONSE, params);
+	}
+
+	private void addTimestamp(MapSqlParameterSource params, String name,
+			long time) {
+		params.addValue(name, time == 0 ? null : new Timestamp(time),
+				Types.TIMESTAMP);
 	}
 
 	private void saveMessageHeader(MutableMessageHeader header, int contentId) {
@@ -468,6 +491,11 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			request.setTarget(InetSocketAddress.createUnresolved(host, port));
 			request.setSsl(ssl);
 			request.setHeader(rs.getBytes(HEADER));
+
+			Timestamp t;
+			if ((t = rs.getTimestamp(REQUEST_SUBMISSION_TIME)) != null)
+				request.setSubmissionTime(t.getTime());
+
 			return request;
 		}
 
@@ -483,6 +511,22 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 			response.setId(id);
 			response.setHeader(rs.getBytes(HEADER));
+
+			Timestamp t;
+			long hs = 0, hc = 0, cs = 0, cc = 0;
+			if ((t = rs.getTimestamp(RESPONSE_HEADER_STARTED_TIME)) != null)
+				hs = t.getTime();
+			if ((t = rs.getTimestamp(RESPONSE_HEADER_COMPLETED_TIME)) != null)
+				hc = t.getTime();
+			if ((t = rs.getTimestamp(RESPONSE_CONTENT_STARTED_TIME)) != null)
+				cs = t.getTime();
+			if ((t = rs.getTimestamp(RESPONSE_CONTENT_COMPLETED_TIME)) != null)
+				cc = t.getTime();
+			response.setHeaderStartedTime(hs);
+			response.setHeaderCompletedTime(hc);
+			response.setContentStartedTime(cs);
+			response.setContentCompletedTime(cc);
+
 			return response;
 		}
 
@@ -512,18 +556,6 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 			c.setId(rs.getInt(ID));
 			c.setRequestId(rs.getInt(REQUESTID));
 			c.setResponseId(rs.getInt(RESPONSEID));
-
-			Timestamp t;
-			long requestTime = 0, responseHeaderTime = 0, responseContentTime = 0;
-			if ((t = rs.getTimestamp(REQUEST_TIME)) != null)
-				requestTime = t.getTime();
-			if ((t = rs.getTimestamp(RESPONSE_HEADER_TIME)) != null)
-				responseHeaderTime = t.getTime();
-			if ((t = rs.getTimestamp(RESPONSE_CONTENT_TIME)) != null)
-				responseContentTime = t.getTime();
-			c.setRequestTime(requestTime);
-			c.setResponseHeaderTime(responseHeaderTime);
-			c.setResponseContentTime(responseContentTime);
 
 			return c;
 		}

@@ -211,11 +211,11 @@ public class ConversationServiceHttpRequestHandler implements
 	private void xml(StringBuilder buff, ConversationSummary summary) {
 		buff.append("<summary id=\"");
 		buff.append(summary.getId());
-		buff.append("\" requestTime=\"").append(summary.getRequestTime());
+		buff.append("\" requestTime=\"").append(summary.getRequestSubmissionTime());
 		buff.append("\" responseHeaderTime=\"").append(
-				summary.getResponseHeaderTime());
+				summary.getResponseHeaderCompletedTime());
 		buff.append("\" responseContentTime=\"").append(
-				summary.getResponseContentTime());
+				summary.getResponseContentCompletedTime());
 		buff.append("\">");
 		tag(buff, "host", summary.getTarget().getHostName());
 		tag(buff, "port", summary.getTarget().getPort());

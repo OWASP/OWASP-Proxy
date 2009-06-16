@@ -30,9 +30,9 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.io.ChunkedOutputStream;
 import org.owasp.httpclient.io.CopyInputStream;
 import org.owasp.httpclient.util.AsciiString;
@@ -161,7 +161,7 @@ public class TraceServer implements Runnable {
 						request.setHeader(headerBytes);
 					}
 
-					boolean expectContinue = "continue"
+					boolean expectContinue = "100-continue"
 							.equalsIgnoreCase(request.getHeader("Expect"));
 					if (expectContinue)
 						out.write(AsciiString.getBytes(version

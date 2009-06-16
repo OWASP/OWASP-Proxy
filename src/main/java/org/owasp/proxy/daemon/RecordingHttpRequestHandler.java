@@ -3,9 +3,9 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.net.InetAddress;
 
+import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.dao.MessageDAO;
@@ -51,19 +51,18 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 				resp);
 		MessageUtils.delayedCopy(request, req, max, observer
 				.getRequestObserver());
-		StreamingResponse response = next.handleRequest(source, request, isContinue);
+		StreamingResponse response = next.handleRequest(source, request,
+				isContinue);
 		MessageUtils.delayedCopy(response, resp, max, observer
 				.getResponseObserver());
 		return response;
 	}
 
 	protected void record(InetAddress source, MutableBufferedRequest request,
-			MutableBufferedResponse response, long requestTime,
-			long responseHeaderTime, long responseContentTime) {
+			MutableBufferedResponse response) {
 		dao.saveRequest(request);
 		dao.saveResponse(response);
-		dao.saveConversation(request.getId(), response.getId(), requestTime,
-				responseHeaderTime, responseContentTime);
+		dao.saveConversation(request.getId(), response.getId());
 	}
 
 	private class ConversationObserver {
@@ -71,8 +70,6 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		private InetAddress source;
 		private MutableBufferedRequest request;
 		private MutableBufferedResponse response;
-
-		private long requestTime, responseHeaderTime, responseContentTime;
 
 		private boolean requestContentOverflow, responseContentOverflow;
 
@@ -92,13 +89,11 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 
 				@Override
 				public void copyCompleted() {
-					requestTime = System.currentTimeMillis();
 				}
 			};
 		}
 
 		public MessageUtils.DelayedCopyObserver getResponseObserver() {
-			responseHeaderTime = System.currentTimeMillis();
 			return new MessageUtils.DelayedCopyObserver() {
 				@Override
 				public void contentOverflow() {
@@ -107,13 +102,11 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 
 				@Override
 				public void copyCompleted() {
-					responseContentTime = System.currentTimeMillis();
 					if (requestContentOverflow)
 						request.setContent(null);
 					if (responseContentOverflow)
 						response.setContent(null);
-					record(source, request, response, requestTime,
-							responseHeaderTime, responseContentTime);
+					record(source, request, response);
 				}
 			};
 		}

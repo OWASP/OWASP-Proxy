@@ -45,8 +45,7 @@ public interface MessageDAO {
 
 	int getMessageContentId(int headerId) throws DataAccessException;
 
-	int saveConversation(int requestId, int responseId, long requestTime,
-			long responseHeaderTime, long responseContentTime)
+	int saveConversation(int requestId, int responseId)
 			throws DataAccessException;
 
 	Conversation getConversation(int id) throws DataAccessException;
