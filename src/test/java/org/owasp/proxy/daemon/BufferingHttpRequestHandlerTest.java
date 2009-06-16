@@ -44,9 +44,7 @@ public class BufferingHttpRequestHandlerTest {
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
 		ts = new TraceServer(9999);
-		Thread t = new Thread(ts);
-		t.setDaemon(false);
-		t.start();
+		ts.start();
 	}
 
 	@AfterClass

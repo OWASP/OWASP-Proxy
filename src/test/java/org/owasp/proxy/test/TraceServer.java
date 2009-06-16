@@ -24,10 +24,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.ServerSocket;
+import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.logging.Logger;
 
 import org.owasp.httpclient.MessageFormatException;
@@ -37,101 +35,39 @@ import org.owasp.httpclient.io.ChunkedOutputStream;
 import org.owasp.httpclient.io.CopyInputStream;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.daemon.ConnectionHandler;
+import org.owasp.proxy.daemon.Server;
 
-public class TraceServer implements Runnable {
+public class TraceServer extends Server {
 
 	private static Logger logger = Logger
 			.getLogger(TraceServer.class.getName());
 
-	private ServerSocket socket;
+	private static boolean chunked = false;
 
-	private boolean chunked = false;
+	private static boolean verbose = false;
 
-	private boolean verbose = false;
-
-	private String version = "HTTP/1.0";
+	private static String version = "HTTP/1.0";
 
 	public TraceServer(int port) throws IOException {
-		try {
-			InetAddress address = InetAddress.getByAddress(new byte[] { 127, 0,
-					0, 1 });
-			socket = new ServerSocket(port, 20, address);
-			socket.setReuseAddress(true);
-		} catch (UnknownHostException uhe) {
-			// should never happen
-		}
+		super(new InetSocketAddress("localhost", port), new CH());
 	}
 
-	public void setChunked(boolean chunked) {
-		this.chunked = chunked;
+	public static void setChunked(boolean chunked) {
+		TraceServer.chunked = chunked;
 	}
 
-	public void setVerbose(boolean verbose) {
-		this.verbose = verbose;
+	public static void setVerbose(boolean verbose) {
+		TraceServer.verbose = verbose;
 	}
 
-	public void setVersion(String version) {
-		this.version = version;
+	public static void setVersion(String version) {
+		TraceServer.version = version;
 	}
 
-	public void run() {
-		try {
-			do {
-				CH ch = new CH(socket.accept());
-				Thread thread = new Thread(ch);
-				thread.setDaemon(true);
-				thread.start();
-			} while (!socket.isClosed());
-		} catch (IOException ioe) {
-			if (!isStopped()) {
-				ioe.printStackTrace();
-			}
-		}
-		try {
-			if (socket != null && !socket.isClosed())
-				socket.close();
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		}
-		synchronized (this) {
-			notifyAll();
-		}
-	}
+	private static class CH implements ConnectionHandler {
 
-	public synchronized boolean stop() {
-		if (!isStopped()) {
-			try {
-				socket.close();
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
-			while (!isStopped()) {
-				int loop = 0;
-				try {
-					wait(1000);
-				} catch (InterruptedException ie) {
-					loop++;
-					if (loop > 10)
-						return false;
-				}
-			}
-		}
-		return true;
-	}
-
-	public synchronized boolean isStopped() {
-		return socket == null || socket.isClosed();
-	}
-
-	private class CH implements Runnable {
-
-		private Socket socket;
-
-		public CH(Socket socket) {
-			this.socket = socket;
-		}
-
-		public void run() {
+		public void handleConnection(Socket socket) {
 			try {
 				ByteArrayOutputStream copy = new ByteArrayOutputStream();
 				CopyInputStream in = new CopyInputStream(socket
@@ -232,10 +168,9 @@ public class TraceServer implements Runnable {
 
 	public static void main(String[] args) throws Exception {
 		TraceServer ts = new TraceServer(9999);
-		ts.setChunked(true);
-		ts.setVerbose(true);
-		Thread t = new Thread(ts);
-		t.start();
+		TraceServer.setChunked(true);
+		TraceServer.setVerbose(true);
+		ts.start();
 		System.out.println("Started");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
 
