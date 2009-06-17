@@ -83,12 +83,8 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		public MessageUtils.DelayedCopyObserver getRequestObserver() {
 			return new MessageUtils.DelayedCopyObserver() {
 				@Override
-				public void contentOverflow() {
-					requestContentOverflow = true;
-				}
-
-				@Override
-				public void copyCompleted() {
+				public void copyCompleted(boolean overflow, int size) {
+					requestContentOverflow = overflow;
 				}
 			};
 		}
@@ -96,12 +92,8 @@ public class RecordingHttpRequestHandler implements HttpRequestHandler {
 		public MessageUtils.DelayedCopyObserver getResponseObserver() {
 			return new MessageUtils.DelayedCopyObserver() {
 				@Override
-				public void contentOverflow() {
-					responseContentOverflow = true;
-				}
-
-				@Override
-				public void copyCompleted() {
+				public void copyCompleted(boolean overflow, int size) {
+					responseContentOverflow = overflow;
 					if (requestContentOverflow)
 						request.setContent(null);
 					if (responseContentOverflow)

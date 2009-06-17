@@ -14,8 +14,10 @@ import org.owasp.httpclient.MutableBufferedResponse;
 import org.owasp.httpclient.MutableRequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.RequestHeader;
+import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
+import org.owasp.httpclient.io.CountingInputStream;
 import org.owasp.httpclient.io.SizeLimitExceededException;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
@@ -80,12 +82,17 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					request.setContent(MessageUtils.encode(request));
 				}
 			} catch (SizeLimitExceededException slee) {
-				requestContentSizeExceeded(brq);
 				final InputStream buffered = new ByteArrayInputStream(brq
 						.getContent());
 				InputStream content = request.getContent();
 				content = new SequenceInputStream(buffered, content);
+				content = new CountingInputStream(content) {
+					protected void eof() {
+						requestContentSizeExceeded(brq, getCount());
+					}
+				};
 				request.setContent(content);
+
 				if (decode) {
 					request.setContent(MessageUtils.encode(request));
 				}
@@ -94,17 +101,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			brq = new MutableBufferedRequest.Impl();
 			MessageUtils.delayedCopy(request, brq, max,
 					new MessageUtils.DelayedCopyObserver() {
-						private boolean overflow = false;
-
 						@Override
-						public void contentOverflow() {
-							requestContentSizeExceeded(brq);
-							overflow = true;
-						}
-
-						@Override
-						public void copyCompleted() {
-							if (!overflow) {
+						public void copyCompleted(boolean overflow, int size) {
+							if (overflow) {
+								requestContentSizeExceeded(brq, size);
+							} else {
 								requestStreamed(brq);
 							}
 						}
@@ -144,11 +145,15 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					response.setContent(MessageUtils.encode(response));
 				}
 			} catch (SizeLimitExceededException slee) {
-				responseContentSizeExceeded(request, brs);
 				InputStream buffered = new ByteArrayInputStream(brs
 						.getContent());
 				InputStream content = response.getContent();
 				content = new SequenceInputStream(buffered, content);
+				content = new CountingInputStream(content) {
+					protected void eof() {
+						responseContentSizeExceeded(request, brs, getCount());
+					}
+				};
 				response.setContent(content);
 				if (decode) {
 					response.setContent(MessageUtils.encode(response));
@@ -158,17 +163,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			brs = new MutableBufferedResponse.Impl();
 			MessageUtils.delayedCopy(response, brs, max,
 					new MessageUtils.DelayedCopyObserver() {
-						private boolean overflow = false;
-
 						@Override
-						public void contentOverflow() {
-							responseContentSizeExceeded(request, brs);
-							overflow = true;
-						}
-
-						@Override
-						public void copyCompleted() {
-							if (!overflow) {
+						public void copyCompleted(boolean overflow, int size) {
+							if (overflow) {
+								responseContentSizeExceeded(request, brs, size);
+							} else {
 								responseStreamed(request, brs);
 							}
 						}
@@ -262,8 +261,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 * 
 	 * @param request
 	 *            the request, containing max bytes of partial content
+	 * @param size
+	 *            the ultimate size of the request content
 	 */
-	protected void requestContentSizeExceeded(final BufferedRequest request) {
+	protected void requestContentSizeExceeded(final BufferedRequest request,
+			int size) {
 	}
 
 	/**
@@ -320,9 +322,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	 *            the request
 	 * @param response
 	 *            the response, containing max bytes of partial content
+	 * @param size
+	 *            the eventual size of the response content
 	 */
 	protected void responseContentSizeExceeded(final RequestHeader request,
-			final BufferedResponse response) {
+			final ResponseHeader response, int size) {
 	}
 
 	/**

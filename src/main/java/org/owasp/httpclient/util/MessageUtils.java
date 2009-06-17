@@ -23,7 +23,7 @@ import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.io.ChunkingInputStream;
 import org.owasp.httpclient.io.CopyInputStream;
-import org.owasp.httpclient.io.EofNotifyingInputStream;
+import org.owasp.httpclient.io.CountingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.io.GunzipInputStream;
 import org.owasp.httpclient.io.GzipInputStream;
@@ -321,7 +321,7 @@ public class MessageUtils {
 	}
 
 	private static void delayedCopy(StreamingMessage message,
-			final MutableBufferedMessage copy, int max,
+			final MutableBufferedMessage copy, final int max,
 			final DelayedCopyObserver observer) {
 		if (observer == null)
 			throw new NullPointerException("Observer may not be null");
@@ -329,19 +329,15 @@ public class MessageUtils {
 		copy.setHeader(message.getHeader());
 		InputStream content = message.getContent();
 		if (content == null) {
-			observer.copyCompleted();
+			observer.copyCompleted(false, 0);
 		} else {
 			final ByteArrayOutputStream copyContent = new SizeLimitedByteArrayOutputStream(
-					max) {
-				public void overflow() {
-					observer.contentOverflow();
-				}
-			};
+					max);
 			content = new CopyInputStream(content, copyContent);
-			content = new EofNotifyingInputStream(content) {
+			content = new CountingInputStream(content) {
 				protected void eof() {
 					copy.setContent(copyContent.toByteArray());
-					observer.copyCompleted();
+					observer.copyCompleted(getCount() > max, getCount());
 				}
 			};
 			message.setContent(content);
@@ -350,10 +346,7 @@ public class MessageUtils {
 
 	public static abstract class DelayedCopyObserver {
 
-		public void contentOverflow() {
-		}
-
-		public abstract void copyCompleted();
+		public abstract void copyCompleted(boolean overflow, int size);
 
 	}
 }
