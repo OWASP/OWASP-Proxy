@@ -13,6 +13,15 @@ import javax.net.ssl.SSLSocketFactory;
 import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.proxy.io.PushbackSocket;
 
+/*
+ * Of interest is RFC 3546 (http://tools.ietf.org/html/rfc3546#section-3.1), which specifies
+ * a Server Name Indicator extension which can be provided by the client to indicate
+ * which SSL server it is trying to connect to. This could be used for the case where we
+ * are acting as an SSL Server, but we don't have a specified target, or we are prepared
+ * to allow the client to override the target. There is no support for this in the standard JRE
+ * at present, but is expected to be added in JDK7.
+ */
+
 public class SSLConnectionHandler implements TargetedConnectionHandler {
 
 	private SSLContextSelector sslContextSelector;
