@@ -5,9 +5,15 @@ import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 
+import org.junit.Test;
 import org.owasp.httpclient.SSLContextSelector;
 
 public class AutoGeneratingCertificateProviderTest {
+
+	@Test
+	public void test() {
+		// Dummy to shut maven up
+	}
 
 	public static void main(String[] args) throws Exception {
 
