@@ -37,7 +37,7 @@ import org.owasp.proxy.test.TraceServer;
 
 public class BufferingHttpRequestHandlerTest {
 
-	private static Mock mock = new Mock();
+	private static MockRequestHandler requestHandler = new MockRequestHandler();
 
 	private static TraceServer ts = null;
 
@@ -155,7 +155,8 @@ public class BufferingHttpRequestHandlerTest {
 	public void testContinue() throws Exception {
 		HttpRequestHandler rh = new DefaultHttpRequestHandler();
 		rh = new LoggingHttpRequestHandler(rh);
-		rh = new BufferingHttpRequestHandler(rh, 1024, false);
+		BufferedMessageInterceptor bmi = new MockBufferedInterceptor();
+		rh = new BufferingHttpRequestHandler(rh, bmi, 1024, false);
 
 		StreamingRequest req = new StreamingRequest.Impl();
 		req.setTarget(new InetSocketAddress("localhost", 9999));
@@ -189,21 +190,24 @@ public class BufferingHttpRequestHandlerTest {
 	@Test
 	@Ignore
 	public void testHandleRequest() throws Exception {
-		BufferMock bm = new BufferMock(mock);
-		bm.setDecode(true);
-		bm.setMaximumContentSize(65536);
-		test(bm, false, false, 32768);
-		test(bm, true, true, 32768);
+		MockBufferedInterceptor bm = new MockBufferedInterceptor();
+		BufferingHttpRequestHandler brh = new BufferingHttpRequestHandler(
+				requestHandler, bm);
+		brh.setDecode(true);
+		brh.setMaximumContentSize(65536);
+		test(brh, bm, false, false, 32768);
+		test(brh, bm, true, true, 32768);
 	}
 
-	private void test(BufferMock bm, boolean chunked, boolean gzipped, int size)
-			throws Exception {
+	private void test(BufferingHttpRequestHandler brh,
+			MockBufferedInterceptor bm, boolean chunked, boolean gzipped,
+			int size) throws Exception {
 		MutableBufferedRequest brq = createRequest("/?chunked=" + chunked
 				+ "&gzipped=" + gzipped + "&size=" + size, size);
 		StreamingRequest srq = new StreamingRequest.Impl();
 		MessageUtils.stream(brq, srq);
 
-		StreamingResponse srs = bm.handleRequest(null, srq, false);
+		StreamingResponse srs = brh.handleRequest(null, srq, false);
 
 		MutableBufferedResponse brs = new MutableBufferedResponse.Impl();
 		MessageUtils.buffer(srs, brs, Integer.MAX_VALUE);
@@ -250,51 +254,41 @@ public class BufferingHttpRequestHandlerTest {
 		}
 	}
 
-	private static class BufferMock extends BufferingHttpRequestHandler {
+	private static class MockBufferedInterceptor extends
+			BufferedMessageInterceptor {
 
 		private Result result = new Result();
 
-		public BufferMock(HttpRequestHandler next) {
-			super(next);
-		}
-
-		@Override
-		protected Action directRequest(MutableRequestHeader request) {
+		public Action directRequest(MutableRequestHeader request) {
 			return Action.BUFFER;
 		}
 
-		@Override
-		protected Action directResponse(RequestHeader request,
+		public Action directResponse(RequestHeader request,
 				MutableResponseHeader response) {
 			return Action.BUFFER;
 		}
 
-		@Override
-		protected void processRequest(MutableBufferedRequest request) {
+		public void processRequest(MutableBufferedRequest request) {
 			result.request = request;
 		}
 
-		@Override
-		protected void processResponse(RequestHeader request,
+		public void processResponse(RequestHeader request,
 				MutableBufferedResponse response) {
 			result.response = response;
 		}
 
-		@Override
-		protected void requestContentSizeExceeded(BufferedRequest request,
-				int size) {
+		public void requestContentSizeExceeded(BufferedRequest request, int size) {
 			result.requestOverflow = true;
 		}
 
-		@Override
-		protected void responseContentSizeExceeded(RequestHeader request,
+		public void responseContentSizeExceeded(RequestHeader request,
 				ResponseHeader response, int size) {
 			result.responseOverflow = true;
 		}
 
 	}
 
-	private static class Mock implements HttpRequestHandler {
+	private static class MockRequestHandler implements HttpRequestHandler {
 
 		private static Logger logger = Logger.getAnonymousLogger();
 

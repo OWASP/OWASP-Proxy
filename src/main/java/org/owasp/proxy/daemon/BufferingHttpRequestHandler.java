@@ -6,30 +6,22 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.MutableBufferedRequest;
 import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.CountingInputStream;
 import org.owasp.httpclient.io.SizeLimitExceededException;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.daemon.BufferedMessageInterceptor.Action;
 
 public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	private static final byte[] CONTINUE = AsciiString
 			.getBytes("HTTP/1.1 100 Continue\r\n\r\n");
-
-	public enum Action {
-		BUFFER, STREAM, IGNORE
-	};
 
 	private final HttpRequestHandler next;
 
@@ -37,13 +29,19 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	protected boolean decode = false;
 
-	public BufferingHttpRequestHandler(final HttpRequestHandler next) {
+	private BufferedMessageInterceptor interceptor;
+
+	public BufferingHttpRequestHandler(final HttpRequestHandler next,
+			BufferedMessageInterceptor interceptor) {
 		this.next = next;
+		this.interceptor = interceptor;
 	}
 
 	public BufferingHttpRequestHandler(final HttpRequestHandler next,
-			final int max, final boolean decode) {
+			BufferedMessageInterceptor interceptor, final int max,
+			final boolean decode) {
 		this.next = next;
+		this.interceptor = interceptor;
 		this.max = max;
 		this.decode = decode;
 	}
@@ -67,7 +65,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	private void handleRequest(StreamingRequest request, final boolean decode)
 			throws IOException, MessageFormatException {
-		final Action action = directRequest(request);
+		final Action action = interceptor.directRequest(request);
 		final MutableBufferedRequest brq;
 		if (Action.BUFFER.equals(action)) {
 			brq = new MutableBufferedRequest.Impl();
@@ -76,7 +74,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					request.setContent(MessageUtils.decode(request));
 				}
 				MessageUtils.buffer(request, brq, max);
-				processRequest(brq);
+				interceptor.processRequest(brq);
 				MessageUtils.stream(brq, request);
 				if (decode) {
 					request.setContent(MessageUtils.encode(request));
@@ -88,7 +86,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 				content = new SequenceInputStream(buffered, content);
 				content = new CountingInputStream(content) {
 					protected void eof() {
-						requestContentSizeExceeded(brq, getCount());
+						interceptor.requestContentSizeExceeded(brq, getCount());
 					}
 				};
 				request.setContent(content);
@@ -104,9 +102,10 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 						@Override
 						public void copyCompleted(boolean overflow, int size) {
 							if (overflow) {
-								requestContentSizeExceeded(brq, size);
+								interceptor.requestContentSizeExceeded(brq,
+										size);
 							} else {
-								requestStreamed(brq);
+								interceptor.requestStreamed(brq);
 							}
 						}
 					});
@@ -116,7 +115,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	private void handleResponse(final RequestHeader request,
 			final StreamingResponse response, boolean decode)
 			throws IOException, MessageFormatException {
-		Action action = directResponse(request, response);
+		Action action = interceptor.directResponse(request, response);
 		final MutableBufferedResponse brs;
 		if (Action.BUFFER.equals(action)) {
 			brs = new MutableBufferedResponse.Impl();
@@ -139,7 +138,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					}
 				}
 				MessageUtils.buffer(response, brs, max);
-				processResponse(request, brs);
+				interceptor.processResponse(request, brs);
 				MessageUtils.stream(brs, response);
 				if (decode) {
 					response.setContent(MessageUtils.encode(response));
@@ -151,7 +150,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 				content = new SequenceInputStream(buffered, content);
 				content = new CountingInputStream(content) {
 					protected void eof() {
-						responseContentSizeExceeded(request, brs, getCount());
+						interceptor.responseContentSizeExceeded(request, brs,
+								getCount());
 					}
 				};
 				response.setContent(content);
@@ -166,9 +166,10 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 						@Override
 						public void copyCompleted(boolean overflow, int size) {
 							if (overflow) {
-								responseContentSizeExceeded(request, brs, size);
+								interceptor.responseContentSizeExceeded(
+										request, brs, size);
 							} else {
-								responseStreamed(request, brs);
+								interceptor.responseStreamed(request, brs);
 							}
 						}
 
@@ -222,127 +223,6 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		StreamingResponse response = new StreamingResponse.Impl();
 		response.setHeader(CONTINUE);
 		return response;
-	}
-
-	/**
-	 * Called to determine what to do with the request. Implementations can
-	 * choose to buffer the request to allow for modification, stream the
-	 * request directly to the server, or ignore the request entirely.
-	 * 
-	 * Note that even if the request is ignored,
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} will
-	 * still be called.
-	 * 
-	 * @param request
-	 *            the request
-	 * @return the desired Action
-	 */
-	protected Action directRequest(final MutableRequestHeader request) {
-		return Action.BUFFER;
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directRequest(MutableRequestHeader)} is BUFFER, once the request
-	 * has been completely buffered. The request may be modified within this
-	 * method. This method will not be called if the message content is larger
-	 * than max bytes.
-	 * 
-	 * @param request
-	 *            the request
-	 */
-	protected void processRequest(final MutableBufferedRequest request) {
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directRequest(MutableRequestHeader)} is BUFFER or STREAM, and the
-	 * request body is larger than the maximum message body specified
-	 * 
-	 * @param request
-	 *            the request, containing max bytes of partial content
-	 * @param size
-	 *            the ultimate size of the request content
-	 */
-	protected void requestContentSizeExceeded(final BufferedRequest request,
-			int size) {
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directRequest(MutableRequestHeader)} was STREAM, once the request
-	 * has been completely sent to the server, and buffered. This method will
-	 * not be called if the message content is larger than max bytes.
-	 * 
-	 * @param request
-	 *            the request
-	 */
-	protected void requestStreamed(final BufferedRequest request) {
-	}
-
-	/**
-	 * Called to determine what to do with the response. Implementations can
-	 * choose to buffer the response to allow for modification, stream the
-	 * response directly to the client, or ignore the response entirely.
-	 * 
-	 * @param request
-	 *            the request
-	 * @param response
-	 *            the response
-	 * @return the desired Action
-	 */
-	protected Action directResponse(final RequestHeader request,
-			final MutableResponseHeader response) {
-		return Action.STREAM;
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is
-	 * BUFFER, once the response has been completely buffered. The response may
-	 * be modified within this method. This method will not be called if the
-	 * message content is larger than max bytes.
-	 * 
-	 * @param request
-	 *            the request
-	 * @param response
-	 *            the response
-	 */
-	protected void processResponse(final RequestHeader request,
-			final MutableBufferedResponse response) {
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} is
-	 * BUFFER or STREAM, and the response body is larger than the maximum
-	 * message body specified
-	 * 
-	 * @param request
-	 *            the request
-	 * @param response
-	 *            the response, containing max bytes of partial content
-	 * @param size
-	 *            the eventual size of the response content
-	 */
-	protected void responseContentSizeExceeded(final RequestHeader request,
-			final ResponseHeader response, int size) {
-	}
-
-	/**
-	 * Called if the return value from
-	 * {@link #directResponse(MutableRequestHeader, MutableResponseHeader)} was
-	 * STREAM, once the response has been completely sent to the client, and
-	 * buffered. This method will not be called if the message content is larger
-	 * than max bytes.
-	 * 
-	 * @param request
-	 *            the request
-	 * @param response
-	 *            the response
-	 */
-	protected void responseStreamed(final RequestHeader request,
-			final BufferedResponse response) {
 	}
 
 }

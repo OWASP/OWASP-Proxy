@@ -14,11 +14,12 @@ import java.util.logging.Handler;
 import java.util.logging.Logger;
 
 import org.owasp.httpclient.Client;
-import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.MutableResponseHeader;
+import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.SSLContextSelector;
 import org.owasp.httpclient.dao.JdbcMessageDAO;
 import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
+import org.owasp.proxy.daemon.BufferedMessageInterceptor;
 import org.owasp.proxy.daemon.BufferingHttpRequestHandler;
 import org.owasp.proxy.daemon.ConversationServiceHttpRequestHandler;
 import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
@@ -136,13 +137,14 @@ public class Main {
 		dao.createTables();
 		rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
 		rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
-		rh = new BufferingHttpRequestHandler(rh, 10240, true) {
+		BufferedMessageInterceptor bmi = new BufferedMessageInterceptor() {
 			@Override
-			protected Action directResponse(RequestHeader request,
+			public Action directResponse(RequestHeader request,
 					MutableResponseHeader response) {
 				return Action.BUFFER;
 			}
 		};
+		rh = new BufferingHttpRequestHandler(rh, bmi, 10240, true);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLContextSelector cp = new AutoGeneratingContextSelector(".keystore",
