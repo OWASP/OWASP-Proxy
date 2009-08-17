@@ -25,9 +25,16 @@ public class CircularByteBuffer {
 		return length;
 	}
 
+	public int getBufferSize() {
+		return buff == null ? 0 : buff.length;
+	}
+
+	public int getCapacity() {
+		return buff.length - length;
+	}
+
 	private void ensureCapacity(int bytes) {
-		int avail = buff.length - length;
-		if (avail < bytes) {
+		if (getCapacity() < bytes) {
 			byte[] t = new byte[buff.length * 2];
 			if (length == 0) {
 				// copy nothing
