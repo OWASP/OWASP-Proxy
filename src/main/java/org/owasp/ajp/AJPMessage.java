@@ -5,8 +5,8 @@ import java.io.InputStream;
 
 public class AJPMessage {
 
-	public static final byte[] AJP_CLIENT = { (byte) 0x12, (byte) 0x34 };
-	public static final byte[] AJP_SERVER = { (byte) 0x41, (byte) 0x42 };
+	static final byte[] AJP_CLIENT = { (byte) 0x12, (byte) 0x34 };
+	static final byte[] AJP_SERVER = { (byte) 0x41, (byte) 0x42 };
 
 	/**
 	 * Fixed size buffer.
@@ -159,9 +159,10 @@ public class AJPMessage {
 	 * eliminates an extra buffer, as well as a copy.
 	 * 
 	 * @param in
+	 * @return the number of bytes read from the InputStream
 	 * @throws IOException
 	 */
-	public void appendBytes(InputStream in, int max) throws IOException {
+	public int appendBytes(InputStream in, int max) throws IOException {
 		max = Math.min(max, buf.length - (pos + 2 + 1));
 		int read = 0, got;
 		while (read < max
@@ -173,6 +174,7 @@ public class AJPMessage {
 			pos += read;
 			appendByte(0);
 		}
+		return read;
 	}
 
 	/**
