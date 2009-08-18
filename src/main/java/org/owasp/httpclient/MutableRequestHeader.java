@@ -73,11 +73,7 @@ public interface MutableRequestHeader extends RequestHeader,
 			String[] parts = getStartParts();
 			if (parts.length < 2) {
 				String[] p = new String[2];
-				if (parts.length == 1) {
-					p[0] = parts[0];
-				} else {
-					p[0] = null;
-				}
+				p[0] = parts.length >= 1 ? parts[0] : "GET";
 				parts = p;
 			}
 			parts[1] = resource;
@@ -98,17 +94,8 @@ public interface MutableRequestHeader extends RequestHeader,
 			String[] parts = getStartParts();
 			if (parts.length < 3) {
 				String[] p = new String[3];
-				if (parts.length >= 1) {
-					p[0] = parts[0];
-					if (parts.length >= 2) {
-						p[1] = parts[1];
-					} else {
-						p[1] = null;
-					}
-				} else {
-					p[0] = null;
-					p[1] = null;
-				}
+				p[0] = parts.length >= 1 ? parts[0] : "GET";
+				p[1] = parts.length >= 2 ? parts[1] : "/";
 				parts = p;
 			}
 			parts[2] = version;
