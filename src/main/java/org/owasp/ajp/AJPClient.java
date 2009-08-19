@@ -19,9 +19,23 @@ import org.owasp.httpclient.NamedValue;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
+import org.owasp.httpclient.io.BufferedInputStream;
 import org.owasp.httpclient.util.Base64;
 
 public class AJPClient {
+
+	private static final byte[] PING;
+
+	private static final AJPMessage PONG = new AJPMessage(16);
+
+	static {
+		AJPMessage msg = new AJPMessage(16);
+		msg.reset();
+		msg.appendByte(AJPConstants.JK_AJP13_CPING_REQUEST);
+		msg.end(AJPMessage.AJP_CLIENT);
+		PING = new byte[msg.getLen()];
+		System.arraycopy(msg.getBuffer(), 0, PING, 0, msg.getLen());
+	}
 
 	private static final String START_CERTIFICATE = "-----BEGIN CERTIFICATE-----\n";
 
@@ -37,9 +51,10 @@ public class AJPClient {
 
 	private OutputStream out;
 
-	private State state;
+	private State state = State.IDLE;
 
-	private AJPMessage ajpRequest, ajpResponse;
+	private AJPMessage ajpRequest = new AJPMessage(8192),
+			ajpResponse = new AJPMessage(8192);
 
 	private String remoteAddress, remoteHost, context, servletPath, remoteUser,
 			authType, route, sslCert, sslCipher, sslSession, sslKeySize,
@@ -51,26 +66,43 @@ public class AJPClient {
 		this(Proxy.NO_PROXY, target);
 	}
 
-	public AJPClient(Proxy proxy, InetSocketAddress target)
-			throws IOException {
+	public AJPClient(Proxy proxy, InetSocketAddress target) throws IOException {
 		sock = new Socket(proxy);
 		sock.connect(target);
 		in = sock.getInputStream();
 		out = sock.getOutputStream();
-		state = State.IDLE;
-		ajpRequest = new AJPMessage(8192);
-		ajpResponse = new AJPMessage(8192);
+	}
+
+	public void setTimeout(int timeout) throws IOException {
+		sock.setSoTimeout(timeout);
 	}
 
 	public void close() throws IOException {
 		sock.close();
 	}
 
+	public boolean isIdle() {
+		return State.IDLE.equals(state);
+	}
+
+	public boolean ping() throws IOException {
+		if (!isIdle())
+			throw new IllegalStateException("Client is currently assigned");
+		out.write(PING);
+		out.flush();
+		readMessage(in, PONG);
+		return PONG.peekByte() == AJPConstants.JK_AJP13_CPONG_REPLY;
+	}
+
 	public StreamingResponse fetchResponse(StreamingRequest request)
 			throws MessageFormatException, IOException {
-		if (!State.IDLE.equals(state))
+		if (!isIdle())
 			throw new IllegalStateException(
 					"Can't fetch another response while one is in progress");
+
+		// if (!ping())
+		// throw new IOException("Unable to ping, connection closed?");
+
 		translate(request, ajpRequest);
 		out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
 		InputStream content = request.getContent();
@@ -105,103 +137,35 @@ public class AJPClient {
 			throw new IllegalStateException(
 					"Expected message of type SEND_HEADERS, got " + type);
 
-		response.setContent(new AJPInputStream());
+		response.setContent(new AJPResponseInputStream(in));
 
 		return response;
 	}
 
-	private class AJPInputStream extends InputStream {
+	private class AJPResponseInputStream extends BufferedInputStream {
 
-		private boolean closed = false;
-		private byte[] buff = null;
-		private int pos = 0;
-		private int len = 0;
-
-		public AJPInputStream() throws IOException {
-			fill();
+		public AJPResponseInputStream(InputStream in) throws IOException {
+			super(in);
 		}
 
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.io.InputStream#available()
-		 */
-		@Override
-		public int available() throws IOException {
-			return len;
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.io.InputStream#close()
-		 */
-		@Override
-		public void close() throws IOException {
-			if (!closed) {
-				byte[] b = new byte[1024];
-				int got;
-				while ((got = read(b)) > -1)
-					;
-				closed = true;
-			}
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.io.InputStream#read()
-		 */
-		@Override
-		public int read() throws IOException {
-			if (this.len == 0 & closed)
-				return -1;
-
-			int ret = buff[pos];
-			pos++;
-			len--;
-			if (len == 0)
-				fill();
-			return ret;
-		}
-
-		/*
-		 * (non-Javadoc)
-		 * 
-		 * @see java.io.InputStream#read(byte[], int, int)
-		 */
-		@Override
-		public int read(byte[] b, int off, int len) throws IOException {
-			if (this.len == 0 && closed)
-				return -1;
-
-			int got = 0;
-			do {
-				int avail = Math.min(this.len, len);
-				System.arraycopy(buff, pos, b, off, avail);
-				pos += avail;
-				this.len -= avail;
-				got += avail;
-				if (this.len == 0)
-					fill();
-			} while (got < len && this.len > 0);
-			return got;
-		}
-
-		private void fill() throws IOException {
+		protected void fillBuffer() throws IOException {
 			readMessage(in, ajpResponse);
 			int type = ajpResponse.getByte();
 			if (type == AJPConstants.JK_AJP13_END_RESPONSE) {
-				closed = true;
 				state = State.IDLE;
+				buff = null;
+				start = 0;
+				end = 0;
 			} else if (type == AJPConstants.JK_AJP13_SEND_BODY_CHUNK) {
-				len = ajpResponse.peekInt();
+				int len = ajpResponse.peekInt();
 				if (buff == null || buff.length < len)
 					buff = new byte[len];
 				int got = ajpResponse.getBytes(buff);
 				if (got != len)
 					throw new IllegalStateException(
 							"buffer lengths did not match!");
+				start = 0;
+				end = len;
 			}
 		}
 
@@ -241,16 +205,19 @@ public class AJPClient {
 		appendRequestAttribute(message, AJPConstants.SC_A_CONTEXT, context);
 		appendRequestAttribute(message, AJPConstants.SC_A_SERVLET_PATH,
 				servletPath);
-		appendRequestAttribute(message, AJPConstants.SC_A_REMOTE_USER, remoteUser);
+		appendRequestAttribute(message, AJPConstants.SC_A_REMOTE_USER,
+				remoteUser);
 		appendRequestAttribute(message, AJPConstants.SC_A_AUTH_TYPE, authType);
 		appendRequestAttribute(message, AJPConstants.SC_A_QUERY_STRING, query);
 		appendRequestAttribute(message, AJPConstants.SC_A_JVM_ROUTE, route);
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CERT, sslCert);
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CIPHER, sslCipher);
-		appendRequestAttribute(message, AJPConstants.SC_A_SSL_SESSION, sslSession);
+		appendRequestAttribute(message, AJPConstants.SC_A_SSL_SESSION,
+				sslSession);
 		appendRequestAttributes(message, AJPConstants.SC_A_REQ_ATTRIBUTE,
 				requestAttributes);
-		appendRequestAttribute(message, AJPConstants.SC_A_SSL_KEY_SIZE, sslKeySize);
+		appendRequestAttribute(message, AJPConstants.SC_A_SSL_KEY_SIZE,
+				sslKeySize);
 		appendRequestAttribute(message, AJPConstants.SC_A_SECRET, secret);
 		appendRequestAttribute(message, AJPConstants.SC_A_STORED_METHOD,
 				storedMethod);
@@ -306,7 +273,7 @@ public class AJPClient {
 		for (int i = 0; i < n; i++) {
 			byte code = message.peekByte();
 			String name;
-			if (code == 0xA0) {
+			if (code == (byte) 0xA0) {
 				int index = message.getInt();
 				name = AJPConstants.getResponseHeader(index);
 			} else {
@@ -327,6 +294,8 @@ public class AJPClient {
 	 */
 	private static void readMessage(InputStream in, AJPMessage message)
 			throws IOException {
+
+		message.reset();
 
 		byte[] buf = message.getBuffer();
 
