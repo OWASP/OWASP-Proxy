@@ -2,6 +2,7 @@ package org.owasp.ajp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 
 public class AJPMessage {
 
@@ -38,6 +39,7 @@ public class AJPMessage {
 	public void reset() {
 		len = 4;
 		pos = 4;
+		Arrays.fill(buf, (byte) 0);
 	}
 
 	/**
@@ -291,7 +293,7 @@ public class AJPMessage {
 			}
 			return -1;
 		}
-		if (true) {
+		if (false) {
 			System.err.println("Received " + len + " " + buf[0]);
 		}
 		return len;
