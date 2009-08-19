@@ -120,10 +120,10 @@ public class AJPConstants {
 	public static final int SC_REQ_USER_AGENT = 14;
 
 	// Translates integer codes to request header names
-	private static final String[] requestHeaders = { "accept",
-			"accept-charset", "accept-encoding", "accept-language",
-			"authorization", "connection", "content-type", "content-length",
-			"cookie", "cookie2", "host", "pragma", "referer", "user-agent" };
+	private static final String[] requestHeaders = { "Accept",
+			"Accept-Charset", "Accept-Encoding", "Accept-Language",
+			"Authorization", "Connection", "Content-Type", "Content-Length",
+			"Cookie", "Cookie2", "Host", "Pragma", "Referer", "User-Agent" };
 
 	private static final Map<String, Integer> requestHeadersHash = new HashMap<String, Integer>(
 			requestHeaders.length);
@@ -131,7 +131,7 @@ public class AJPConstants {
 	static {
 		int i;
 		for (i = 0; i < requestHeaders.length; i++) {
-			requestHeadersHash.put(requestHeaders[i], Integer
+			requestHeadersHash.put(requestHeaders[i].toLowerCase(), Integer
 					.valueOf(0xA001 + i));
 		}
 
@@ -163,7 +163,7 @@ public class AJPConstants {
 	}
 
 	public static final String getRequestMethod(int index) {
-		return requestHeaders[index];
+		return requestMethods[index - 1];
 	}
 
 	public static final int getRequestHeaderIndex(String header) {
@@ -175,7 +175,7 @@ public class AJPConstants {
 	}
 
 	public static final String getRequestHeader(int index) {
-		return requestHeaders[index];
+		return requestHeaders[index - 0xA001];
 	}
 
 	public static final int getResponseHeaderIndex(String header) {
@@ -187,6 +187,6 @@ public class AJPConstants {
 	}
 
 	public static final String getResponseHeader(int index) {
-		return responseHeaders[index];
+		return responseHeaders[index - 0xA001];
 	}
 }
