@@ -6,7 +6,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import org.owasp.httpclient.Client;
+import org.owasp.httpclient.HttpClient;
 import org.owasp.httpclient.MessageFormatException;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
@@ -16,7 +16,7 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 
 	private ServerGroup serverGroup = null;
 
-	private ThreadLocal<Client> client = new ThreadLocal<Client>() {
+	private ThreadLocal<HttpClient> client = new ThreadLocal<HttpClient>() {
 
 		/*
 		 * (non-Javadoc)
@@ -24,7 +24,7 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 		 * @see java.lang.ThreadLocal#initialValue()
 		 */
 		@Override
-		protected Client initialValue() {
+		protected HttpClient initialValue() {
 			return createClient();
 		}
 
@@ -34,8 +34,8 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 		this.serverGroup = serverGroup;
 	}
 
-	protected Client createClient() {
-		return new Client() {
+	protected HttpClient createClient() {
+		return new HttpClient() {
 
 			/*
 			 * (non-Javadoc)
@@ -73,7 +73,7 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 	public StreamingResponse handleRequest(InetAddress source,
 			StreamingRequest request, boolean isContinue) throws IOException,
 			MessageFormatException {
-		Client client = this.client.get();
+		HttpClient client = this.client.get();
 		if (isContinue) {
 			client.sendRequestContent(request.getContent());
 		} else {

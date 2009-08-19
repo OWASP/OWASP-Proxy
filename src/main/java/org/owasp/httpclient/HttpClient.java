@@ -32,9 +32,9 @@ import org.owasp.httpclient.io.EofNotifyingInputStream;
 import org.owasp.httpclient.io.FixedLengthInputStream;
 import org.owasp.httpclient.util.AsciiString;
 
-public class Client {
+public class HttpClient {
 
-	private static Logger logger = Logger.getLogger(Client.class.getName());
+	private static Logger logger = Logger.getLogger(HttpClient.class.getName());
 
 	public static final ProxySelector NO_PROXY = new ProxySelector() {
 
@@ -80,7 +80,7 @@ public class Client {
 
 	private int soTimeout = 10000;
 
-	public Client() {
+	public HttpClient() {
 	}
 
 	public void setProxySelector(ProxySelector proxySelector) {

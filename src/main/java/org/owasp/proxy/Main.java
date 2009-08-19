@@ -13,7 +13,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
-import org.owasp.httpclient.Client;
+import org.owasp.httpclient.HttpClient;
 import org.owasp.httpclient.MutableResponseHeader;
 import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.SSLContextSelector;
@@ -116,8 +116,8 @@ public class Main {
 
 		DefaultHttpRequestHandler drh = new DefaultHttpRequestHandler() {
 			@Override
-			protected Client createClient() {
-				Client client = super.createClient();
+			protected HttpClient createClient() {
+				HttpClient client = super.createClient();
 				client.setProxySelector(ps);
 				return client;
 			}

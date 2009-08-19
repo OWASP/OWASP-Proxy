@@ -36,7 +36,7 @@ import org.owasp.httpclient.io.ChunkedInputStream;
 import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.test.TraceServer;
 
-public class ClientTest {
+public class HttpClientTest {
 
 	private static Logger logger = Logger.getAnonymousLogger();
 
@@ -57,7 +57,7 @@ public class ClientTest {
 
 	@Test
 	public void testFetchResponse() throws Exception {
-		Client client = new Client();
+		HttpClient client = new HttpClient();
 		client.connect("localhost", 9999, false);
 		String request = "GET /blah/blah?abc=def HTTP/1.0\r\nHost: localhost\r\n\r\n";
 		client.sendRequestHeader(request.getBytes());
@@ -73,7 +73,7 @@ public class ClientTest {
 
 	@Test
 	public void testContinue() throws Exception {
-		Client client = new Client();
+		HttpClient client = new HttpClient();
 		client.connect("localhost", 9999, false);
 		byte[] header = AsciiString
 				.getBytes("POST /target HTTP/1.1\r\n"
@@ -103,7 +103,7 @@ public class ClientTest {
 	@Test
 	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
-		Client client = new Client();
+		HttpClient client = new HttpClient();
 		client.connect("www.google.co.za", 80, false);
 		String request = "GET /search?q=OWASP+Proxy&ie=utf-8&oe=utf-8&aq=t&rls=org.mozilla:en-US:official&client=firefox-a HTTP/1.1\r\n"
 				+ "Host : www.google.co.za\r\n\r\n";
