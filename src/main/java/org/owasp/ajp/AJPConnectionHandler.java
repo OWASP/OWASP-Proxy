@@ -31,8 +31,25 @@ public class AJPConnectionHandler implements ConnectionHandler {
 
 	private AJPRequestHandler handler;
 
+	private int timeout = 30000;
+
 	public AJPConnectionHandler(AJPRequestHandler handler) {
 		this.handler = handler;
+	}
+
+	/**
+	 * @return the timeout
+	 */
+	public int getTimeout() {
+		return timeout;
+	}
+
+	/**
+	 * @param timeout
+	 *            the timeout to set
+	 */
+	public void setTimeout(int timeout) {
+		this.timeout = timeout;
 	}
 
 	/*
@@ -43,6 +60,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 	 * )
 	 */
 	public void handleConnection(Socket socket) throws IOException {
+		socket.setSoTimeout(timeout);
 		InputStream in = socket.getInputStream();
 		OutputStream out = socket.getOutputStream();
 
@@ -54,7 +72,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 						"Trying to read a new request in state " + holder.state);
 			try {
 				readMessage(in, ajpRequest);
-			} catch (IOException expected) { // error reading a new request
+			} catch (IOException ignore) {
 				return;
 			}
 			int type = ajpRequest.peekByte();

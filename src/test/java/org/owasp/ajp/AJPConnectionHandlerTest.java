@@ -23,6 +23,8 @@ public class AJPConnectionHandlerTest {
 
 	private static MutableBufferedResponse response;
 
+	private static InetSocketAddress ajp;
+
 	private static AJPRequestHandler handler = new AJPRequestHandler() {
 		public void dispose() throws IOException {
 		}
@@ -90,12 +92,13 @@ public class AJPConnectionHandlerTest {
 
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception {
+		ajp = new InetSocketAddress("localhost", 8010);
 		response = new MutableBufferedResponse.Impl();
 		response.setHeader(AsciiString
 				.getBytes("HTTP/1.1 200 Ok\r\nContent-Length: 16\r\n\r\n"));
 		response.setContent(AsciiString.getBytes("0123456789ABCDEF"));
 		AJPConnectionHandler ach = new AJPConnectionHandler(handler);
-		server = new Server(new InetSocketAddress("localhost", 8009), ach);
+		server = new Server(ajp, ach);
 		server.start();
 	}
 
@@ -114,8 +117,8 @@ public class AJPConnectionHandlerTest {
 
 	@Test
 	public void testHandleConnection() throws Exception {
-		AJPClient client = new AJPClient(new InetSocketAddress("localhost",
-				8009));
+		AJPClient client = new AJPClient();
+		client.connect(ajp);
 
 		StreamingRequest req = new StreamingRequest.Impl();
 		req.setTarget(new InetSocketAddress("www.target.com", 443));

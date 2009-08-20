@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 
+import org.owasp.httpclient.util.AsciiString;
+
 public class AJPMessage {
 
 	static final byte[] AJP_CLIENT = { (byte) 0x12, (byte) 0x34 };
@@ -304,7 +306,8 @@ public class AJPMessage {
 	 */
 	public void dump(String msg) {
 		if (true) {
-			System.err.println(msg + ": " + buf + " " + pos + "/" + (len + 4));
+			System.err.println(msg + ": " + AsciiString.create(buf) + " " + pos
+					+ "/" + (len + 4));
 		}
 		int max = pos;
 		if (len + 4 > pos)

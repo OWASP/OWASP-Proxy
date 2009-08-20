@@ -61,21 +61,23 @@ public class AJPClientTest {
 
 	@Test
 	// @Ignore
-	public void execute() throws Exception {
+	public void testCertificate() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
-		AJPClient connection = new AJPClient(ajp);
-		connection.getRequestAttributes().put("w00t", "WAIT");
-		InputStream in = AJPClientTest.class.getClassLoader().getResourceAsStream(
-				"org/owasp/proxy/daemon/server.p12");
+		AJPClient connection = new AJPClient();
+		connection.connect(ajp);
+		AJPProperties properties = connection.getProperties();
+		properties.getRequestAttributes().put("w00t", "WAIT");
+		InputStream in = AJPClientTest.class.getClassLoader()
+				.getResourceAsStream("org/owasp/proxy/daemon/server.p12");
 		if (in == null) {
 			System.err.println("Can't find keystore");
 			return;
 		}
 		X509Certificate cert = loadCertificate(in, "password".toCharArray());
-		connection.setSslCert(cert);
-		connection.setSslCipher("TLS_DHE_DSS_WITH_AES_128_CBC_SHA");
-		connection.setSslKeySize("2048");
-		connection.setSslSession("SSLSession");
+		properties.setSslCert(cert);
+		properties.setSslCipher("TLS_DHE_DSS_WITH_AES_128_CBC_SHA");
+		properties.setSslKeySize("2048");
+		properties.setSslSession("SSLSession");
 
 		StreamingRequest request = new StreamingRequest.Impl();
 		StreamingResponse response;
@@ -94,43 +96,6 @@ public class AJPClientTest {
 		MessageUtils.buffer(response, b, Integer.MAX_VALUE);
 		System.out.println(b);
 
-		// String cookie = response.getHeader("Set-Cookie");
-		// int s = cookie.indexOf(';');
-		// cookie = cookie.substring(0, s);
-		// int e = cookie.indexOf('=');
-		// cookie = cookie.substring(e);
-		//
-		// String content = "browser=test&sequence=0";
-		// request.setMethod("POST");
-		// request.setResource("/cachetest/EntryServlet?action=register");
-		// request.setVersion("HTTP/1.0");
-		// request.setHeader("Content-Type",
-		// "application/x-www-form-urlencoded");
-		// request.setHeader("Cookie", cookie);
-		// request.setHeader("Content-Length",
-		// Integer.toString(content.length()));
-		// request.setHeader("User-Agent", "AJPClient");
-		// request.setContent(new ByteArrayInputStream(AsciiString
-		// .getBytes(content)));
-		//
-		// response = connection.fetchResponse(request);
-		// b = new MutableBufferedResponse.Impl();
-		// MessageUtils.buffer(response, b, Integer.MAX_VALUE);
-		// System.out.println(b);
-		//
-		// request.setMethod("GET");
-		// request.setResource("/cachetest/EntryServlet?sequence=4000");
-		// request.deleteHeader("Content-Length");
-		// request.deleteHeader("Content-Type");
-		// request.setContent(null);
-		//
-		// // connection.setSecure(true);
-		//
-		// response = connection.fetchResponse(request);
-		// b = new MutableBufferedResponse.Impl();
-		// MessageUtils.buffer(response, b, Integer.MAX_VALUE);
-		// System.out.println(b);
-		//
 		connection.close();
 
 	}
@@ -138,7 +103,8 @@ public class AJPClientTest {
 	@Test
 	public void ping() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
-		AJPClient connection = new AJPClient(ajp);
+		AJPClient connection = new AJPClient();
+		connection.connect(ajp);
 
 		for (int i = 0; i < 15; i++)
 			if (!connection.ping())
@@ -168,7 +134,8 @@ public class AJPClientTest {
 	@Test
 	public void testTomcat() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
-		AJPClient client = new AJPClient(ajp);
+		AJPClient client = new AJPClient();
+		client.connect(ajp);
 		client.setTimeout(1000);
 		doPosts(client);
 	}
@@ -178,8 +145,9 @@ public class AJPClientTest {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8010);
 		Server server = new Server(ajp, new AJPConnectionHandler(handler));
 		server.start();
-		AJPClient client = new AJPClient(ajp);
-		// client.setTimeout(1000);
+		AJPClient client = new AJPClient();
+		client.setTimeout(1000);
+		client.connect(ajp);
 
 		doPosts(client);
 

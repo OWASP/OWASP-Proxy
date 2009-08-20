@@ -6,9 +6,8 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.X509Certificate;
-import java.util.HashMap;
+import java.net.SocketAddress;
+import java.net.SocketTimeoutException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -20,7 +19,6 @@ import org.owasp.httpclient.RequestHeader;
 import org.owasp.httpclient.StreamingRequest;
 import org.owasp.httpclient.StreamingResponse;
 import org.owasp.httpclient.io.BufferedInputStream;
-import org.owasp.httpclient.util.Base64;
 
 public class AJPClient {
 
@@ -37,12 +35,8 @@ public class AJPClient {
 		System.arraycopy(msg.getBuffer(), 0, PING, 0, msg.getLen());
 	}
 
-	private static final String START_CERTIFICATE = "-----BEGIN CERTIFICATE-----\n";
-
-	private static final String END_CERTIFICATE = "\n-----END CERTIFICATE-----\n";
-
 	private enum State {
-		IDLE, ASSIGNED
+		DISCONNECTED, IDLE, ASSIGNED
 	}
 
 	private Socket sock;
@@ -51,26 +45,37 @@ public class AJPClient {
 
 	private OutputStream out;
 
-	private State state = State.IDLE;
+	private State state = State.DISCONNECTED;
+
+	private int timeout = 10000;
+
+	private AJPProperties properties = new AJPProperties();
 
 	private AJPMessage ajpRequest = new AJPMessage(8192),
 			ajpResponse = new AJPMessage(8192);
 
-	private String remoteAddress, remoteHost, context, servletPath, remoteUser,
-			authType, route, sslCert, sslCipher, sslSession, sslKeySize,
-			secret, storedMethod;
+	private long requestSubmissionTime, responseHeaderTime;
 
-	private Map<String, String> requestAttributes = null;
-
-	public AJPClient(InetSocketAddress target) throws IOException {
-		this(Proxy.NO_PROXY, target);
+	public AJPClient() {
 	}
 
-	public AJPClient(Proxy proxy, InetSocketAddress target) throws IOException {
+	public void connect(InetSocketAddress target) throws IOException {
+		connect(target, Proxy.NO_PROXY);
+	}
+
+	public void connect(InetSocketAddress target, Proxy proxy)
+			throws IOException {
+		try {
+			close();
+		} catch (IOException ignored) {
+		}
+		validateTarget(proxy.address());
 		sock = new Socket(proxy);
 		sock.connect(target);
+		sock.setSoTimeout(timeout);
 		in = sock.getInputStream();
 		out = sock.getOutputStream();
+		state = State.IDLE;
 	}
 
 	public void setTimeout(int timeout) throws IOException {
@@ -78,7 +83,31 @@ public class AJPClient {
 	}
 
 	public void close() throws IOException {
-		sock.close();
+		if (sock != null) {
+			if (!sock.isClosed()) {
+				sock.close();
+			}
+		}
+	}
+
+	protected void validateTarget(SocketAddress target) throws IOException {
+	}
+
+	public boolean isConnected() {
+		if (sock == null)
+			return false;
+		try {
+			sock.setSoTimeout(10);
+			int got = sock.getInputStream().read();
+			if (got == -1)
+				return false;
+			throw new RuntimeException("Unexpected data read from socket: "
+					+ got);
+		} catch (SocketTimeoutException ste) {
+			return true;
+		} catch (IOException ioe) {
+			return false;
+		}
 	}
 
 	public boolean isIdle() {
@@ -86,6 +115,8 @@ public class AJPClient {
 	}
 
 	public boolean ping() throws IOException {
+		if (!isConnected())
+			throw new IOException("Not connected to server");
 		if (!isIdle())
 			throw new IllegalStateException("Client is currently assigned");
 		out.write(PING);
@@ -96,12 +127,10 @@ public class AJPClient {
 
 	public StreamingResponse fetchResponse(StreamingRequest request)
 			throws MessageFormatException, IOException {
+		if (!isConnected())
+			throw new IOException("Not connected to server");
 		if (!isIdle())
-			throw new IllegalStateException(
-					"Can't fetch another response while one is in progress");
-
-		// if (!ping())
-		// throw new IOException("Unable to ping, connection closed?");
+			throw new IllegalStateException("Client is currently assigned");
 
 		translate(request, ajpRequest);
 		out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
@@ -113,6 +142,7 @@ public class AJPClient {
 			out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
 		}
 		out.flush();
+		requestSubmissionTime = System.currentTimeMillis();
 
 		readMessage(in, ajpResponse);
 
@@ -126,12 +156,14 @@ public class AJPClient {
 			ajpRequest.end(AJPMessage.AJP_CLIENT);
 			out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
 			out.flush();
+			requestSubmissionTime = System.currentTimeMillis();
 			readMessage(in, ajpResponse);
 			type = ajpResponse.peekByte();
 		}
 
 		StreamingResponse response = new StreamingResponse.Impl();
 		if (type == AJPConstants.JK_AJP13_SEND_HEADERS) {
+			responseHeaderTime = System.currentTimeMillis();
 			translate(ajpResponse, response);
 		} else
 			throw new IllegalStateException(
@@ -202,25 +234,31 @@ public class AJPClient {
 			appendRequestHeader(message, headers[i]);
 		}
 
-		appendRequestAttribute(message, AJPConstants.SC_A_CONTEXT, context);
+		appendRequestAttribute(message, AJPConstants.SC_A_CONTEXT, properties
+				.getContext());
 		appendRequestAttribute(message, AJPConstants.SC_A_SERVLET_PATH,
-				servletPath);
+				properties.getServletPath());
 		appendRequestAttribute(message, AJPConstants.SC_A_REMOTE_USER,
-				remoteUser);
-		appendRequestAttribute(message, AJPConstants.SC_A_AUTH_TYPE, authType);
+				properties.getRemoteUser());
+		appendRequestAttribute(message, AJPConstants.SC_A_AUTH_TYPE, properties
+				.getAuthType());
 		appendRequestAttribute(message, AJPConstants.SC_A_QUERY_STRING, query);
-		appendRequestAttribute(message, AJPConstants.SC_A_JVM_ROUTE, route);
-		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CERT, sslCert);
-		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CIPHER, sslCipher);
+		appendRequestAttribute(message, AJPConstants.SC_A_JVM_ROUTE, properties
+				.getRoute());
+		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CERT, properties
+				.getSslCert());
+		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CIPHER,
+				properties.getSslCipher());
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_SESSION,
-				sslSession);
+				properties.getSslSession());
 		appendRequestAttributes(message, AJPConstants.SC_A_REQ_ATTRIBUTE,
-				requestAttributes);
+				properties.getRequestAttributes());
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_KEY_SIZE,
-				sslKeySize);
-		appendRequestAttribute(message, AJPConstants.SC_A_SECRET, secret);
+				properties.getSslKeySize());
+		appendRequestAttribute(message, AJPConstants.SC_A_SECRET, properties
+				.getSecret());
 		appendRequestAttribute(message, AJPConstants.SC_A_STORED_METHOD,
-				storedMethod);
+				properties.getStoredMethod());
 
 		message.appendByte(AJPConstants.SC_A_ARE_DONE);
 		message.end(AJPMessage.AJP_CLIENT);
@@ -243,6 +281,20 @@ public class AJPClient {
 			return;
 		message.appendByte(attribute);
 		message.appendString(value);
+	}
+
+	private String getRemoteAddress() {
+		String remoteAddress = properties.getRemoteAddress();
+		if (remoteAddress != null)
+			return remoteAddress;
+		return sock.getLocalAddress().getHostAddress();
+	}
+
+	private String getRemoteHost() {
+		String remoteHost = properties.getRemoteHost();
+		if (remoteHost != null)
+			return remoteHost;
+		return sock.getLocalAddress().getHostName();
 	}
 
 	private void appendRequestAttributes(AJPMessage message, byte attribute,
@@ -324,217 +376,33 @@ public class AJPClient {
 		}
 	}
 
-	public String getRemoteAddress() {
-		if (remoteAddress == null) {
-			return sock.getLocalAddress().getHostAddress();
-		}
-		return remoteAddress;
-	}
-
-	public String getRemoteHost() {
-		if (remoteHost == null)
-			return sock.getLocalAddress().getHostName();
-		return remoteHost;
-	}
-
-	public void setRequestAttributes(Map<String, String> attributes) {
-		this.requestAttributes = attributes;
-	}
-
-	public Map<String, String> getRequestAttributes() {
-		if (requestAttributes == null)
-			requestAttributes = new HashMap<String, String>();
-		return requestAttributes;
+	/**
+	 * @return the properties
+	 */
+	public AJPProperties getProperties() {
+		return properties;
 	}
 
 	/**
-	 * @return the context
+	 * @param properties
+	 *            the properties to set
 	 */
-	public String getContext() {
-		return context;
+	public void setProperties(AJPProperties properties) {
+		this.properties = properties;
 	}
 
 	/**
-	 * @param context
-	 *            the context to set
+	 * @return the requestSubmissionTime
 	 */
-	public void setContext(String context) {
-		this.context = context;
+	public long getRequestSubmissionTime() {
+		return requestSubmissionTime;
 	}
 
 	/**
-	 * @return the servletPath
+	 * @return the responseHeaderStartTime
 	 */
-	public String getServletPath() {
-		return servletPath;
+	public long getResponseHeaderTime() {
+		return responseHeaderTime;
 	}
 
-	/**
-	 * @param servletPath
-	 *            the servletPath to set
-	 */
-	public void setServletPath(String servletPath) {
-		this.servletPath = servletPath;
-	}
-
-	/**
-	 * @return the remoteUser
-	 */
-	public String getRemoteUser() {
-		return remoteUser;
-	}
-
-	/**
-	 * @param remoteUser
-	 *            the remoteUser to set
-	 */
-	public void setRemoteUser(String remoteUser) {
-		this.remoteUser = remoteUser;
-	}
-
-	/**
-	 * @return the authType
-	 */
-	public String getAuthType() {
-		return authType;
-	}
-
-	/**
-	 * @param authType
-	 *            the authType to set
-	 */
-	public void setAuthType(String authType) {
-		this.authType = authType;
-	}
-
-	/**
-	 * @return the route
-	 */
-	public String getRoute() {
-		return route;
-	}
-
-	/**
-	 * @param route
-	 *            the route to set
-	 */
-	public void setRoute(String route) {
-		this.route = route;
-	}
-
-	/**
-	 * @return the sslCert
-	 */
-	public String getSslCert() {
-		return sslCert;
-	}
-
-	/**
-	 * @param sslCert
-	 *            the sslCert to set
-	 */
-	public void setSslCert(String sslCert) {
-		this.sslCert = sslCert;
-	}
-
-	public void setSslCert(X509Certificate cert)
-			throws CertificateEncodingException, IOException {
-		StringBuilder buff = new StringBuilder();
-		buff.append(START_CERTIFICATE);
-		buff.append(Base64
-				.encodeBytes(cert.getEncoded(), Base64.DO_BREAK_LINES));
-		buff.append(END_CERTIFICATE);
-		setSslCert(buff.toString());
-	}
-
-	/**
-	 * @return the sslCipher
-	 */
-	public String getSslCipher() {
-		return sslCipher;
-	}
-
-	/**
-	 * @param sslCipher
-	 *            the sslCipher to set
-	 */
-	public void setSslCipher(String sslCipher) {
-		this.sslCipher = sslCipher;
-	}
-
-	/**
-	 * @return the sslSession
-	 */
-	public String getSslSession() {
-		return sslSession;
-	}
-
-	/**
-	 * @param sslSession
-	 *            the sslSession to set
-	 */
-	public void setSslSession(String sslSession) {
-		this.sslSession = sslSession;
-	}
-
-	/**
-	 * @return the sslKeySize
-	 */
-	public String getSslKeySize() {
-		return sslKeySize;
-	}
-
-	/**
-	 * @param sslKeySize
-	 *            the sslKeySize to set
-	 */
-	public void setSslKeySize(String sslKeySize) {
-		this.sslKeySize = sslKeySize;
-	}
-
-	/**
-	 * @return the secret
-	 */
-	public String getSecret() {
-		return secret;
-	}
-
-	/**
-	 * @param secret
-	 *            the secret to set
-	 */
-	public void setSecret(String secret) {
-		this.secret = secret;
-	}
-
-	/**
-	 * @return the storedMethod
-	 */
-	public String getStoredMethod() {
-		return storedMethod;
-	}
-
-	/**
-	 * @param storedMethod
-	 *            the storedMethod to set
-	 */
-	public void setStoredMethod(String storedMethod) {
-		this.storedMethod = storedMethod;
-	}
-
-	/**
-	 * @param remoteAddress
-	 *            the remoteAddress to set
-	 */
-	public void setRemoteAddress(String remoteAddress) {
-		this.remoteAddress = remoteAddress;
-	}
-
-	/**
-	 * @param remoteHost
-	 *            the remoteHost to set
-	 */
-	public void setRemoteHost(String remoteHost) {
-		this.remoteHost = remoteHost;
-	}
 }
