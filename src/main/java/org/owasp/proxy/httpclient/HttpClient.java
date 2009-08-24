@@ -485,7 +485,7 @@ public class HttpClient {
 		}
 	}
 
-	public long getRequestSubmissionTime() {
+	public long getRequestTime() {
 		return requestSubmissionTime;
 	}
 

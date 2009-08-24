@@ -8,12 +8,8 @@ public interface ResponseHeader extends MessageHeader {
 
 	String getReason() throws MessageFormatException;
 
-	long getHeaderStartedTime();
+	long getHeaderTime();
 
-	long getHeaderCompletedTime();
-
-	long getContentStartedTime();
-
-	long getContentCompletedTime();
+	long getContentTime();
 
 }

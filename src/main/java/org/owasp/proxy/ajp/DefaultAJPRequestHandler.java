@@ -133,9 +133,8 @@ public class DefaultAJPRequestHandler implements AJPRequestHandler,
 			throw new RuntimeException("AJP does not support Expect: continue");
 		} else {
 			StreamingResponse response = client.fetchResponse(request);
-			request.setSubmissionTime(client.getRequestSubmissionTime());
-			response.setHeaderStartedTime(client.getResponseHeaderTime());
-			response.setHeaderCompletedTime(client.getResponseHeaderTime());
+			request.setTime(client.getRequestTime());
+			response.setHeaderTime(client.getResponseHeaderTime());
 			InputStream content = response.getContent();
 			if (content != null)
 				content = new TimingInputStream(content, response);

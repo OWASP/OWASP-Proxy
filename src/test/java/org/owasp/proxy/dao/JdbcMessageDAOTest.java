@@ -14,8 +14,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.owasp.proxy.dao.Conversation;
-import org.owasp.proxy.dao.JdbcMessageDAO;
 import org.owasp.proxy.httpclient.MutableBufferedRequest;
 import org.owasp.proxy.httpclient.MutableBufferedResponse;
 import org.owasp.proxy.httpclient.RequestHeader;
@@ -76,16 +74,14 @@ public class JdbcMessageDAOTest {
 		request.setSsl(false);
 		request.setHeader(AsciiString
 				.getBytes("GET / HTTP/1.0\r\nHost: localhost\r\n\r\n"));
-		request.setSubmissionTime(1);
+		request.setTime(1);
 		MutableBufferedResponse response = new MutableBufferedResponse.Impl();
 		response.setHeader(AsciiString
 				.getBytes("HTTP/1.0 200 Ok\r\nContent-Type: text\r\n\r\n"));
 		byte[] cont = AsciiString.getBytes("Some content");
 		response.setContent(cont);
-		response.setHeaderStartedTime(2);
-		response.setHeaderCompletedTime(3);
-		response.setContentStartedTime(4);
-		response.setContentCompletedTime(5);
+		response.setHeaderTime(2);
+		response.setContentTime(4);
 
 		dao.saveRequest(request);
 		dao.saveResponse(response);
@@ -104,18 +100,12 @@ public class JdbcMessageDAOTest {
 		assertTrue(Arrays.equals(request.getHeader(), reqh.getHeader()));
 		assertEquals(request.getTarget(), reqh.getTarget());
 		assertEquals(request.isSsl(), reqh.isSsl());
-		assertEquals(request.getSubmissionTime(), reqh.getSubmissionTime());
+		assertEquals(request.getTime(), reqh.getTime());
 
 		assertTrue("Response headers differ", Arrays.equals(response
 				.getHeader(), resph.getHeader()));
-		assertEquals(response.getHeaderStartedTime(), resph
-				.getHeaderStartedTime());
-		assertEquals(response.getHeaderCompletedTime(), resph
-				.getHeaderCompletedTime());
-		assertEquals(response.getContentStartedTime(), resph
-				.getContentStartedTime());
-		assertEquals(response.getContentCompletedTime(), resph
-				.getContentCompletedTime());
+		assertEquals(response.getHeaderTime(), resph.getHeaderTime());
+		assertEquals(response.getContentTime(), resph.getContentTime());
 		byte[] content = dao.loadMessageContent(dao.getMessageContentId(c
 				.getRequestId()));
 

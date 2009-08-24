@@ -108,7 +108,7 @@ public class BufferingHttpRequestHandlerTest {
 		brs = new MutableBufferedResponse.Impl();
 		MessageUtils.buffer(response, brs, Integer.MAX_VALUE);
 		content = MessageUtils.decode(brs);
-		// System.out.write(content);
+		System.out.write(content.length);
 
 		//
 		// byte[] buff = new byte[1024];

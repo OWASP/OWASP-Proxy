@@ -15,7 +15,7 @@ public interface MutableRequestHeader extends RequestHeader,
 
 	void setVersion(String version) throws MessageFormatException;
 
-	void setSubmissionTime(long time);
+	void setTime(long time);
 
 	public static class Impl extends MutableMessageHeader.Impl implements
 			MutableRequestHeader {
@@ -24,7 +24,7 @@ public interface MutableRequestHeader extends RequestHeader,
 
 		private boolean ssl;
 
-		private long submissionTime = 0;
+		private long time = 0;
 
 		public InetSocketAddress getTarget() {
 			return target;
@@ -119,8 +119,8 @@ public interface MutableRequestHeader extends RequestHeader,
 		 * 
 		 * @see org.owasp.httpclient.RequestHeader#getSubmissionTime()
 		 */
-		public long getSubmissionTime() {
-			return submissionTime;
+		public long getTime() {
+			return time;
 		}
 
 		/*
@@ -129,8 +129,8 @@ public interface MutableRequestHeader extends RequestHeader,
 		 * @see
 		 * org.owasp.httpclient.MutableRequestHeader#setSubmissionTime(long)
 		 */
-		public void setSubmissionTime(long time) {
-			submissionTime = time;
+		public void setTime(long time) {
+			this.time = time;
 		}
 
 	}

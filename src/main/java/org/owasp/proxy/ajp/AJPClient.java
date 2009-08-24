@@ -394,7 +394,7 @@ public class AJPClient {
 	/**
 	 * @return the requestSubmissionTime
 	 */
-	public long getRequestSubmissionTime() {
+	public long getRequestTime() {
 		return requestSubmissionTime;
 	}
 

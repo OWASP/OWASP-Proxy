@@ -82,11 +82,10 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 			if (request.getContent() != null)
 				client.sendRequestContent(request.getContent());
 		}
-		request.setSubmissionTime(client.getRequestSubmissionTime());
+		request.setTime(client.getRequestTime());
 		StreamingResponse response = new StreamingResponse.Impl();
 		response.setHeader(client.getResponseHeader());
-		response.setHeaderStartedTime(client.getResponseHeaderStartTime());
-		response.setHeaderCompletedTime(client.getResponseHeaderEndTime());
+		response.setHeaderTime(client.getResponseHeaderEndTime());
 		InputStream content = client.getResponseContent();
 		if (content != null)
 			content = new TimingInputStream(content, response);

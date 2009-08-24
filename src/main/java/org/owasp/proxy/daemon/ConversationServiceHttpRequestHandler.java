@@ -213,9 +213,9 @@ public class ConversationServiceHttpRequestHandler implements
 		buff.append(summary.getId());
 		buff.append("\" requestTime=\"").append(summary.getRequestSubmissionTime());
 		buff.append("\" responseHeaderTime=\"").append(
-				summary.getResponseHeaderCompletedTime());
+				summary.getResponseHeaderTime());
 		buff.append("\" responseContentTime=\"").append(
-				summary.getResponseContentCompletedTime());
+				summary.getResponseContentTime());
 		buff.append("\">");
 		tag(buff, "host", summary.getTarget().getHostName());
 		tag(buff, "port", summary.getTarget().getPort());

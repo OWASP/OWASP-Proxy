@@ -14,6 +14,6 @@ public interface RequestHeader extends MessageHeader {
 
 	String getVersion() throws MessageFormatException;
 
-	long getSubmissionTime();
+	long getTime();
 
 }
