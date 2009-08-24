@@ -1,13 +1,13 @@
 package org.owasp.proxy.daemon;
 
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.BufferedResponse;
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
+import org.owasp.proxy.httpclient.BufferedRequest;
+import org.owasp.proxy.httpclient.BufferedResponse;
+import org.owasp.proxy.httpclient.MutableBufferedRequest;
+import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.httpclient.MutableRequestHeader;
+import org.owasp.proxy.httpclient.MutableResponseHeader;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.ResponseHeader;
 
 public abstract class BufferedMessageInterceptor {
 

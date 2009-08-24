@@ -7,7 +7,7 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-import org.owasp.httpclient.util.AsciiString;
+import org.owasp.proxy.util.AsciiString;
 
 /**
  * SOCKS5 request/response message.

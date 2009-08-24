@@ -3,13 +3,13 @@ package org.owasp.proxy.daemon;
 import java.io.IOException;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.dao.MessageDAO;
-import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.dao.MessageDAO;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableBufferedRequest;
+import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.util.MessageUtils;
 
 public class RecordingHttpRequestHandler implements HttpRequestHandler {
 

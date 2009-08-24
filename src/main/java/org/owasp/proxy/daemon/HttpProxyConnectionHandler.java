@@ -14,17 +14,17 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.logging.Logger;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.io.ChunkedInputStream;
-import org.owasp.httpclient.io.CopyInputStream;
-import org.owasp.httpclient.io.EofNotifyingInputStream;
-import org.owasp.httpclient.io.FixedLengthInputStream;
-import org.owasp.httpclient.util.AsciiString;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableRequestHeader;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.io.ChunkedInputStream;
+import org.owasp.proxy.io.CopyInputStream;
+import org.owasp.proxy.io.EofNotifyingInputStream;
+import org.owasp.proxy.io.FixedLengthInputStream;
 import org.owasp.proxy.model.URI;
+import org.owasp.proxy.util.AsciiString;
 
 public class HttpProxyConnectionHandler implements ConnectionHandler,
 		TargetedConnectionHandler, EncryptedConnectionHandler {

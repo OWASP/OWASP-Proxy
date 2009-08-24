@@ -4,13 +4,13 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.io.CountingInputStream;
-import org.owasp.httpclient.io.EofNotifyingInputStream;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableRequestHeader;
+import org.owasp.proxy.httpclient.MutableResponseHeader;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.io.CountingInputStream;
+import org.owasp.proxy.io.EofNotifyingInputStream;
 
 public class LoggingHttpRequestHandler implements HttpRequestHandler {
 

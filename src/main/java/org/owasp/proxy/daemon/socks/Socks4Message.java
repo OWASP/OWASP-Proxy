@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.util.AsciiString;
+import org.owasp.proxy.util.AsciiString;
 
 /**
  * SOCKS4 Reply/Request message.

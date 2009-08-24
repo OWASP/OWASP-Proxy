@@ -28,15 +28,15 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.logging.Logger;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.io.ChunkedOutputStream;
-import org.owasp.httpclient.io.CopyInputStream;
-import org.owasp.httpclient.util.AsciiString;
-import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.daemon.ConnectionHandler;
 import org.owasp.proxy.daemon.Server;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableBufferedRequest;
+import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.io.ChunkedOutputStream;
+import org.owasp.proxy.io.CopyInputStream;
+import org.owasp.proxy.util.AsciiString;
+import org.owasp.proxy.util.MessageUtils;
 
 public class TraceServer extends Server {
 

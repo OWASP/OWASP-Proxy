@@ -6,11 +6,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import org.owasp.httpclient.HttpClient;
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.io.TimingInputStream;
+import org.owasp.proxy.httpclient.HttpClient;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.io.TimingInputStream;
 
 public class DefaultHttpRequestHandler implements HttpRequestHandler {
 

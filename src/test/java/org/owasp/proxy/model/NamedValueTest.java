@@ -22,8 +22,8 @@ package org.owasp.proxy.model;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.NamedValue;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.NamedValue;
 
 public class NamedValueTest {
 

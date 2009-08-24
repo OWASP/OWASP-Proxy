@@ -13,11 +13,6 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
-import org.owasp.httpclient.HttpClient;
-import org.owasp.httpclient.MutableResponseHeader;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.SSLContextSelector;
-import org.owasp.httpclient.dao.JdbcMessageDAO;
 import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
 import org.owasp.proxy.daemon.BufferedMessageInterceptor;
 import org.owasp.proxy.daemon.BufferingHttpRequestHandler;
@@ -33,6 +28,11 @@ import org.owasp.proxy.daemon.SSLConnectionHandler;
 import org.owasp.proxy.daemon.ServerGroup;
 import org.owasp.proxy.daemon.SocksConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
+import org.owasp.proxy.dao.JdbcMessageDAO;
+import org.owasp.proxy.httpclient.HttpClient;
+import org.owasp.proxy.httpclient.MutableResponseHeader;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.SSLContextSelector;
 import org.owasp.proxy.util.TextFormatter;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 

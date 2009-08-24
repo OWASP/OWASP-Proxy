@@ -39,8 +39,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.owasp.httpclient.util.AsciiString;
 import org.owasp.proxy.test.TraceServer;
+import org.owasp.proxy.util.AsciiString;
 
 public class DefaultHttpProxyTest {
 

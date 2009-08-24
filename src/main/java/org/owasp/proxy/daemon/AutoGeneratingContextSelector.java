@@ -27,7 +27,7 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509KeyManager;
 
-import org.owasp.httpclient.SSLContextSelector;
+import org.owasp.proxy.httpclient.SSLContextSelector;
 
 import sun.security.util.ObjectIdentifier;
 import sun.security.x509.AlgorithmId;

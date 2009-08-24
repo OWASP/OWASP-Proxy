@@ -19,21 +19,21 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
-import org.owasp.httpclient.BufferedRequest;
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableBufferedMessage;
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.MutableRequestHeader;
-import org.owasp.httpclient.MutableResponseHeader;
-import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.util.AsciiString;
-import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.httpclient.BufferedRequest;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableBufferedMessage;
+import org.owasp.proxy.httpclient.MutableBufferedRequest;
+import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.httpclient.MutableRequestHeader;
+import org.owasp.proxy.httpclient.MutableResponseHeader;
+import org.owasp.proxy.httpclient.NamedValue;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.ResponseHeader;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
 import org.owasp.proxy.test.TraceServer;
+import org.owasp.proxy.util.AsciiString;
+import org.owasp.proxy.util.MessageUtils;
 
 public class BufferingHttpRequestHandlerTest {
 

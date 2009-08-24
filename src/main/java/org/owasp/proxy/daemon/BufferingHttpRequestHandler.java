@@ -6,17 +6,17 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.InetAddress;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.MutableBufferedRequest;
-import org.owasp.httpclient.MutableBufferedResponse;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.io.CountingInputStream;
-import org.owasp.httpclient.io.SizeLimitExceededException;
-import org.owasp.httpclient.util.AsciiString;
-import org.owasp.httpclient.util.MessageUtils;
 import org.owasp.proxy.daemon.BufferedMessageInterceptor.Action;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.MutableBufferedRequest;
+import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.io.CountingInputStream;
+import org.owasp.proxy.io.SizeLimitExceededException;
+import org.owasp.proxy.util.AsciiString;
+import org.owasp.proxy.util.MessageUtils;
 
 public class BufferingHttpRequestHandler implements HttpRequestHandler {
 

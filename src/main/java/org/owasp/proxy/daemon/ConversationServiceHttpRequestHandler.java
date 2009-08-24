@@ -10,16 +10,16 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.owasp.httpclient.MessageFormatException;
-import org.owasp.httpclient.NamedValue;
-import org.owasp.httpclient.RequestHeader;
-import org.owasp.httpclient.ResponseHeader;
-import org.owasp.httpclient.StreamingRequest;
-import org.owasp.httpclient.StreamingResponse;
-import org.owasp.httpclient.dao.ConversationSummary;
-import org.owasp.httpclient.dao.MessageDAO;
-import org.owasp.httpclient.util.AsciiString;
-import org.owasp.httpclient.util.MessageUtils;
+import org.owasp.proxy.dao.ConversationSummary;
+import org.owasp.proxy.dao.MessageDAO;
+import org.owasp.proxy.httpclient.MessageFormatException;
+import org.owasp.proxy.httpclient.NamedValue;
+import org.owasp.proxy.httpclient.RequestHeader;
+import org.owasp.proxy.httpclient.ResponseHeader;
+import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.util.AsciiString;
+import org.owasp.proxy.util.MessageUtils;
 import org.springframework.dao.DataAccessException;
 
 @SuppressWarnings("serial")

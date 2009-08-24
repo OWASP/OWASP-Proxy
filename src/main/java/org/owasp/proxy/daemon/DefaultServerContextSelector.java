@@ -9,7 +9,7 @@ import java.security.KeyStore;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 
-import org.owasp.httpclient.SSLContextSelector;
+import org.owasp.proxy.httpclient.SSLContextSelector;
 
 public class DefaultServerContextSelector implements SSLContextSelector {
 

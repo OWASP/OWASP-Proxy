@@ -10,7 +10,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 
-import org.owasp.httpclient.SSLContextSelector;
+import org.owasp.proxy.httpclient.SSLContextSelector;
 import org.owasp.proxy.io.PushbackSocket;
 
 /*

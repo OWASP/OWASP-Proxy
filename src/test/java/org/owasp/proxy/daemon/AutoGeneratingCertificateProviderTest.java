@@ -6,7 +6,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.junit.Test;
-import org.owasp.httpclient.SSLContextSelector;
+import org.owasp.proxy.httpclient.SSLContextSelector;
 
 public class AutoGeneratingCertificateProviderTest {
 
