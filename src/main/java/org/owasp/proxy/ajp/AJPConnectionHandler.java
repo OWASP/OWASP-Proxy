@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.util.Arrays;
 
 import org.owasp.proxy.daemon.ConnectionHandler;
 import org.owasp.proxy.httpclient.MessageFormatException;
@@ -24,9 +23,8 @@ public class AJPConnectionHandler implements ConnectionHandler {
 		AJPMessage msg = new AJPMessage(16);
 		msg.reset();
 		msg.appendByte(AJPConstants.JK_AJP13_CPONG_REPLY);
-		msg.end(AJPMessage.AJP_SERVER);
-		PONG = new byte[msg.getLen()];
-		System.arraycopy(msg.getBuffer(), 0, PONG, 0, msg.getLen());
+		msg.endServerMessage();
+		PONG = msg.toByteArray();
 	}
 
 	private AJPRequestHandler handler;
@@ -71,7 +69,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 				throw new IllegalStateException(
 						"Trying to read a new request in state " + holder.state);
 			try {
-				readMessage(in, ajpRequest);
+				ajpRequest.readMessage(in);
 			} catch (IOException ignore) {
 				return;
 			}
@@ -122,8 +120,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 						"handler did not read all the request content");
 			AJPMessage ajpResponse = new AJPMessage(8192);
 			translate(response, ajpResponse);
-			out.write(ajpResponse.getBuffer(), 0, ajpResponse.getLen());
-			out.flush();
+			ajpResponse.write(out);
 			InputStream content = response.getContent();
 			if (content != null) {
 				int wrote;
@@ -135,16 +132,14 @@ public class AJPConnectionHandler implements ConnectionHandler {
 							AJPConstants.MAX_SEND_SIZE);
 					if (wrote == 0)
 						break;
-					ajpResponse.end(AJPMessage.AJP_SERVER);
-					out.write(ajpResponse.getBuffer(), 0, ajpResponse.getLen());
-					out.flush();
+					ajpResponse.endServerMessage();
+					ajpResponse.write(out);
 				} while (wrote > 0);
 			}
 			ajpResponse.reset();
 			ajpResponse.appendByte(AJPConstants.JK_AJP13_END_RESPONSE);
-			ajpResponse.end(AJPMessage.AJP_SERVER);
-			out.write(ajpResponse.getBuffer(), 0, ajpResponse.getLen());
-			out.flush();
+			ajpResponse.endServerMessage();
+			ajpResponse.write(out);
 			holder.state = State.READY;
 		} catch (MessageFormatException mfe) {
 			mfe.printStackTrace();
@@ -262,47 +257,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 			}
 			message.appendString(headers[i].getValue());
 		}
-		message.end(AJPMessage.AJP_SERVER);
-	}
-
-	/**
-	 * Read an AJP message.
-	 * 
-	 * @return true if the message has been read, false if the short read didn't
-	 *         return anything
-	 * @throws IOException
-	 *             any other failure, including incomplete reads
-	 */
-	private static void readMessage(InputStream in, AJPMessage message)
-			throws IOException {
-
-		Arrays.fill(message.getBuffer(), (byte) 0);
-		message.reset();
-		byte[] buf = message.getBuffer();
-
-		read(in, buf, 0, message.getHeaderLength());
-
-		message.processHeader();
-		read(in, buf, message.getHeaderLength(), message.getLen());
-	}
-
-	/**
-	 * Read at least the specified amount of bytes, and place them in the input
-	 * buffer.
-	 */
-	private static void read(InputStream in, byte[] buf, int pos, int n)
-			throws IOException {
-
-		int read = 0;
-		int res = 0;
-		while (read < n) {
-			res = in.read(buf, read + pos, n - read);
-			if (res > 0) {
-				read += res;
-			} else {
-				throw new IOException("Read failed, got " + read + " of " + n);
-			}
-		}
+		message.endServerMessage();
 	}
 
 	private static class AJPInputStream extends BufferedInputStream {
@@ -324,27 +279,25 @@ public class AJPConnectionHandler implements ConnectionHandler {
 				buff = null;
 				return;
 			}
-			readMessage(in, request);
-			int size = request.getInt();
+			request.readMessage(in);
+			int size = request.peekInt();
+			if (buff.length < size)
+				buff = new byte[size];
+			size = request.getBytes(buff);
 			read += size;
 			if (read > len)
 				throw new IllegalStateException(
 						"Request body packet sizes mismatch! Expected " + len
 								+ ", got " + read);
-			if (buff.length < size)
-				buff = new byte[size];
 			start = 0;
 			end = size;
-			System.arraycopy(request.getBuffer(), AJPConstants.READ_HEAD_LEN,
-					buff, 0, size);
 			if (read < len) { // ask for more
 				response.reset();
 				response.appendByte(AJPConstants.JK_AJP13_GET_BODY_CHUNK);
 				response.appendInt(Math.min(len - read,
 						AJPConstants.MAX_READ_SIZE));
-				response.end(AJPMessage.AJP_SERVER);
-				out.write(response.getBuffer(), 0, response.getLen());
-				out.flush();
+				response.endServerMessage();
+				response.write(out);
 			}
 		}
 

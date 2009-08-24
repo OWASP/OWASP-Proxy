@@ -11,12 +11,6 @@ import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 
 import org.junit.Test;
-import org.owasp.proxy.ajp.AJPClient;
-import org.owasp.proxy.ajp.AJPConnectionHandler;
-import org.owasp.proxy.ajp.AJPConstants;
-import org.owasp.proxy.ajp.AJPProperties;
-import org.owasp.proxy.ajp.AJPRequest;
-import org.owasp.proxy.ajp.AJPRequestHandler;
 import org.owasp.proxy.daemon.Server;
 import org.owasp.proxy.httpclient.MessageFormatException;
 import org.owasp.proxy.httpclient.MutableBufferedResponse;

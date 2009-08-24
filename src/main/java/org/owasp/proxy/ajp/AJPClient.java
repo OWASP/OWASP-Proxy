@@ -30,9 +30,8 @@ public class AJPClient {
 		AJPMessage msg = new AJPMessage(16);
 		msg.reset();
 		msg.appendByte(AJPConstants.JK_AJP13_CPING_REQUEST);
-		msg.end(AJPMessage.AJP_CLIENT);
-		PING = new byte[msg.getLen()];
-		System.arraycopy(msg.getBuffer(), 0, PING, 0, msg.getLen());
+		msg.endClientMessage();
+		PING = msg.toByteArray();
 	}
 
 	private enum State {
@@ -79,7 +78,7 @@ public class AJPClient {
 	}
 
 	public void setTimeout(int timeout) throws IOException {
-		sock.setSoTimeout(timeout);
+		this.timeout = timeout;
 	}
 
 	public void close() throws IOException {
@@ -97,14 +96,21 @@ public class AJPClient {
 		if (sock == null)
 			return false;
 		try {
-			sock.setSoTimeout(10);
-			int got = sock.getInputStream().read();
-			if (got == -1)
+			int to = sock.getSoTimeout();
+			try {
+				sock.setSoTimeout(10);
+				int got = sock.getInputStream().read();
+				if (got == -1)
+					return false;
+				throw new RuntimeException("Unexpected data read from socket: "
+						+ got);
+			} catch (SocketTimeoutException ste) {
+				return true;
+			} catch (IOException ioe) {
 				return false;
-			throw new RuntimeException("Unexpected data read from socket: "
-					+ got);
-		} catch (SocketTimeoutException ste) {
-			return true;
+			} finally {
+				sock.setSoTimeout(to);
+			}
 		} catch (IOException ioe) {
 			return false;
 		}
@@ -121,7 +127,7 @@ public class AJPClient {
 			throw new IllegalStateException("Client is currently assigned");
 		out.write(PING);
 		out.flush();
-		readMessage(in, PONG);
+		PONG.readMessage(in);
 		return PONG.peekByte() == AJPConstants.JK_AJP13_CPONG_REPLY;
 	}
 
@@ -133,31 +139,30 @@ public class AJPClient {
 			throw new IllegalStateException("Client is currently assigned");
 
 		translate(request, ajpRequest);
-		out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
+		ajpRequest.write(out);
 		InputStream content = request.getContent();
 		if (request.getContent() != null) {
 			ajpRequest.reset();
 			ajpRequest.appendBytes(content, Integer.MAX_VALUE);
-			ajpRequest.end(AJPMessage.AJP_CLIENT);
-			out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
+			ajpRequest.endClientMessage();
+			ajpRequest.write(out);
 		}
-		out.flush();
 		requestSubmissionTime = System.currentTimeMillis();
 
-		readMessage(in, ajpResponse);
+		ajpResponse.readMessage(in);
 
 		byte type = ajpResponse.peekByte();
 
+		int wrote = 0;
 		while (type == AJPConstants.JK_AJP13_GET_BODY_CHUNK) {
 			ajpResponse.getByte(); // get the type
 			int max = ajpResponse.getInt();
 			ajpRequest.reset();
-			ajpRequest.appendBytes(content, max);
-			ajpRequest.end(AJPMessage.AJP_CLIENT);
-			out.write(ajpRequest.getBuffer(), 0, ajpRequest.getLen());
-			out.flush();
+			wrote += ajpRequest.appendBytes(content, max);
+			ajpRequest.endClientMessage();
+			ajpRequest.write(out);
 			requestSubmissionTime = System.currentTimeMillis();
-			readMessage(in, ajpResponse);
+			ajpResponse.readMessage(in);
 			type = ajpResponse.peekByte();
 		}
 
@@ -181,7 +186,7 @@ public class AJPClient {
 		}
 
 		protected void fillBuffer() throws IOException {
-			readMessage(in, ajpResponse);
+			ajpResponse.readMessage(in);
 			int type = ajpResponse.getByte();
 			if (type == AJPConstants.JK_AJP13_END_RESPONSE) {
 				state = State.IDLE;
@@ -261,7 +266,7 @@ public class AJPClient {
 				properties.getStoredMethod());
 
 		message.appendByte(AJPConstants.SC_A_ARE_DONE);
-		message.end(AJPMessage.AJP_CLIENT);
+		message.endClientMessage();
 	}
 
 	private static void appendRequestHeader(AJPMessage message,
@@ -334,46 +339,6 @@ public class AJPClient {
 			response.addHeader(name, message.getString());
 		}
 
-	}
-
-	/**
-	 * Read an AJP message.
-	 * 
-	 * @return true if the message has been read, false if the short read didn't
-	 *         return anything
-	 * @throws IOException
-	 *             any other failure, including incomplete reads
-	 */
-	private static void readMessage(InputStream in, AJPMessage message)
-			throws IOException {
-
-		message.reset();
-
-		byte[] buf = message.getBuffer();
-
-		read(in, buf, 0, message.getHeaderLength());
-
-		message.processHeader();
-		read(in, buf, message.getHeaderLength(), message.getLen());
-	}
-
-	/**
-	 * Read at least the specified amount of bytes, and place them in the input
-	 * buffer.
-	 */
-	private static void read(InputStream in, byte[] buf, int pos, int n)
-			throws IOException {
-
-		int read = 0;
-		int res = 0;
-		while (read < n) {
-			res = in.read(buf, read + pos, n - read);
-			if (res > 0) {
-				read += res;
-			} else {
-				throw new IOException("Read failed, got " + read + " of " + n);
-			}
-		}
 	}
 
 	/**

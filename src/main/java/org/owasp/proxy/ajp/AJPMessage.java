@@ -2,6 +2,7 @@ package org.owasp.proxy.ajp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Arrays;
 
 import org.owasp.proxy.util.AsciiString;
@@ -44,12 +45,20 @@ public class AJPMessage {
 		Arrays.fill(buf, (byte) 0);
 	}
 
+	public void endClientMessage() {
+		end(AJP_CLIENT);
+	}
+
+	public void endServerMessage() {
+		end(AJP_SERVER);
+	}
+
 	/**
 	 * For a packet to be sent, finish the process of accumulating data and
 	 * write the packet signature and the length of the data payload into the
 	 * header.
 	 */
-	public void end(byte[] signature) {
+	private void end(byte[] signature) {
 		len = pos;
 		int dLen = len - 4;
 
@@ -57,6 +66,12 @@ public class AJPMessage {
 		buf[1] = signature[1];
 		buf[2] = (byte) ((dLen >>> 8) & 0xFF);
 		buf[3] = (byte) (dLen & 0xFF);
+	}
+
+	public byte[] toByteArray() {
+		byte[] arr = new byte[getLen()];
+		System.arraycopy(buf, 0, arr, 0, getLen());
+		return arr;
 	}
 
 	/**
@@ -347,6 +362,43 @@ public class AJPMessage {
 			h = "0" + h;
 		}
 		return h.substring(h.length() - 2);
+	}
+
+	/**
+	 * Read an AJP message.
+	 * 
+	 * @throws IOException
+	 *             any failure, including incomplete reads
+	 */
+	public void readMessage(InputStream in) throws IOException {
+		reset();
+		read(in, buf, 0, getHeaderLength());
+		processHeader();
+		read(in, buf, getHeaderLength(), getLen());
+	}
+
+	/**
+	 * Read at least the specified amount of bytes, and place them in the input
+	 * buffer.
+	 */
+	private static void read(InputStream in, byte[] buf, int pos, int n)
+			throws IOException {
+
+		int read = 0;
+		int res = 0;
+		while (read < n) {
+			res = in.read(buf, read + pos, n - read);
+			if (res > 0) {
+				read += res;
+			} else {
+				throw new IOException("Read failed, got " + read + " of " + n);
+			}
+		}
+	}
+
+	public void write(OutputStream out) throws IOException {
+		out.write(buf, 0, getLen());
+		out.flush();
 	}
 
 }
