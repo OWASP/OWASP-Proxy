@@ -9,6 +9,26 @@
   <version>1.0-SNAPSHOT</version>
   <name>OWASP Proxy</name>
   <url>http://www.owasp.org/index.php/Category:OWASP_Proxy</url>
+  <scm>
+    <connection>scm:git:http://dawes.za.net/rogan/owasp-proxy/owasp-proxy.git/k</connection>
+    <developerConnection>scm:git:ssh://dawes.za.net/home/rdawes/dawes.za.net/rogan/owasp-proxy/owasp-proxy.git/</developerConnection>
+    <url>http://dawes.za.net/gitweb.cgi?p=rogan/owasp-proxy/owasp-proxy.git;a=summary.com</url>
+  </scm>
+  <distributionManagement>
+    <!-- use the following if you're not using a snapshot version. -->
+    <repository>
+      <id>dawes.za.net</id>
+      <name>Dawes.za.net Maven repo</name>
+      <url>scp://dawes.za.net/home/rdawes/dawes.za.net/rogan/repository/</url>
+    </repository>
+    <!-- use the following if you ARE using a snapshot version. -->
+    <snapshotRepository>
+      <id>dawes.za.net-snapshot</id>
+      <name>Dawes.za.net Snapshot Maven repo</name>
+      <url>scp://dawes.za.net/home/rdawes/dawes.za.net/rogan/snapshot-repository/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <dependencies>
   	<dependency>
   		<groupId>junit</groupId>
@@ -56,7 +76,21 @@
   	</developer>
   </developers>
   <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.0-beta-9</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
     <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <version>2.0-beta-9</version>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
