@@ -10,6 +10,7 @@ import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.owasp.proxy.daemon.Server;
 import org.owasp.proxy.httpclient.MessageFormatException;
@@ -132,6 +133,7 @@ public class AJPClientTest {
 	}
 
 	@Test
+	@Ignore
 	public void testTomcat() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
 		AJPClient client = new AJPClient();
