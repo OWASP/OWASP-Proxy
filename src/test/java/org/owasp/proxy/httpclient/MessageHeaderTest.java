@@ -28,9 +28,6 @@ import static org.junit.Assert.fail;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.MutableMessageHeader;
-import org.owasp.proxy.httpclient.NamedValue;
 import org.owasp.proxy.util.AsciiString;
 
 /**
@@ -47,7 +44,7 @@ public class MessageHeaderTest {
 
 	private String get3 = "GET / HTTP/1.0\r\nHost: localhost\r\nCookie: a=b";
 
-	private String post = "POST / HTTP1.0\r\nHost: localhost\r\nCookie: a=b\r\nContent-Length: 10";
+	private String post = "POST / HTTP/1.0\r\nHost: localhost\r\nCookie: a=b\r\nContent-Length: 10";
 
 	/**
 	 * @throws java.lang.Exception
@@ -57,22 +54,24 @@ public class MessageHeaderTest {
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getMessage()}.
+	 * Test method for
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getMessage()}.
 	 */
 	@Test
 	public void testGetSetHeader() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
 		String s = AsciiString.create(m.getHeader());
 		assertEquals(get + CRLFCRLF, s);
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getStartLine()}.
+	 * Test method for
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getStartLine()}.
 	 */
 	@Test
 	public void testGetFirstLine() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(get + CRLFCRLF));
 		assertEquals(get, m.getStartLine());
 		m.setHeader(AsciiString.getBytes(get3 + CRLFCRLF));
@@ -81,24 +80,27 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#setStartLine(java.lang.String)}.
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#setStartLine(java.lang.String)}
+	 * .
 	 */
 	@Test
 	public void testSetFirstLine() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setStartLine(get);
 		assertEquals(get + CRLFCRLF, AsciiString.create(m.getHeader()));
 	}
 
 	/**
-	 * Test method for {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getHeaders()}.
+	 * Test method for
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getHeaders()}.
 	 */
 	@Test
 	public void testGetHeaders() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
-		assertEquals(post, m.getStartLine() + CRLF
-				+ NamedValue.join(m.getHeaders(), CRLF));
+		String result = m.getStartLine() + CRLF
+				+ NamedValue.join(m.getHeaders(), CRLF) + CRLFCRLF;
+		assertEquals(post + CRLFCRLF, result);
 	}
 
 	/**
@@ -108,7 +110,7 @@ public class MessageHeaderTest {
 	 */
 	@Test
 	public void testSetHeaders() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		String first = post.substring(0, post.indexOf(CRLF));
 		NamedValue[] h = NamedValue.parse(post.substring(first.length()
 				+ CRLF.length()), CRLF, " *: *");
@@ -126,11 +128,12 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getHeader(java.lang.String)}.
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#getHeader(java.lang.String)}
+	 * .
 	 */
 	@Test
 	public void testGetHeaderString() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("cookie"));
 	}
@@ -142,7 +145,7 @@ public class MessageHeaderTest {
 	 */
 	@Test
 	public void testSetHeaderStringString() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.setHeader("Cookie", "a=c");
 		assertEquals("a=c", m.getHeader("cookie"));
@@ -155,7 +158,7 @@ public class MessageHeaderTest {
 	 */
 	@Test
 	public void testAddHeader() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		m.addHeader("Cookie", "b=c");
 		NamedValue[] headers = m.getHeaders();
@@ -175,15 +178,23 @@ public class MessageHeaderTest {
 
 	/**
 	 * Test method for
-	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#deleteHeader(java.lang.String)}.
+	 * {@link org.owasp.proxy.httpclient.MutableBufferedMessage#deleteHeader(java.lang.String)}
+	 * .
 	 */
 	@Test
 	public void testDeleteHeader() throws Exception {
-		MutableMessageHeader m = new MutableMessageHeader.Impl();
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
 		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
 		assertEquals("a=b", m.getHeader("Cookie"));
 		m.deleteHeader("cookie");
 		assertEquals(null, m.getHeader("cookie"));
 	}
 
+	@Test
+	public void testHeaderLines() throws Exception {
+		MutableMessageHeader.Impl m = new MutableMessageHeader.Impl();
+		m.setHeader(AsciiString.getBytes(post + CRLFCRLF));
+		assertEquals(5, m.getHeaderLines().length);
+		assertEquals(3, m.getHeaders().length);
+	}
 }

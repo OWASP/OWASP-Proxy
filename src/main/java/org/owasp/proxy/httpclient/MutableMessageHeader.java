@@ -1,11 +1,12 @@
 package org.owasp.proxy.httpclient;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.logging.Logger;
 
 import org.owasp.proxy.util.AsciiString;
-import org.owasp.proxy.util.MessageUtils;
 
 /**
  * The MessageHeader class is the base class for the HTTP Message, Request and
@@ -46,8 +47,8 @@ public interface MutableMessageHeader extends MessageHeader {
 
 	public static class Impl implements MutableMessageHeader {
 
-		private static Logger logger = Logger.getLogger(MutableMessageHeader.class
-				.getName());
+		private static Logger logger = Logger
+				.getLogger(MutableMessageHeader.class.getName());
 
 		private static final byte[] CRLF = { '\r', '\n' };
 
@@ -65,21 +66,6 @@ public interface MutableMessageHeader extends MessageHeader {
 
 		public void setHeader(byte[] header) {
 			this.header = header;
-			if (header != null)
-				if (header.length < 4) {
-					throw new IllegalStateException(
-							"The header does not end with CRLFCRLF");
-				} else {
-					for (int i = 0; i < 4; i++) {
-						if (header[header.length - 4 + i] != CRLF[i % 2]) {
-							logger
-									.info("Odd header does not end with CRLFCRLF: "
-											+ AsciiString.create(header));
-							throw new IllegalStateException(
-									"The header does not end with CRLFCRLF");
-						}
-					}
-				}
 		}
 
 		public byte[] getHeader() {
@@ -87,38 +73,73 @@ public interface MutableMessageHeader extends MessageHeader {
 		}
 
 		/**
+		 * Finds the first occurrence of separator, starting at start
+		 * 
 		 * @param separator
+		 * @param start
+		 * @return
+		 */
+		protected int indexOf(byte[] separator, int start) {
+			if (header == null)
+				throw new NullPointerException("array is null");
+			if (header.length - start < separator.length)
+				return -1;
+			int sep = start;
+			int i = 0;
+			while (sep <= header.length - separator.length
+					&& i < separator.length) {
+				if (header[sep + i] == separator[i]) {
+					i++;
+				} else {
+					i = 0;
+					sep++;
+				}
+			}
+			if (i == separator.length)
+				return sep;
+			return -1;
+		}
+
+		/**
+		 * Breaks the header byte[] up into lines, separated by \r\n. The lines
+		 * will include the trailing blank line expected as part of the header.
+		 * The lines do NOT include the actual \r\n separator
+		 * 
 		 * @return
 		 * @throws MessageFormatException
 		 */
-		protected String[] getHeaderLines(byte[] separator)
-				throws MessageFormatException {
+		protected String[] getHeaderLines() throws MessageFormatException {
 			if (header == null)
 				return null;
 			List<String> lines = new LinkedList<String>();
 			int sep, start = 0;
-			while ((sep = MessageUtils.findSeparator(header, separator, start)) > -1
-					&& sep > start) {
+			while ((sep = indexOf(CRLF, start)) > -1) {
 				lines.add(AsciiString.create(header, start, sep - start));
-				start = sep + separator.length;
+				start = sep + CRLF.length;
 			}
 			return lines.toArray(new String[lines.size()]);
 		}
 
 		/**
+		 * Converts an array of String to a suitable byte[], by separating each
+		 * with \r\n. The provided lines should include the trailing blank line
+		 * 
 		 * @param lines
-		 * @param separator
+		 *            including the trailing empty line
 		 * @throws MessageFormatException
 		 */
-		protected void setHeaderLines(String[] lines, byte[] separator)
+		protected void setHeaderLines(String[] lines)
 				throws MessageFormatException {
-			String sep = AsciiString.create(separator);
-			StringBuilder buff = new StringBuilder();
-			for (int i = 0; i < lines.length; i++) {
-				buff.append(lines[i]).append(sep);
+			ByteArrayOutputStream buff = new ByteArrayOutputStream();
+			try {
+				for (int i = 0; i < lines.length; i++) {
+					buff.write(AsciiString.getBytes(lines[i]));
+					buff.write(CRLF);
+				}
+			} catch (IOException ioe) {
+				// impossible for ByteArrayOutputStream
 			}
-			buff.append(sep);
-			setHeader(AsciiString.getBytes(buff.toString()));
+			setHeader(buff.toByteArray());
 		}
 
 		/**
@@ -139,7 +160,7 @@ public interface MutableMessageHeader extends MessageHeader {
 		protected void setStartParts(String[] parts)
 				throws MessageFormatException {
 			if (parts == null || parts.length == 0) {
-				setStartLine("");
+				setStartLine(null);
 			} else {
 				StringBuilder b = new StringBuilder(parts[0] == null ? ""
 						: parts[0]);
@@ -154,7 +175,7 @@ public interface MutableMessageHeader extends MessageHeader {
 		 * @throws MessageFormatException
 		 */
 		public String getStartLine() throws MessageFormatException {
-			String[] lines = getHeaderLines(CRLF);
+			String[] lines = getHeaderLines();
 			if (lines == null || lines.length == 0)
 				return null;
 			return lines[0];
@@ -165,11 +186,15 @@ public interface MutableMessageHeader extends MessageHeader {
 		 * @throws MessageFormatException
 		 */
 		public void setStartLine(String line) throws MessageFormatException {
-			String[] lines = getHeaderLines(CRLF);
-			if (lines == null || lines.length == 0)
-				lines = new String[1];
+			if (line == null)
+				line = "";
+			String[] lines = getHeaderLines();
+			if (lines == null || lines.length <= 1) {
+				lines = new String[2];
+				lines[1] = "";
+			}
 			lines[0] = line;
-			setHeaderLines(lines, CRLF);
+			setHeaderLines(lines);
 		}
 
 		/**
@@ -177,10 +202,10 @@ public interface MutableMessageHeader extends MessageHeader {
 		 * @throws MessageFormatException
 		 */
 		public NamedValue[] getHeaders() throws MessageFormatException {
-			String[] lines = getHeaderLines(CRLF);
+			String[] lines = getHeaderLines();
 			if (lines == null || lines.length <= 1)
 				return null;
-			NamedValue[] headers = new NamedValue[lines.length - 1];
+			NamedValue[] headers = new NamedValue[lines.length - 2];
 			for (int i = 0; i < headers.length; i++)
 				headers[i] = NamedValue.parse(lines[i + 1], " *: *");
 			return headers;
@@ -192,17 +217,19 @@ public interface MutableMessageHeader extends MessageHeader {
 		 */
 		public void setHeaders(NamedValue[] headers)
 				throws MessageFormatException {
-			String[] lines = new String[(headers == null ? 0 : headers.length) + 1];
+			String[] lines = new String[(headers == null ? 0 : headers.length) + 2];
 			lines[0] = getStartLine();
 			if (lines[0] == null)
 				throw new MessageFormatException(
 						"No start line found, can't set headers without one!",
 						header);
-			if (headers != null)
+			if (headers != null) {
 				for (int i = 0; i < headers.length; i++) {
 					lines[i + 1] = headers[i].toString();
 				}
-			setHeaderLines(lines, CRLF);
+			}
+			lines[lines.length - 1] = "";
+			setHeaderLines(lines);
 		}
 
 		/**

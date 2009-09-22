@@ -12,4 +12,6 @@ public interface ResponseHeader extends MessageHeader {
 
 	long getContentTime();
 
+	boolean has100Continue() throws MessageFormatException;
+
 }

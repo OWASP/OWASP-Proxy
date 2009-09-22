@@ -18,6 +18,80 @@ public interface MutableResponseHeader extends ResponseHeader,
 
 		private long headerTime = 0, contentTime = 0;
 
+		protected String[] get100Header(String[] lines) {
+			if (lines == null || lines.length < 3)
+				// "100 Continue"
+				// BLANK
+				// BLANK
+				return null;
+			String[] parts = lines[0].split("[ \t]+", 3);
+			if (parts.length < 2 || !"100".equals(parts[1]))
+				return null;
+
+			// It's a 100 response, now look for a blank line
+			int sep = -1;
+			for (int i = 0; i < lines.length; i++) {
+				if ("".equals(lines[i])) {
+					sep = i;
+					break;
+				}
+			}
+			if (sep == -1 || sep == lines.length - 1)
+				return null;
+			String[] h = new String[sep + 1];
+			System.arraycopy(lines, 0, h, 0, sep + 1);
+			return h;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see
+		 * org.owasp.proxy.httpclient.MutableMessageHeader.Impl#getHeaderLines
+		 * (byte[])
+		 */
+		@Override
+		protected String[] getHeaderLines() throws MessageFormatException {
+			String[] lines = super.getHeaderLines();
+			String[] contHeader = get100Header(lines);
+			if (contHeader != null) {
+				String[] t = new String[lines.length - contHeader.length];
+				System.arraycopy(lines, contHeader.length, t, 0, t.length);
+				return t;
+			}
+			return lines;
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see
+		 * org.owasp.proxy.httpclient.MutableMessageHeader.Impl#setHeaderLines
+		 * (java.lang.String[], byte[])
+		 */
+		@Override
+		protected void setHeaderLines(String[] lines)
+				throws MessageFormatException {
+			String[] contHeader = get100Header(super.getHeaderLines());
+			if (contHeader != null) {
+				String[] t = new String[contHeader.length + lines.length];
+				System.arraycopy(contHeader, 0, t, 0, contHeader.length);
+				System.arraycopy(lines, 0, t, contHeader.length, lines.length);
+				lines = t;
+			}
+			super.setHeaderLines(lines);
+		}
+
+		/*
+		 * (non-Javadoc)
+		 * 
+		 * @see org.owasp.proxy.httpclient.ResponseHeader#has100Continue()
+		 */
+		public boolean has100Continue() throws MessageFormatException {
+			String[] contHeader = get100Header(super.getHeaderLines());
+			return contHeader != null;
+		}
+
 		public void setVersion(String version) throws MessageFormatException {
 			String[] parts = getStartParts();
 			if (parts.length < 1) {
