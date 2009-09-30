@@ -110,12 +110,17 @@ public class MessageUtils {
 
 	public static byte[] encode(BufferedMessage message) throws IOException,
 			MessageFormatException {
-		InputStream content = new ByteArrayInputStream(message.getContent());
-		content = encode(message, content);
+		return encode(message, message.getContent());
+	}
+
+	public static byte[] encode(MessageHeader header, byte[] content)
+			throws IOException, MessageFormatException {
+		InputStream contentStream = new ByteArrayInputStream(content);
+		content = encode(header, content);
 		ByteArrayOutputStream copy = new ByteArrayOutputStream();
 		byte[] buff = new byte[4096];
 		int got;
-		while ((got = content.read(buff)) > 0)
+		while ((got = contentStream.read(buff)) > 0)
 			copy.write(buff, 0, got);
 		return copy.toByteArray();
 	}
