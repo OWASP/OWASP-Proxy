@@ -108,20 +108,24 @@ public class MessageUtils {
 		return encode(message, message.getContent());
 	}
 
-	public static byte[] encode(BufferedMessage message) throws IOException,
-			MessageFormatException {
+	public static byte[] encode(BufferedMessage message)
+			throws MessageFormatException {
 		return encode(message, message.getContent());
 	}
 
 	public static byte[] encode(MessageHeader header, byte[] content)
-			throws IOException, MessageFormatException {
+			throws MessageFormatException {
 		InputStream contentStream = new ByteArrayInputStream(content);
-		content = encode(header, content);
+		contentStream = encode(header, contentStream);
 		ByteArrayOutputStream copy = new ByteArrayOutputStream();
 		byte[] buff = new byte[4096];
 		int got;
-		while ((got = contentStream.read(buff)) > 0)
-			copy.write(buff, 0, got);
+		try {
+			while ((got = contentStream.read(buff)) > 0)
+				copy.write(buff, 0, got);
+		} catch (IOException ioe) {
+			throw new MessageFormatException("Error encoding content", ioe);
+		}
 		return copy.toByteArray();
 	}
 
