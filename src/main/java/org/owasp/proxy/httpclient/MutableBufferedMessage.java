@@ -19,11 +19,25 @@
  */
 package org.owasp.proxy.httpclient;
 
-public interface MutableBufferedMessage extends BufferedMessage, MutableMessageHeader {
+public interface MutableBufferedMessage extends BufferedMessage,
+		MutableMessageHeader {
 
 	/**
 	 * @param content
 	 */
 	void setContent(byte[] content);
+
+	/**
+	 * Allows the caller to avoid dealing with Transfer-Encoding and
+	 * Content-Encoding details.
+	 * 
+	 * The content provided will have Chunking and Gzip, etc encodings applied
+	 * as specified by the message header, before being set as the message
+	 * content.
+	 * 
+	 * @param content
+	 * @throws MessageFormatException
+	 */
+	void setDecodedContent(byte[] content) throws MessageFormatException;
 
 }
