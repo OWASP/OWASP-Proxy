@@ -47,7 +47,9 @@ public class NamedValue {
 
 	@Override
 	public String toString() {
-		return name + separator + (value == null ? "" : value);
+		return (name == null ? "" : name)
+				+ (separator == null ? "" : separator)
+				+ (value == null ? "" : value);
 	}
 
 	/**
