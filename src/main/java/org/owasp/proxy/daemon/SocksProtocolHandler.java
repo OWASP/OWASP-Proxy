@@ -132,7 +132,9 @@ public class SocksProtocolHandler {
 					msg.ip = InetAddress.getByName(msg.host);
 				} catch (UnknownHostException uhe) {
 					throw new SocksException(
-							SocksConstants.SOCKS_ADDR_NOT_SUPPORTED);
+							SocksConstants.SOCKS_ADDR_NOT_SUPPORTED,
+							"Address not supported for " + msg.host + ":"
+									+ msg.port);
 				}
 			} else
 				throw new SocksException(SocksConstants.SOCKS_FAILURE);
