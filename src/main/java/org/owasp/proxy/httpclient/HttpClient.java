@@ -441,7 +441,7 @@ public class HttpClient {
 				} else if (contentLength != null) {
 					try {
 						is = new FixedLengthInputStream(is, Integer
-								.parseInt(contentLength));
+								.parseInt(contentLength.trim()));
 					} catch (NumberFormatException nfe) {
 						IOException ioe = new IOException(
 								"Invalid content-length header: "
