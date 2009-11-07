@@ -7,11 +7,14 @@ import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
+
+import javax.sql.DataSource;
 
 import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
 import org.owasp.proxy.daemon.BufferedMessageInterceptor;
@@ -42,7 +45,7 @@ public class Main {
 
 	private static void usage() {
 		System.err
-				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"] [ Driver URL username password ]");
+				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"] [ <JDBC Driver> <JDBC URL> <username> <password> ]");
 		System.err.println("Where \'proxy instruction\' might look like:");
 		System.err
 				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
@@ -89,13 +92,24 @@ public class Main {
 		return ps;
 	}
 
+	private static DataSource createDataSource(String driver, String url,
+			String username, String password) throws SQLException {
+		DriverManagerDataSource dataSource = new DriverManagerDataSource();
+		dataSource.setDriverClassName(driver);
+		dataSource.setUrl(url);
+		dataSource.setUsername(username);
+		dataSource.setPassword(password);
+		return dataSource;
+	}
+
 	public static void main(String[] args) throws Exception {
 		logger.setUseParentHandlers(false);
 		Handler ch = new ConsoleHandler();
 		ch.setFormatter(new TextFormatter());
 		logger.addHandler(ch);
 
-		if (args == null || (args.length != 1 && args.length != 2)) {
+		if (args == null
+				|| (args.length != 1 && args.length != 2 && args.length != 5 && args.length != 6)) {
 			usage();
 			return;
 		}
@@ -108,8 +122,14 @@ public class Main {
 			return;
 		}
 		String proxy = "DIRECT";
-		if (args.length == 3) {
-			proxy = args[2];
+		if (args.length == 2 || args.length == 6) {
+			proxy = args[1];
+		}
+		DataSource dataSource = null;
+		if (args.length == 5) {
+			dataSource = createDataSource(args[1], args[2], args[3], args[4]);
+		} else if (args.length == 6) {
+			dataSource = createDataSource(args[2], args[3], args[4], args[5]);
 		}
 
 		final ProxySelector ps = getProxySelector(proxy);
@@ -128,15 +148,13 @@ public class Main {
 		HttpRequestHandler rh = drh;
 		rh = new LoggingHttpRequestHandler(rh);
 
-		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName("org.h2.Driver");
-		dataSource.setUrl("jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1");
-		JdbcMessageDAO dao = new JdbcMessageDAO();
-		dao.setDataSource(dataSource);
-		dao.setDataSource(dataSource);
-		dao.createTables();
-		rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
-		rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
+		if (dataSource != null) {
+			JdbcMessageDAO dao = new JdbcMessageDAO();
+			dao.setDataSource(dataSource);
+			dao.createTables();
+			rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
+			rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
+		}
 		BufferedMessageInterceptor bmi = new BufferedMessageInterceptor() {
 			@Override
 			public Action directResponse(RequestHeader request,
@@ -154,6 +172,7 @@ public class Main {
 		hpch.setConnectHandler(tch);
 		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
 		Proxy p = new Proxy(listen, socks, null);
+		p.setSocketTimeout(30000);
 		p.start();
 
 		System.out.println("Listener started on " + listen);
