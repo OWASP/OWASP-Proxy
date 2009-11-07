@@ -25,6 +25,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.util.logging.Logger;
 
 /**
@@ -76,12 +77,32 @@ public class Server {
 		this(listen, null, connectionHandler);
 	}
 
-	public Server(InetSocketAddress listen, Executor executor,
+	public Server(final InetSocketAddress listen, Executor executor,
 			ConnectionHandler connectionHandler) throws IOException {
 		if (listen == null)
 			throw new NullPointerException("listen may not be null");
 		if (executor == null)
-			executor = Executors.newCachedThreadPool();
+			executor = Executors.newCachedThreadPool(new ThreadFactory() {
+				private int threadCount = 0;
+				private String prefix = listen + "-";
+
+				private synchronized String getName() {
+					return prefix + (threadCount++);
+				}
+
+				/*
+				 * (non-Javadoc)
+				 * 
+				 * @see
+				 * java.util.concurrent.ThreadFactory#newThread(java.lang.Runnable
+				 * )
+				 */
+				public Thread newThread(Runnable r) {
+					Thread t = new Thread(r, getName());
+					t.setDaemon(true);
+					return t;
+				}
+			});
 		if (connectionHandler == null)
 			throw new NullPointerException("connectionHandler may not be null");
 		socket = new ServerSocket(listen.getPort(), 20, listen.getAddress());
@@ -112,6 +133,10 @@ public class Server {
 	private AcceptThread acceptThread = null;
 
 	private class AcceptThread extends Thread {
+
+		public AcceptThread() {
+			super("Accept: " + socket.getLocalSocketAddress());
+		}
 
 		public void run() {
 			try {
