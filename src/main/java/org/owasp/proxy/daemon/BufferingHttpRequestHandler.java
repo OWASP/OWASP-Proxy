@@ -27,8 +27,6 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 
 	protected int max = 0;
 
-	protected boolean decode = false;
-
 	private BufferedMessageInterceptor interceptor;
 
 	public BufferingHttpRequestHandler(final HttpRequestHandler next,
@@ -38,20 +36,14 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	}
 
 	public BufferingHttpRequestHandler(final HttpRequestHandler next,
-			BufferedMessageInterceptor interceptor, final int max,
-			final boolean decode) {
+			BufferedMessageInterceptor interceptor, final int max) {
 		this.next = next;
 		this.interceptor = interceptor;
 		this.max = max;
-		this.decode = decode;
 	}
 
 	public void setMaximumContentSize(int max) {
 		this.max = max;
-	}
-
-	public void setDecode(boolean decode) {
-		this.decode = decode;
 	}
 
 	/*
@@ -63,22 +55,16 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		next.dispose();
 	}
 
-	private void handleRequest(StreamingRequest request, final boolean decode)
-			throws IOException, MessageFormatException {
+	private void handleRequest(StreamingRequest request) throws IOException,
+			MessageFormatException {
 		final Action action = interceptor.directRequest(request);
 		final MutableBufferedRequest brq;
 		if (Action.BUFFER.equals(action)) {
 			brq = new MutableBufferedRequest.Impl();
 			try {
-				if (decode) {
-					request.setContent(MessageUtils.decode(request));
-				}
 				MessageUtils.buffer(request, brq, max);
 				interceptor.processRequest(brq);
 				MessageUtils.stream(brq, request);
-				if (decode) {
-					request.setContent(MessageUtils.encode(request));
-				}
 			} catch (SizeLimitExceededException slee) {
 				final InputStream buffered = new ByteArrayInputStream(brq
 						.getContent());
@@ -90,10 +76,6 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					}
 				};
 				request.setContent(content);
-
-				if (decode) {
-					request.setContent(MessageUtils.encode(request));
-				}
 			}
 		} else if (Action.STREAM.equals(action)) {
 			brq = new MutableBufferedRequest.Impl();
@@ -113,36 +95,16 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	}
 
 	private void handleResponse(final RequestHeader request,
-			final StreamingResponse response, boolean decode)
-			throws IOException, MessageFormatException {
+			final StreamingResponse response) throws IOException,
+			MessageFormatException {
 		Action action = interceptor.directResponse(request, response);
 		final MutableBufferedResponse brs;
 		if (Action.BUFFER.equals(action)) {
 			brs = new MutableBufferedResponse.Impl();
 			try {
-				if (decode) {
-					try {
-						response.setContent(MessageUtils.decode(response));
-					} catch (MessageFormatException mfe) {
-						throw new MessageFormatException(
-								"Error decoding response for "
-										+ request.getTarget()
-										+ request.getResource(), mfe);
-					} catch (IOException ioe) {
-						IOException e = new IOException(
-								"Error decoding response for "
-										+ request.getTarget()
-										+ request.getResource());
-						e.initCause(ioe);
-						throw e;
-					}
-				}
 				MessageUtils.buffer(response, brs, max);
 				interceptor.processResponse(request, brs);
 				MessageUtils.stream(brs, response);
-				if (decode) {
-					response.setContent(MessageUtils.encode(response));
-				}
 			} catch (SizeLimitExceededException slee) {
 				InputStream buffered = new ByteArrayInputStream(brs
 						.getContent());
@@ -155,9 +117,6 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 					}
 				};
 				response.setContent(content);
-				if (decode) {
-					response.setContent(MessageUtils.encode(response));
-				}
 			}
 		} else if (Action.STREAM.equals(action)) {
 			brs = new MutableBufferedResponse.Impl();
@@ -187,12 +146,11 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 	final public StreamingResponse handleRequest(final InetAddress source,
 			final StreamingRequest request, boolean isContinue)
 			throws IOException, MessageFormatException {
-		boolean decode = this.decode;
 		if (!isContinue && isExpectContinue(request)) {
 			return get100Continue();
 		}
 
-		handleRequest(request, decode);
+		handleRequest(request);
 		isContinue = false;
 
 		StreamingResponse response = null;
@@ -205,7 +163,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			}
 		}
 		response = next.handleRequest(source, request, isContinue);
-		handleResponse(request, response, decode);
+		handleResponse(request, response);
 		return response;
 	}
 

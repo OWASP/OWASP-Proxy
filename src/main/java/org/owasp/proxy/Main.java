@@ -162,7 +162,7 @@ public class Main {
 				return Action.BUFFER;
 			}
 		};
-		rh = new BufferingHttpRequestHandler(rh, bmi, 10240, true);
+		rh = new BufferingHttpRequestHandler(rh, bmi, 10240);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLContextSelector cp = new AutoGeneratingContextSelector(".keystore",

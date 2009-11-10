@@ -156,7 +156,7 @@ public class BufferingHttpRequestHandlerTest {
 		HttpRequestHandler rh = new DefaultHttpRequestHandler();
 		rh = new LoggingHttpRequestHandler(rh);
 		BufferedMessageInterceptor bmi = new MockBufferedInterceptor();
-		rh = new BufferingHttpRequestHandler(rh, bmi, 1024, false);
+		rh = new BufferingHttpRequestHandler(rh, bmi, 1024);
 
 		StreamingRequest req = new StreamingRequest.Impl();
 		req.setTarget(new InetSocketAddress("localhost", 9999));
@@ -193,7 +193,6 @@ public class BufferingHttpRequestHandlerTest {
 		MockBufferedInterceptor bm = new MockBufferedInterceptor();
 		BufferingHttpRequestHandler brh = new BufferingHttpRequestHandler(
 				requestHandler, bm);
-		brh.setDecode(true);
 		brh.setMaximumContentSize(65536);
 		test(brh, bm, false, false, 32768);
 		test(brh, bm, true, true, 32768);
