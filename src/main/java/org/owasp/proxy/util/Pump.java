@@ -10,8 +10,22 @@ public class Pump extends Thread {
 	private OutputStream out;
 
 	public static void connect(Socket a, Socket b) throws IOException {
-		new Pump(a.getInputStream(), b.getOutputStream()).start();
-		new Pump(b.getInputStream(), a.getOutputStream()).start();
+		Pump ab = new Pump(a.getInputStream(), b.getOutputStream());
+		Pump ba = new Pump(b.getInputStream(), a.getOutputStream());
+		ab.start();
+		ba.start();
+		while (ab.isAlive()) {
+			try {
+				ab.join();
+			} catch (InterruptedException ie) {
+			}
+		}
+		while (ba.isAlive()) {
+			try {
+				ba.join();
+			} catch (InterruptedException ie) {
+			}
+		}
 	}
 
 	public Pump(InputStream in, OutputStream out) {
