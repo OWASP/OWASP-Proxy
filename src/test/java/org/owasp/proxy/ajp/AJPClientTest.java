@@ -61,7 +61,7 @@ public class AJPClientTest {
 	};
 
 	@Test
-	// @Ignore
+	@Ignore("Requires an AJP server on the other end")
 	public void testCertificate() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
 		AJPClient connection = new AJPClient();
@@ -102,6 +102,7 @@ public class AJPClientTest {
 	}
 
 	@Test
+	@Ignore("Requires an AJP server on the other end")
 	public void ping() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
 		AJPClient connection = new AJPClient();
@@ -133,7 +134,7 @@ public class AJPClientTest {
 	}
 
 	@Test
-	@Ignore
+	@Ignore("Requires an AJP server on the other end")
 	public void testTomcat() throws Exception {
 		InetSocketAddress ajp = new InetSocketAddress("localhost", 8009);
 		AJPClient client = new AJPClient();
