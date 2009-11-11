@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Logger;
 
 import org.owasp.proxy.util.AsciiString;
 
@@ -46,9 +45,6 @@ public interface MutableMessageHeader extends MessageHeader {
 	String deleteHeader(String name) throws MessageFormatException;
 
 	public static class Impl implements MutableMessageHeader {
-
-		private static Logger logger = Logger
-				.getLogger(MutableMessageHeader.class.getName());
 
 		private static final byte[] CRLF = { '\r', '\n' };
 
