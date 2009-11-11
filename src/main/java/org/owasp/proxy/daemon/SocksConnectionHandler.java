@@ -7,7 +7,8 @@ import java.net.Socket;
 
 import org.owasp.proxy.io.PushbackSocket;
 
-public class SocksConnectionHandler implements TargetedConnectionHandler {
+public class SocksConnectionHandler implements TargetedConnectionHandler,
+		ConnectionHandler {
 
 	private TargetedConnectionHandler next;
 
@@ -34,6 +35,17 @@ public class SocksConnectionHandler implements TargetedConnectionHandler {
 					+ " bytes in as many attempts!");
 		in.unread(sniff);
 		return sniff;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see
+	 * org.owasp.proxy.daemon.ConnectionHandler#handleConnection(java.net.Socket
+	 * )
+	 */
+	public void handleConnection(Socket socket) throws IOException {
+		handleConnection(socket, null);
 	}
 
 	/*
