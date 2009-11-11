@@ -1,6 +1,9 @@
 package org.owasp.proxy.httpclient;
 
+import java.io.IOException;
 import java.io.InputStream;
+
+import org.owasp.proxy.util.MessageUtils;
 
 public interface StreamingResponse extends MutableResponseHeader,
 		StreamingMessage {
@@ -19,6 +22,17 @@ public interface StreamingResponse extends MutableResponseHeader,
 			return content;
 		}
 
+		public InputStream getDecodedContent() throws MessageFormatException {
+			try {
+				return MessageUtils.decode(this, content);
+			} catch (IOException ioe) {
+				MessageFormatException mfe = new MessageFormatException(
+						"Error decoding content");
+				mfe.initCause(ioe);
+				throw mfe;
+			}
+		}
+
 		/*
 		 * (non-Javadoc)
 		 * 
@@ -28,6 +42,11 @@ public interface StreamingResponse extends MutableResponseHeader,
 		 */
 		public void setContent(InputStream content) {
 			this.content = content;
+		}
+
+		public void setDecodedContent(InputStream content)
+				throws MessageFormatException {
+			this.content = MessageUtils.encode(this, content);
 		}
 
 	}
