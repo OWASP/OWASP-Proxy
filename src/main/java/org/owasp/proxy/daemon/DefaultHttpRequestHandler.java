@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.ProxySelector;
 import java.net.SocketAddress;
 
 import org.owasp.proxy.httpclient.HttpClient;
@@ -13,6 +14,8 @@ import org.owasp.proxy.httpclient.StreamingResponse;
 import org.owasp.proxy.io.TimingInputStream;
 
 public class DefaultHttpRequestHandler implements HttpRequestHandler {
+
+	private ProxySelector proxySelector = null;
 
 	private ServerGroup serverGroup = null;
 
@@ -34,8 +37,12 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 		this.serverGroup = serverGroup;
 	}
 
+	public void setProxySelector(ProxySelector proxySelector) {
+		this.proxySelector = proxySelector;
+	}
+
 	protected HttpClient createClient() {
-		return new HttpClient() {
+		HttpClient client = new HttpClient() {
 
 			/*
 			 * (non-Javadoc)
@@ -52,6 +59,8 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 			}
 
 		};
+		client.setProxySelector(proxySelector);
+		return client;
 	}
 
 	/*
