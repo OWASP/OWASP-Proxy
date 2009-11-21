@@ -6,11 +6,9 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.ConnectException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.Socket;
-import java.net.UnknownHostException;
 
 import org.owasp.proxy.daemon.socks.ProxyMessage;
 import org.owasp.proxy.daemon.socks.ServerAuthenticator;
@@ -126,19 +124,9 @@ public class SocksProtocolHandler {
 		if (!auth.checkRequest(msg))
 			throw new SocksException(SocksConstants.SOCKS_FAILURE);
 
-		if (msg.ip == null) {
-			if (msg instanceof Socks5Message) {
-				try {
-					msg.ip = InetAddress.getByName(msg.host);
-				} catch (UnknownHostException uhe) {
-					throw new SocksException(
-							SocksConstants.SOCKS_ADDR_NOT_SUPPORTED,
-							"Address not supported for " + msg.host + ":"
-									+ msg.port);
-				}
-			} else
-				throw new SocksException(SocksConstants.SOCKS_FAILURE);
-		}
+		if (msg.ip == null && !(msg instanceof Socks5Message))
+			// Socks5 allows specifying a host name
+			throw new SocksException(SocksConstants.SOCKS_FAILURE);
 
 		switch (msg.command) {
 		case SocksConstants.SOCKS_CMD_CONNECT:
