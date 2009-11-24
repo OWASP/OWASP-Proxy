@@ -231,7 +231,8 @@ public class HttpClient {
 		for (Proxy proxy : proxies) {
 			direct = true;
 			try {
-				SocketAddress addr = proxy.address();
+				SocketAddress addr = proxy == Proxy.NO_PROXY ? target : proxy
+						.address();
 				validateTarget(addr);
 				if (proxy.type() == Proxy.Type.HTTP) {
 					socket = new Socket(Proxy.NO_PROXY);
