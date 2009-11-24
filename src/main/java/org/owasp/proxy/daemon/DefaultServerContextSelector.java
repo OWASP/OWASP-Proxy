@@ -33,7 +33,7 @@ public class DefaultServerContextSelector implements SSLContextSelector {
 		if (is != null) {
 			char[] ksp = storePassword.toCharArray();
 			ks.load(is, ksp);
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("X509");
 			char[] kp = keyPassword.toCharArray();
 			kmf.init(ks, kp);
 			sslContext = SSLContext.getInstance("SSLv3");
