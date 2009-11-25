@@ -7,137 +7,168 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.Principal;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.Signature;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Vector;
 import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509KeyManager;
+import javax.security.auth.x500.X500Principal;
 
 import org.owasp.proxy.httpclient.SSLContextSelector;
-
-import sun.security.util.ObjectIdentifier;
-import sun.security.x509.AlgorithmId;
-import sun.security.x509.AuthorityKeyIdentifierExtension;
-import sun.security.x509.BasicConstraintsExtension;
-import sun.security.x509.CertAndKeyGen;
-import sun.security.x509.CertificateAlgorithmId;
-import sun.security.x509.CertificateExtensions;
-import sun.security.x509.CertificateIssuerName;
-import sun.security.x509.CertificateSerialNumber;
-import sun.security.x509.CertificateSubjectName;
-import sun.security.x509.CertificateValidity;
-import sun.security.x509.CertificateVersion;
-import sun.security.x509.CertificateX509Key;
-import sun.security.x509.ExtendedKeyUsageExtension;
-import sun.security.x509.KeyIdentifier;
-import sun.security.x509.KeyUsageExtension;
-import sun.security.x509.NetscapeCertTypeExtension;
-import sun.security.x509.SubjectKeyIdentifierExtension;
-import sun.security.x509.X500Name;
-import sun.security.x509.X500Signer;
-import sun.security.x509.X509CertImpl;
-import sun.security.x509.X509CertInfo;
+import org.owasp.proxy.util.SingleX509KeyManager;
+import org.owasp.proxy.util.SunCertificateUtils;
 
 public class AutoGeneratingContextSelector implements SSLContextSelector {
 
+	private static final long DEFAULT_VALIDITY = 10L * 365L * 24L * 60L * 60L
+			* 1000L;
+
 	private static Logger logger = Logger
 			.getLogger(AutoGeneratingContextSelector.class.getName());
-
-	private static final String CA = "CA";
-
-	private static final String SIGALG = "SHA1withRSA";
-
-	private static X500Name CA_NAME;
-
-	static {
-		try {
-			CA_NAME = new X500Name("OWASP Custom CA for "
-					+ java.net.InetAddress.getLocalHost().getHostName(),
-					"OWASP Custom CA", "OWASP", "OWASP", "OWASP", "OWASP");
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-			CA_NAME = null;
-		}
-	}
-
-	private String filename;
-
-	private KeyStore keystore;
-
-	private char[] password;
 
 	private boolean reuseKeys = false;
 
 	private Map<String, SSLContext> contextCache = new HashMap<String, SSLContext>();
 
-	private X500Name caName;
+	private PrivateKey caKey;
 
-	public AutoGeneratingContextSelector() throws GeneralSecurityException,
-			IOException {
-		this(null, "JKS", "password".toCharArray());
+	private X509Certificate[] caCerts;
+
+	/**
+	 * creates a {@link AutoGeneratingContextSelector} that will create a RSA
+	 * {@link KeyPair} and self-signed {@link X509Certificate} based on the
+	 * {@link X500Principal} supplied. The user can call
+	 * {@link #save(File, String, char[], char[], String)} to save the generated
+	 * details at a later stage.
+	 * 
+	 * @param ca
+	 * @throws GeneralSecurityException
+	 * @throws IOException
+	 */
+	public AutoGeneratingContextSelector(X500Principal ca)
+			throws GeneralSecurityException, IOException {
+		create(ca);
 	}
 
-	public AutoGeneratingContextSelector(String filename, String type,
-			char[] password) throws GeneralSecurityException, IOException {
-		this(filename, type, password, CA_NAME);
+	/**
+	 * creates a {@link AutoGeneratingContextSelector} that will use the
+	 * supplied {@link PrivateKey} and {@link X509Certificate} chain
+	 * 
+	 * @param caKey
+	 *            the CA key
+	 * @param caCerts
+	 *            the certificate chain
+	 */
+	public AutoGeneratingContextSelector(PrivateKey caKey,
+			X509Certificate[] caCerts) {
+		this.caKey = caKey;
+		this.caCerts = new X509Certificate[caCerts.length];
+		System.arraycopy(caCerts, 0, this.caCerts, 0, caCerts.length);
 	}
 
-	public AutoGeneratingContextSelector(String filename, String type,
-			char[] password, X500Name caName) throws GeneralSecurityException,
+	/**
+	 * creates a {@link AutoGeneratingContextSelector} that will load its CA
+	 * {@link PrivateKey} and {@link X509Certificate} chain from the indicated
+	 * keystore
+	 * 
+	 * @param keystore
+	 *            the location of the keystore
+	 * @param type
+	 *            the keystore type
+	 * @param password
+	 *            the keystore password
+	 * @param keyPassword
+	 *            the key password
+	 * @param caAlias
+	 *            the alias of the key entry
+	 * @throws GeneralSecurityException
+	 * @throws IOException
+	 */
+	public AutoGeneratingContextSelector(File keystore, String type,
+			char[] password, char[] keyPassword, String caAlias)
+			throws GeneralSecurityException, IOException {
+		initFromKeyStore(keystore, type, password, keyPassword, caAlias);
+	}
+
+	private void initFromKeyStore(File ks, String type, char[] kspassword,
+			char[] keyPassword, String alias) throws GeneralSecurityException,
 			IOException {
-		this.filename = filename;
-		this.password = new char[password.length];
-		System.arraycopy(password, 0, this.password, 0, password.length);
-		this.caName = caName;
-		keystore = KeyStore.getInstance(type);
-		if (filename == null) {
-			logger
-					.info("No keystore provided, keys and certificates will be transient!");
-			keystore.load(null, password);
-		} else {
-			File file = new File(filename);
-			if (file.exists()) {
-				InputStream is = null;
-				try {
-					logger.fine("Loading keys from " + filename);
-					is = new FileInputStream(file);
-					keystore.load(is, password);
-				} finally {
-					if (is != null) {
-						try {
-							is.close();
-						} catch (IOException ioe) {
-							ioe.printStackTrace();
-						}
-					}
-				}
-			} else {
-				logger.info("keystore '" + filename + "' will be created");
-			}
+		InputStream in = new FileInputStream(ks);
+		try {
+			KeyStore keyStore = KeyStore.getInstance(type);
+			keyStore.load(in, kspassword);
+			caKey = (PrivateKey) keyStore.getKey(alias, keyPassword);
+			Certificate[] certChain = keyStore.getCertificateChain(alias);
+			caCerts = new X509Certificate[certChain.length];
+			System.arraycopy(certChain, 0, caCerts, 0, certChain.length);
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		} finally {
+			in.close();
 		}
-		if (keystore.getKey(CA, password) == null) {
-			logger.info("Generating CA key");
-			generateCA();
+	}
+
+	private void create(X500Principal caName) throws GeneralSecurityException,
+			IOException {
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+		keyGen.initialize(1024);
+		KeyPair caPair = keyGen.generateKeyPair();
+		caKey = caPair.getPrivate();
+		PublicKey caPubKey = caPair.getPublic();
+		Date begin = new Date();
+		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
+
+		X509Certificate cert = SunCertificateUtils.sign(caName, caPubKey,
+				caName, caPubKey, caKey, begin, ends);
+		caCerts = new X509Certificate[] { cert };
+	}
+
+	/**
+	 * Saves the CA key and the Certificate chain to the specified keystore
+	 * 
+	 * @param keyStore
+	 *            the file to save the keystore to
+	 * @param type
+	 *            the keystore type (PKCS12, JKS, etc)
+	 * @param password
+	 *            the keystore password
+	 * @param keyPassword
+	 *            the key password
+	 * @param caAlias
+	 *            the alias to save the key and cert under
+	 * @throws GeneralSecurityException
+	 * @throws IOException
+	 */
+	public void save(File keyStore, String type, char[] password,
+			char[] keyPassword, String caAlias)
+			throws GeneralSecurityException, IOException {
+		KeyStore store = KeyStore.getInstance(type);
+		store.load(null, password);
+		store.setKeyEntry(caAlias, caKey, keyPassword, caCerts);
+		OutputStream out = new FileOutputStream(keyStore);
+		try {
+			store.store(out, password);
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		} finally {
+			out.close();
 		}
 	}
 
 	/**
-	 * Determines whether the public and private key generated for the CA will
-	 * be reused for other hosts as well.
+	 * Determines whether the public and private key used for the CA will be
+	 * reused for other hosts as well.
 	 * 
 	 * This is mostly just a performance optimisation, to save time generating a
 	 * key pair for each host. Paranoid clients may have an issue with this, in
@@ -163,10 +194,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		SSLContext sslContext = contextCache.get(host);
 		if (sslContext == null) {
 			try {
-				if (!keystore.containsAlias(host))
-					generate(host, reuseKeys);
+				X509KeyManager km = createKeyMaterial(host);
 				sslContext = SSLContext.getInstance("SSLv3");
-				HostKeyManager km = new HostKeyManager(host);
 				sslContext.init(new KeyManager[] { km }, null, null);
 				contextCache.put(host, sslContext);
 			} catch (GeneralSecurityException gse) {
@@ -177,221 +206,34 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		return sslContext;
 	}
 
-	private void saveKeystore() {
-		if (filename == null)
-			return;
-		OutputStream out = null;
-		try {
-			out = new FileOutputStream(filename);
-			keystore.store(out, password);
-		} catch (IOException ioe) {
-			ioe.printStackTrace();
-		} catch (GeneralSecurityException gse) {
-			gse.printStackTrace();
-		} finally {
-			if (out != null) {
-				try {
-					out.close();
-				} catch (IOException ioe) {
-					ioe.printStackTrace();
-				}
-			}
-		}
+	protected X500Principal getSubjectPrincipal(String host) {
+		return new X500Principal("cn=" + host + ",ou=UNTRUSTED,o=UNTRUSTED");
 	}
 
-	private void generateCA() throws GeneralSecurityException, IOException {
-		CertAndKeyGen keygen = new CertAndKeyGen("RSA", SIGALG);
-		keygen.generate(1024);
-
-		PrivateKey key = keygen.getPrivateKey();
-
-		java.security.cert.X509Certificate certificate = keygen
-				.getSelfCertificate(caName, 10L * 365L * 24L * 60L * 60L);
-
-		certificate.checkValidity();
-		keystore.setKeyEntry(CA, key, password,
-				new Certificate[] { certificate });
-		saveKeystore();
-	}
-
-	private void generate(String cname, boolean reuseKeys)
+	private X509KeyManager createKeyMaterial(String host)
 			throws GeneralSecurityException {
-		try {
-			PrivateKey caKey = (PrivateKey) keystore.getKey(CA, password);
-			PublicKey caPubKey = keystore.getCertificate(CA).getPublicKey();
-			Certificate[] caCertChain = keystore.getCertificateChain(CA);
-			X509Certificate caCert = (X509Certificate) caCertChain[0];
+		KeyPair keyPair;
 
-			PrivateKey privKey = caKey;
-			PublicKey pubKey = caPubKey;
-
-			if (!reuseKeys) {
-				CertAndKeyGen keygen = new CertAndKeyGen("RSA", SIGALG);
-				keygen.generate(1024);
-				privKey = keygen.getPrivateKey();
-				pubKey = keygen.getPublicKey();
-			}
-
-			Signature signature = Signature.getInstance(SIGALG);
-
-			signature.initSign(caKey);
-			X500Signer issuer = new X500Signer(signature, caName);
-
-			Date begin = new Date();
-			Date ends = caCert.getNotAfter();
-			CertificateValidity valid = new CertificateValidity(begin, ends);
-			X500Name subject = new X500Name(cname, caName
-					.getOrganizationalUnit(), caName.getOrganization(), caName
-					.getCountry());
-
-			X509CertInfo info = new X509CertInfo();
-			// Add all mandatory attributes
-			info.set(X509CertInfo.VERSION, new CertificateVersion(
-					CertificateVersion.V3));
-			info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(
-					(int) (begin.getTime() / 1000)));
-			AlgorithmId algID = issuer.getAlgorithmId();
-			info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(
-					algID));
-			info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(subject));
-			info.set(X509CertInfo.KEY, new CertificateX509Key(pubKey));
-			info.set(X509CertInfo.VALIDITY, valid);
-			info.set(X509CertInfo.ISSUER, new CertificateIssuerName(issuer
-					.getSigner()));
-
-			// add Extensions
-			CertificateExtensions ext = getCertificateExtensions(pubKey,
-					caPubKey);
-			info.set(X509CertInfo.EXTENSIONS, ext);
-
-			X509CertImpl cert = new X509CertImpl(info);
-			cert.sign(caKey, SIGALG);
-
-			Certificate[] certChain = new Certificate[caCertChain.length + 1];
-			System.arraycopy(caCertChain, 0, certChain, 1, caCertChain.length);
-			certChain[0] = cert;
-
-			keystore.setKeyEntry(cname, privKey, password, certChain);
-
-			saveKeystore();
-		} catch (IOException e) {
-			throw new CertificateEncodingException("generate: "
-					+ e.getMessage(), e);
-		}
-	}
-
-	private CertificateExtensions getCertificateExtensions(PublicKey pubKey,
-			PublicKey caPubKey) throws IOException {
-		CertificateExtensions ext = new CertificateExtensions();
-
-		ext.set(SubjectKeyIdentifierExtension.NAME,
-				new SubjectKeyIdentifierExtension(new KeyIdentifier(pubKey)
-						.getIdentifier()));
-
-		ext.set(AuthorityKeyIdentifierExtension.NAME,
-				new AuthorityKeyIdentifierExtension(
-						new KeyIdentifier(caPubKey), null, null));
-
-		// Basic Constraints
-		ext.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(
-		/* isCritical */true, /* isCA */
-		false, /* pathLen */Integer.MAX_VALUE));
-
-		// Netscape Cert Type Extension
-		boolean[] ncteOk = new boolean[8];
-		ncteOk[0] = true; // SSL_CLIENT
-		ncteOk[1] = true; // SSL_SERVER
-		NetscapeCertTypeExtension ncte = new NetscapeCertTypeExtension(ncteOk);
-		ncte = new NetscapeCertTypeExtension(false, ncte.getExtensionValue());
-		ext.set(NetscapeCertTypeExtension.NAME, ncte);
-
-		// Key Usage Extension
-		boolean[] kueOk = new boolean[9];
-		kueOk[0] = true;
-		kueOk[2] = true;
-		// "digitalSignature", // (0),
-		// "nonRepudiation", // (1)
-		// "keyEncipherment", // (2),
-		// "dataEncipherment", // (3),
-		// "keyAgreement", // (4),
-		// "keyCertSign", // (5),
-		// "cRLSign", // (6),
-		// "encipherOnly", // (7),
-		// "decipherOnly", // (8)
-		// "contentCommitment" // also (1)
-		KeyUsageExtension kue = new KeyUsageExtension(kueOk);
-		ext.set(KeyUsageExtension.NAME, kue);
-
-		// Extended Key Usage Extension
-		int[] serverAuthOidData = { 1, 3, 6, 1, 5, 5, 7, 3, 1 };
-		ObjectIdentifier serverAuthOid = new ObjectIdentifier(serverAuthOidData);
-		int[] clientAuthOidData = { 1, 3, 6, 1, 5, 5, 7, 3, 2 };
-		ObjectIdentifier clientAuthOid = new ObjectIdentifier(clientAuthOidData);
-		Vector<ObjectIdentifier> v = new Vector<ObjectIdentifier>();
-		v.add(serverAuthOid);
-		v.add(clientAuthOid);
-		ExtendedKeyUsageExtension ekue = new ExtendedKeyUsageExtension(false, v);
-		ext.set(ExtendedKeyUsageExtension.NAME, ekue);
-
-		return ext;
-
-	}
-
-	private class HostKeyManager implements X509KeyManager {
-
-		private String host;
-
-		private PrivateKey pk;
-
-		private X509Certificate[] certs;
-
-		public HostKeyManager(String host) throws GeneralSecurityException {
-			this.host = host;
-			Certificate[] chain = keystore.getCertificateChain(host);
-			if (chain != null) {
-				certs = new X509Certificate[chain.length];
-				for (int i = 0; i < chain.length; i++) {
-					certs[i] = (X509Certificate) chain[i];
-				}
-			} else {
-				throw new GeneralSecurityException(
-						"Internal error: certificate chain for " + host
-								+ " not found!");
-			}
-
-			pk = (PrivateKey) keystore.getKey(host, password);
-			if (pk == null) {
-				throw new GeneralSecurityException(
-						"Internal error: private key for " + host
-								+ " not found!");
-			}
+		if (reuseKeys) {
+			keyPair = new KeyPair(caCerts[0].getPublicKey(), caKey);
+		} else {
+			KeyPairGenerator keygen = KeyPairGenerator.getInstance("RSA");
+			keygen.initialize(1024);
+			keyPair = keygen.generateKeyPair();
 		}
 
-		public String chooseClientAlias(String[] keyType, Principal[] issuers,
-				Socket socket) {
-			throw new UnsupportedOperationException("Not implemented");
-		}
+		X500Principal subject = getSubjectPrincipal(host);
+		Date begin = new Date();
+		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		public String chooseServerAlias(String keyType, Principal[] issuers,
-				Socket socket) {
-			return host;
-		}
+		X509Certificate cert = SunCertificateUtils.sign(subject, keyPair
+				.getPublic(), caCerts[0].getSubjectX500Principal(), caCerts[0]
+				.getPublicKey(), caKey, begin, ends);
 
-		public X509Certificate[] getCertificateChain(String alias) {
-			return certs;
-		}
+		X509Certificate[] chain = new X509Certificate[caCerts.length + 1];
+		System.arraycopy(caCerts, 0, chain, 1, caCerts.length);
+		chain[0] = cert;
 
-		public String[] getClientAliases(String keyType, Principal[] issuers) {
-			throw new UnsupportedOperationException("Not implemented");
-		}
-
-		public PrivateKey getPrivateKey(String alias) {
-			return pk;
-		}
-
-		public String[] getServerAliases(String keyType, Principal[] issuers) {
-			return new String[] { host };
-		}
-
+		return new SingleX509KeyManager(host, keyPair.getPrivate(), chain);
 	}
 }

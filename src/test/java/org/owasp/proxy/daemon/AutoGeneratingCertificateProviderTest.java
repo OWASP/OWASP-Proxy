@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.util.Date;
+
+import javax.security.auth.x500.X500Principal;
 
 import org.junit.Test;
 import org.owasp.proxy.httpclient.SSLContextSelector;
@@ -17,23 +20,12 @@ public class AutoGeneratingCertificateProviderTest {
 
 	public static void main(String[] args) throws Exception {
 
-		// KeyStore keystore = KeyStore.getInstance("PKCS12");
-		// File file = new File(
-		// "/Users/rogan/secure/Corsaire/localhost.corsaire.com.p12");
-		// if (file.exists()) {
-		// InputStream is = new FileInputStream(file);
-		// keystore.load(is, "password".toCharArray());
-		// Certificate[] chain = keystore
-		// .getCertificateChain("localhost.corsaire.com");
-		// System.out.println(Arrays.asList(chain));
-		// System.exit(0);
-		// } else {
-		// System.err.println("filenotfound");
-		// System.exit(0);
-		// }
+		X500Principal ca = new X500Principal("cn=OWASP Custom CA for "
+				+ java.net.InetAddress.getLocalHost().getHostName() + " at "
+				+ new Date()
+				+ ",ou=OWASP Custom CA,o=OWASP,l=OWASP,st=OWASP,c=OWASP");
 
-		SSLContextSelector cp = new AutoGeneratingContextSelector(null, "JKS",
-				"password".toCharArray());
+		SSLContextSelector cp = new AutoGeneratingContextSelector(ca);
 		EncryptedConnectionHandler ech = new EncryptedConnectionHandler() {
 
 			/*

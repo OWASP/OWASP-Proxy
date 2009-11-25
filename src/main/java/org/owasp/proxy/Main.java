@@ -1,12 +1,14 @@
 package org.owasp.proxy;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.security.GeneralSecurityException;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
+import javax.security.auth.x500.X500Principal;
 import javax.sql.DataSource;
 
 import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
@@ -102,6 +105,42 @@ public class Main {
 		return dataSource;
 	}
 
+	private static SSLContextSelector getSSLContextSelector()
+			throws GeneralSecurityException, IOException {
+		File ks = new File("ca.p12");
+		String type = "PKCS12";
+		char[] password = "password".toCharArray();
+		String alias = "CA";
+		if (ks.exists()) {
+			try {
+				return new AutoGeneratingContextSelector(ks, type, password,
+						password, alias);
+			} catch (GeneralSecurityException e) {
+				System.err.println("Error loading CA keys from keystore: "
+						+ e.getLocalizedMessage());
+			} catch (IOException e) {
+				System.err.println("Error loading CA keys from keystore: "
+						+ e.getLocalizedMessage());
+			}
+		}
+		System.err.println("Generating a new CA");
+		X500Principal ca = new X500Principal("cn=OWASP Custom CA for "
+				+ java.net.InetAddress.getLocalHost().getHostName()
+				+ ",ou=OWASP Custom CA,o=OWASP,l=OWASP,st=OWASP,c=OWASP");
+		AutoGeneratingContextSelector ssl = new AutoGeneratingContextSelector(
+				ca);
+		try {
+			ssl.save(ks, type, password, password, "CA");
+		} catch (GeneralSecurityException e) {
+			System.err.println("Error saving CA keys to keystore: "
+					+ e.getLocalizedMessage());
+		} catch (IOException e) {
+			System.err.println("Error saving CA keys to keystore: "
+					+ e.getLocalizedMessage());
+		}
+		return ssl;
+	}
+
 	public static void main(String[] args) throws Exception {
 		logger.setUseParentHandlers(false);
 		Handler ch = new ConsoleHandler();
@@ -159,14 +198,13 @@ public class Main {
 			@Override
 			public Action directResponse(RequestHeader request,
 					MutableResponseHeader response) {
-				return Action.BUFFER;
+				return Action.STREAM;
 			}
 		};
 		rh = new BufferingHttpRequestHandler(rh, bmi, 10240);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		SSLContextSelector cp = new AutoGeneratingContextSelector(".keystore",
-				"JKS", "password".toCharArray());
+		SSLContextSelector cp = getSSLContextSelector();
 		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
 		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
 		hpch.setConnectHandler(tch);
