@@ -315,7 +315,12 @@ public class MessageUtils {
 			observer.copyCompleted(false, 0);
 		} else {
 			final ByteArrayOutputStream copyContent = new SizeLimitedByteArrayOutputStream(
-					max);
+					max) {
+				@Override
+				protected void overflow() {
+					// do not throw an exception
+				}
+			};
 			content = new CopyInputStream(content, copyContent);
 			content = new CountingInputStream(content) {
 				protected void eof() {
