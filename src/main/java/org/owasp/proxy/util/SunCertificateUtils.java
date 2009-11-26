@@ -40,7 +40,8 @@ public class SunCertificateUtils {
 
 	public static X509Certificate sign(X500Principal subject, PublicKey pubKey,
 			X500Principal issuer, PublicKey caPubKey, PrivateKey caKey,
-			Date begin, Date ends) throws GeneralSecurityException {
+			Date begin, Date ends, int serialNo)
+			throws GeneralSecurityException {
 
 		try {
 			X500Name subjectName = new X500Name(subject.getName());
@@ -57,7 +58,7 @@ public class SunCertificateUtils {
 			info.set(X509CertInfo.VERSION, new CertificateVersion(
 					CertificateVersion.V3));
 			info.set(X509CertInfo.SERIAL_NUMBER, new CertificateSerialNumber(
-					(int) (begin.getTime() / 1000)));
+					serialNo));
 			AlgorithmId algID = signer.getAlgorithmId();
 			info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(
 					algID));

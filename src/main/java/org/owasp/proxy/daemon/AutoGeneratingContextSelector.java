@@ -17,7 +17,9 @@ import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import javax.net.ssl.KeyManager;
@@ -44,6 +46,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 	private PrivateKey caKey;
 
 	private X509Certificate[] caCerts;
+
+	private Set<Integer> serials = new HashSet<Integer>();
 
 	/**
 	 * creates a {@link AutoGeneratingContextSelector} that will create a RSA
@@ -130,7 +134,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
 		X509Certificate cert = SunCertificateUtils.sign(caName, caPubKey,
-				caName, caPubKey, caKey, begin, ends);
+				caName, caPubKey, caKey, begin, ends, 1);
 		caCerts = new X509Certificate[] { cert };
 	}
 
@@ -228,7 +232,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 
 		X509Certificate cert = SunCertificateUtils.sign(subject, keyPair
 				.getPublic(), caCerts[0].getSubjectX500Principal(), caCerts[0]
-				.getPublicKey(), caKey, begin, ends);
+				.getPublicKey(), caKey, begin, ends, getNextSerialNo());
 
 		X509Certificate[] chain = new X509Certificate[caCerts.length + 1];
 		System.arraycopy(caCerts, 0, chain, 1, caCerts.length);
@@ -236,4 +240,13 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 
 		return new SingleX509KeyManager(host, keyPair.getPrivate(), chain);
 	}
+
+	protected int getNextSerialNo() {
+		int serial = (int) (System.currentTimeMillis() / 1000L);
+		while (serials.contains(serial))
+			serial++;
+		serials.add(serial);
+		return serial;
+	}
+
 }
