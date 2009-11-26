@@ -210,7 +210,7 @@ public class Main {
 		hpch.setConnectHandler(tch);
 		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
 		Proxy p = new Proxy(listen, socks, null);
-		p.setSocketTimeout(30000);
+		p.setSocketTimeout(90000);
 		p.start();
 
 		System.out.println("Listener started on " + listen);
