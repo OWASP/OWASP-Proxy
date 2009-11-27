@@ -6,11 +6,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import org.owasp.proxy.daemon.HttpRequestHandler;
 import org.owasp.proxy.daemon.ServerGroup;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.StreamingRequest;
-import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.StreamingRequest;
+import org.owasp.proxy.http.StreamingResponse;
+import org.owasp.proxy.http.server.HttpRequestHandler;
 import org.owasp.proxy.io.TimingInputStream;
 
 public class DefaultAJPRequestHandler implements AJPRequestHandler,

@@ -12,12 +12,12 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.MutableResponseHeader;
-import org.owasp.proxy.httpclient.NamedValue;
-import org.owasp.proxy.httpclient.RequestHeader;
-import org.owasp.proxy.httpclient.StreamingRequest;
-import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.NamedValue;
+import org.owasp.proxy.http.RequestHeader;
+import org.owasp.proxy.http.StreamingRequest;
+import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.io.BufferedInputStream;
 
 public class AJPClient {

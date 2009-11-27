@@ -30,13 +30,13 @@ import java.util.logging.Logger;
 
 import org.owasp.proxy.daemon.ConnectionHandler;
 import org.owasp.proxy.daemon.Server;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.MutableBufferedRequest;
-import org.owasp.proxy.httpclient.MutableBufferedResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MessageUtils;
+import org.owasp.proxy.http.MutableBufferedRequest;
+import org.owasp.proxy.http.MutableBufferedResponse;
 import org.owasp.proxy.io.ChunkedOutputStream;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.util.AsciiString;
-import org.owasp.proxy.util.MessageUtils;
 
 public class TraceServer extends Server {
 

@@ -19,26 +19,27 @@ import java.util.logging.Logger;
 import javax.security.auth.x500.X500Principal;
 import javax.sql.DataSource;
 
-import org.owasp.proxy.daemon.AutoGeneratingContextSelector;
-import org.owasp.proxy.daemon.BufferedMessageInterceptor;
-import org.owasp.proxy.daemon.BufferingHttpRequestHandler;
-import org.owasp.proxy.daemon.ConversationServiceHttpRequestHandler;
-import org.owasp.proxy.daemon.DefaultHttpRequestHandler;
-import org.owasp.proxy.daemon.HttpProxyConnectionHandler;
-import org.owasp.proxy.daemon.HttpRequestHandler;
-import org.owasp.proxy.daemon.LoggingHttpRequestHandler;
 import org.owasp.proxy.daemon.LoopAvoidingTargetedConnectionHandler;
 import org.owasp.proxy.daemon.Proxy;
-import org.owasp.proxy.daemon.RecordingHttpRequestHandler;
-import org.owasp.proxy.daemon.SSLConnectionHandler;
 import org.owasp.proxy.daemon.ServerGroup;
-import org.owasp.proxy.daemon.SocksConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
 import org.owasp.proxy.dao.JdbcMessageDAO;
-import org.owasp.proxy.httpclient.HttpClient;
-import org.owasp.proxy.httpclient.MutableResponseHeader;
-import org.owasp.proxy.httpclient.RequestHeader;
-import org.owasp.proxy.httpclient.SSLContextSelector;
+import org.owasp.proxy.http.MutableRequestHeader;
+import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.RequestHeader;
+import org.owasp.proxy.http.client.HttpClient;
+import org.owasp.proxy.http.server.BufferedMessageInterceptor;
+import org.owasp.proxy.http.server.BufferingHttpRequestHandler;
+import org.owasp.proxy.http.server.ConversationServiceHttpRequestHandler;
+import org.owasp.proxy.http.server.DefaultHttpRequestHandler;
+import org.owasp.proxy.http.server.HttpProxyConnectionHandler;
+import org.owasp.proxy.http.server.HttpRequestHandler;
+import org.owasp.proxy.http.server.LoggingHttpRequestHandler;
+import org.owasp.proxy.http.server.RecordingHttpRequestHandler;
+import org.owasp.proxy.socks.SocksConnectionHandler;
+import org.owasp.proxy.ssl.AutoGeneratingContextSelector;
+import org.owasp.proxy.ssl.SSLConnectionHandler;
+import org.owasp.proxy.ssl.SSLContextSelector;
 import org.owasp.proxy.util.TextFormatter;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -198,6 +199,16 @@ public class Main {
 			@Override
 			public Action directResponse(RequestHeader request,
 					MutableResponseHeader response) {
+				System.err.println(new String(request.getHeader())
+						+ "+++++++++++\n" + new String(response.getHeader())
+						+ "===========");
+				return Action.STREAM;
+			}
+
+			@Override
+			public Action directRequest(MutableRequestHeader request) {
+				System.err.println(new String(request.getHeader())
+						+ "===========");
 				return Action.STREAM;
 			}
 		};

@@ -2,11 +2,11 @@ package org.owasp.proxy.dao;
 
 import java.net.InetSocketAddress;
 
-import org.owasp.proxy.httpclient.BufferedRequest;
-import org.owasp.proxy.httpclient.BufferedResponse;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.RequestHeader;
-import org.owasp.proxy.httpclient.ResponseHeader;
+import org.owasp.proxy.http.BufferedRequest;
+import org.owasp.proxy.http.BufferedResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.RequestHeader;
+import org.owasp.proxy.http.ResponseHeader;
 
 public class ConversationSummary {
 

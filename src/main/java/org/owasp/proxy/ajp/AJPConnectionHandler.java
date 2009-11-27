@@ -8,10 +8,10 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 
 import org.owasp.proxy.daemon.ConnectionHandler;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.MutableResponseHeader;
-import org.owasp.proxy.httpclient.NamedValue;
-import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.NamedValue;
+import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.io.BufferedInputStream;
 import org.owasp.proxy.io.EofNotifyingInputStream;
 

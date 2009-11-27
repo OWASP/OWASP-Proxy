@@ -9,7 +9,10 @@ import java.util.Date;
 import javax.security.auth.x500.X500Principal;
 
 import org.junit.Test;
-import org.owasp.proxy.httpclient.SSLContextSelector;
+import org.owasp.proxy.ssl.AutoGeneratingContextSelector;
+import org.owasp.proxy.ssl.EncryptedConnectionHandler;
+import org.owasp.proxy.ssl.SSLConnectionHandler;
+import org.owasp.proxy.ssl.SSLContextSelector;
 
 public class AutoGeneratingCertificateProviderTest {
 

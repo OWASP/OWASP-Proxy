@@ -3,7 +3,7 @@ package org.owasp.proxy.io;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.owasp.proxy.httpclient.MutableResponseHeader;
+import org.owasp.proxy.http.MutableResponseHeader;
 
 public class TimingInputStream extends EofNotifyingInputStream {
 

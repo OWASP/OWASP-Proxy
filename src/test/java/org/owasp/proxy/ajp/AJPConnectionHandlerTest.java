@@ -16,12 +16,12 @@ import org.owasp.proxy.ajp.AJPConnectionHandler;
 import org.owasp.proxy.ajp.AJPRequest;
 import org.owasp.proxy.ajp.AJPRequestHandler;
 import org.owasp.proxy.daemon.Server;
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.MutableBufferedResponse;
-import org.owasp.proxy.httpclient.StreamingRequest;
-import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MessageUtils;
+import org.owasp.proxy.http.MutableBufferedResponse;
+import org.owasp.proxy.http.StreamingRequest;
+import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.util.AsciiString;
-import org.owasp.proxy.util.MessageUtils;
 
 public class AJPConnectionHandlerTest {
 

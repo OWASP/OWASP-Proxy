@@ -3,8 +3,8 @@ package org.owasp.proxy.ajp;
 import java.io.IOException;
 import java.net.InetAddress;
 
-import org.owasp.proxy.httpclient.MessageFormatException;
-import org.owasp.proxy.httpclient.StreamingResponse;
+import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.StreamingResponse;
 
 public interface AJPRequestHandler {
 

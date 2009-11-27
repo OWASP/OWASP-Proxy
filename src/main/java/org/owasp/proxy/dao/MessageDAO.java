@@ -3,14 +3,14 @@ package org.owasp.proxy.dao;
 import java.io.InputStream;
 import java.util.Collection;
 
-import org.owasp.proxy.httpclient.BufferedRequest;
-import org.owasp.proxy.httpclient.BufferedResponse;
-import org.owasp.proxy.httpclient.MutableBufferedRequest;
-import org.owasp.proxy.httpclient.MutableBufferedResponse;
-import org.owasp.proxy.httpclient.MutableRequestHeader;
-import org.owasp.proxy.httpclient.MutableResponseHeader;
-import org.owasp.proxy.httpclient.RequestHeader;
-import org.owasp.proxy.httpclient.ResponseHeader;
+import org.owasp.proxy.http.BufferedRequest;
+import org.owasp.proxy.http.BufferedResponse;
+import org.owasp.proxy.http.MutableBufferedRequest;
+import org.owasp.proxy.http.MutableBufferedResponse;
+import org.owasp.proxy.http.MutableRequestHeader;
+import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.RequestHeader;
+import org.owasp.proxy.http.ResponseHeader;
 import org.springframework.dao.DataAccessException;
 
 public interface MessageDAO {

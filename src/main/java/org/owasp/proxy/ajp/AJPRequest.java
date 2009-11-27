@@ -2,7 +2,7 @@ package org.owasp.proxy.ajp;
 
 import java.util.Map;
 
-import org.owasp.proxy.httpclient.StreamingRequest;
+import org.owasp.proxy.http.StreamingRequest;
 
 public class AJPRequest extends StreamingRequest.Impl {
 
