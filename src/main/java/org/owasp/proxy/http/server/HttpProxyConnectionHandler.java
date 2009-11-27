@@ -329,35 +329,9 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 					}
 				}
 
-				try {
-					out.write(response.getHeader());
-				} catch (IOException ioe) { // client gone
+				if (!writeResponse(request, response, out))
 					return;
-				}
-				InputStream content = response.getContent();
-				if (content != null) {
-					int count = 0;
-					try {
-						byte[] buff = new byte[4096];
-						int got;
-						while ((got = content.read(buff)) > -1) {
-							try {
-								out.write(buff, 0, got);
-								count += got;
-							} catch (IOException ioe) { // client gone
-								content.close();
-								return;
-							}
-						}
-						out.flush();
-					} catch (IOException ioe) { // server closed
-						logger.fine("Request was " + request);
-						logger.fine("Incomplete response content because "
-								+ ioe.getMessage());
-						logger.fine("Read " + count + " bytes");
-						throw ioe;
-					}
-				}
+
 				holder.state = State.READY;
 				version = response.getVersion();
 				connection = response.getHeader("Connection");
@@ -371,6 +345,11 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 					close = true;
 				} else if ("Keep-Alive".equalsIgnoreCase(connection)) {
 					close = false;
+				}
+				if (!close && response.getHeader("Transfer-Encoding") == null
+						&& response.getHeader("Content-Length") == null) {
+					// Close connection: no T-E or C-L
+					close = true;
 				}
 			} while (!close);
 		} catch (GeneralSecurityException gse) {
@@ -391,6 +370,40 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 			}
 		}
 
+	}
+
+	private boolean writeResponse(RequestHeader request,
+			StreamingResponse response, OutputStream out) throws IOException {
+		try {
+			out.write(response.getHeader());
+		} catch (IOException ioe) { // client gone
+			return false;
+		}
+		InputStream content = response.getContent();
+		if (content != null) {
+			int count = 0;
+			try {
+				byte[] buff = new byte[4096];
+				int got;
+				while ((got = content.read(buff)) > -1) {
+					try {
+						out.write(buff, 0, got);
+						count += got;
+					} catch (IOException ioe) { // client gone
+						content.close();
+						return false;
+					}
+				}
+				out.flush();
+			} catch (IOException ioe) { // server closed
+				logger.fine("Request was " + request);
+				logger.fine("Incomplete response content because "
+						+ ioe.getMessage());
+				logger.fine("Read " + count + " bytes");
+				throw ioe;
+			}
+		}
+		return true;
 	}
 
 	private boolean isExpectContinue(RequestHeader request)

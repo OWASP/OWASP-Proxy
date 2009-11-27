@@ -199,16 +199,16 @@ public class Main {
 			@Override
 			public Action directResponse(RequestHeader request,
 					MutableResponseHeader response) {
-				System.err.println(new String(request.getHeader())
-						+ "+++++++++++\n" + new String(response.getHeader())
-						+ "===========");
+				// System.err.println(new String(request.getHeader())
+				// + "+++++++++++\n" + new String(response.getHeader())
+				// + "===========");
 				return Action.STREAM;
 			}
 
 			@Override
 			public Action directRequest(MutableRequestHeader request) {
-				System.err.println(new String(request.getHeader())
-						+ "===========");
+				// System.err.println(new String(request.getHeader())
+				// + "===========");
 				return Action.STREAM;
 			}
 		};
