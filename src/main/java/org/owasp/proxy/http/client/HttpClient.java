@@ -1,15 +1,11 @@
 package org.owasp.proxy.http.client;
 
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -30,7 +26,9 @@ import javax.net.ssl.SSLSocketFactory;
 import org.owasp.proxy.daemon.AddressResolver;
 import org.owasp.proxy.http.MessageFormatException;
 import org.owasp.proxy.http.MessageUtils;
+import org.owasp.proxy.http.MutableRequestHeader;
 import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.ResponseHeader;
 import org.owasp.proxy.http.StreamingRequest;
 import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.io.ChunkedInputStream;
@@ -178,34 +176,33 @@ public class HttpClient {
 		return false;
 	}
 
-	private void proxyConnect(InetSocketAddress target) throws IOException {
-		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(socket
-				.getOutputStream()));
-		bw.write("CONNECT " + target.getHostName() + ":" + target.getPort()
-				+ " HTTP/1.0\r\n\r\n");
-		bw.flush();
-		BufferedReader br = new BufferedReader(new InputStreamReader(socket
-				.getInputStream()));
-		String line = br.readLine();
-		if (line == null) {
-			throw new IOException(
-					"Upstream proxy closed connection without replying");
+	private StreamingResponse proxyConnect(InetSocketAddress target)
+			throws IOException, MessageFormatException {
+		MutableRequestHeader req = new MutableRequestHeader.Impl();
+		req.setStartLine("CONNECT " + target.getHostName() + ":"
+				+ target.getPort() + " HTTP/1.0");
+		OutputStream out = socket.getOutputStream();
+		out.write(req.getHeader());
+		out.flush();
+
+		InputStream is = socket.getInputStream();
+		ResponseHeader header = readResponseHeader(is);
+		if (!"200".equals(header.getStatus())) {
+			StreamingResponse response = new StreamingResponse.Impl();
+			response.setHeader(header.getHeader());
+			response.setHeaderTime(header.getHeaderTime());
+			response.setContent(getContentStream(response, is));
+			return response;
 		}
-		int pos = "HTTP/1.x ".length();
-		String status = line.substring(pos);
-		if (!status.startsWith("200 ")) {
-			throw new IOException("Upstream proxy responded: " + status);
-		}
-		do {
-			line = br.readLine();
-		} while (br != null && !"".equals(line));
+		return null;
 	}
 
-	public void connect(String host, int port, boolean ssl) throws IOException {
-		connect(new InetSocketAddress(host, port), ssl);
+	public StreamingResponse connect(String host, int port, boolean ssl)
+			throws IOException {
+		return connect(new InetSocketAddress(host, port), ssl);
 	}
 
-	public void connect(InetSocketAddress target, boolean ssl)
+	public StreamingResponse connect(InetSocketAddress target, boolean ssl)
 			throws IOException {
 		if (resolver != null) {
 			InetAddress addr = resolver.getAddress(target.getHostName());
@@ -222,7 +219,7 @@ public class HttpClient {
 
 		if (isConnected(target)) {
 			if (state == State.RESPONSE_CONTENT_READ) {
-				return;
+				return null;
 			}
 			disconnect();
 		} else if (socket != null && !socket.isClosed()) {
@@ -248,7 +245,17 @@ public class HttpClient {
 					socket.setSoTimeout(soTimeout);
 					socket.connect(addr);
 					if (ssl) {
-						proxyConnect(target);
+						try {
+							StreamingResponse proxyResponse = proxyConnect(target);
+							if (!"200".equals(proxyResponse.getStatus())) {
+								return proxyResponse;
+							}
+						} catch (MessageFormatException mfe) {
+							IOException ioe = new IOException(
+									"Malformed proxy response");
+							ioe.initCause(mfe);
+							throw ioe;
+						}
 						layerSsl(target);
 					} else {
 						direct = false;
@@ -272,7 +279,7 @@ public class HttpClient {
 			if (socket != null && socket.isConnected()) {
 				// success
 				state = State.CONNECTED;
-				return;
+				return null;
 			}
 		}
 		if (lastAttempt != null) {
@@ -389,6 +396,37 @@ public class HttpClient {
 		requestSubmissionTime = System.currentTimeMillis();
 	}
 
+	private ResponseHeader readResponseHeader(InputStream in)
+			throws IOException, MessageFormatException {
+		InputStream is = socket.getInputStream();
+		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
+		MutableResponseHeader response = new MutableResponseHeader.Impl();
+		int i = -1;
+		try {
+			while (!header.isEndOfHeader() && (i = is.read()) > -1) {
+				header.write(i);
+			}
+			response.setHeaderTime(System.currentTimeMillis());
+		} catch (SocketTimeoutException ste) {
+			if (header.size() > 0) {
+				MessageFormatException mfe = new MessageFormatException(
+						"Timeout reading response header", header.toByteArray());
+				mfe.initCause(ste);
+				throw mfe;
+			}
+			throw ste;
+		}
+		if (!header.isEndOfHeader() && i == -1) {
+			if (header.size() > 0)
+				throw new MessageFormatException("Invalid header ", header
+						.toByteArray());
+			throw new IOException("Unexpected end of stream reading header");
+		}
+
+		response.setHeader(header.toByteArray());
+		return response;
+	}
+
 	/**
 	 * returns the bytes of the response header.
 	 * 
@@ -439,31 +477,36 @@ public class HttpClient {
 			state = State.RESPONSE_CONTINUE;
 		} else {
 			state = State.RESPONSE_HEADER_READ;
-			if ("204".equals(status) || "304".equals(status)
-					|| !expectResponseContent) {
-				responseContent = NO_CONTENT;
-			} else {
-				String transferCoding = rh.getHeader("Transfer-Encoding");
-				String contentLength = rh.getHeader("Content-Length");
-				if (transferCoding != null
-						&& transferCoding.trim().equalsIgnoreCase("chunked")) {
-					is = new ChunkedInputStream(is, true);
-				} else if (contentLength != null) {
-					try {
-						is = new FixedLengthInputStream(is, Integer
-								.parseInt(contentLength.trim()));
-					} catch (NumberFormatException nfe) {
-						IOException ioe = new IOException(
-								"Invalid content-length header: "
-										+ contentLength);
-						ioe.initCause(nfe);
-						throw ioe;
-					}
-				}
-				responseContent = is;
-			}
+			responseContent = getContentStream(rh, is);
 		}
 		return rh.getHeader();
+	}
+
+	private InputStream getContentStream(MutableResponseHeader header,
+			InputStream is) throws IOException, MessageFormatException {
+		String status = header.getStatus();
+		if ("204".equals(status) || "304".equals(status)
+				|| !expectResponseContent) {
+			return NO_CONTENT;
+		} else {
+			String transferCoding = header.getHeader("Transfer-Encoding");
+			String contentLength = header.getHeader("Content-Length");
+			if (transferCoding != null
+					&& transferCoding.trim().equalsIgnoreCase("chunked")) {
+				is = new ChunkedInputStream(is, true);
+			} else if (contentLength != null) {
+				try {
+					is = new FixedLengthInputStream(is, Integer
+							.parseInt(contentLength.trim()));
+				} catch (NumberFormatException nfe) {
+					IOException ioe = new IOException(
+							"Invalid content-length header: " + contentLength);
+					ioe.initCause(nfe);
+					throw ioe;
+				}
+			}
+			return is;
+		}
 	}
 
 	public InputStream getResponseContent() throws IOException {
@@ -509,8 +552,11 @@ public class HttpClient {
 
 	public StreamingResponse fetchResponse(StreamingRequest request)
 			throws IOException, MessageFormatException {
-		connect(request.getTarget(), request.isSsl());
-		StreamingResponse response = new StreamingResponse.Impl();
+		StreamingResponse response = connect(request.getTarget(), request
+				.isSsl());
+		if (response != null)
+			return response;
+		response = new StreamingResponse.Impl();
 		sendRequestHeader(request.getHeader());
 		request.setTime(getRequestTime());
 		if (MessageUtils.isExpectContinue(request)) {
