@@ -29,10 +29,14 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.owasp.proxy.daemon.AddressResolver;
 import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.MutableResponseHeader;
+import org.owasp.proxy.http.StreamingRequest;
+import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.io.ChunkedInputStream;
 import org.owasp.proxy.io.EofNotifyingInputStream;
 import org.owasp.proxy.io.FixedLengthInputStream;
+import org.owasp.proxy.io.TimingInputStream;
 import org.owasp.proxy.ssl.DefaultClientContextSelector;
 import org.owasp.proxy.ssl.SSLContextSelector;
 import org.owasp.proxy.util.AsciiString;
@@ -501,6 +505,58 @@ public class HttpClient {
 
 	public long getResponseHeaderEndTime() {
 		return responseHeaderEndTime;
+	}
+
+	public StreamingResponse fetchResponse(StreamingRequest request)
+			throws IOException, MessageFormatException {
+		connect(request.getTarget(), request.isSsl());
+		StreamingResponse response = new StreamingResponse.Impl();
+		sendRequestHeader(request.getHeader());
+		request.setTime(getRequestTime());
+		if (MessageUtils.isExpectContinue(request)) {
+			socket.setSoTimeout(2000);
+			try {
+				response.setHeader(getResponseHeader());
+				response.setHeaderTime(getResponseHeaderEndTime());
+			} catch (SocketTimeoutException ste) {
+			} finally {
+				socket.setSoTimeout(getSoTimeout());
+			}
+			if (response.getHeader() != null
+					&& !"100".equals(response.getStatus())) {
+				InputStream content = getResponseContent();
+				if (content != null)
+					content = new TimingInputStream(content, response);
+				response.setContent(content);
+				return response;
+			}
+			if (request.getContent() != null) {
+				sendRequestContent(request.getContent());
+				request.setTime(getRequestTime());
+			}
+		} else {
+			sendRequestHeader(request.getHeader());
+			if (request.getContent() != null)
+				sendRequestContent(request.getContent());
+			request.setTime(System.currentTimeMillis());
+		}
+		if (response.getHeader() != null) {
+			byte[] cont = response.getHeader();
+			byte[] header = getResponseHeader();
+			response.setHeaderTime(getResponseHeaderEndTime());
+			byte[] newHeader = new byte[cont.length + header.length];
+			System.arraycopy(cont, 0, newHeader, 0, cont.length);
+			System.arraycopy(header, 0, newHeader, cont.length, header.length);
+			response.setHeader(newHeader);
+		} else {
+			response.setHeader(getResponseHeader());
+			response.setHeaderTime(getResponseHeaderEndTime());
+		}
+		InputStream content = getResponseContent();
+		if (content != null)
+			content = new TimingInputStream(content, response);
+		response.setContent(content);
+		return response;
 	}
 
 	private static class HeaderByteArrayOutputStream extends
