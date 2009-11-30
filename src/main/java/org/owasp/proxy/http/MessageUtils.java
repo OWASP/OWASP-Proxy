@@ -323,4 +323,10 @@ public class MessageUtils {
 		public abstract void copyCompleted(boolean overflow, int size);
 
 	}
+
+	public static boolean isExpectContinue(RequestHeader request)
+			throws MessageFormatException {
+		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
+	}
+
 }

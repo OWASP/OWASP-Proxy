@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 import org.owasp.proxy.daemon.ConnectionHandler;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
 import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.MutableRequestHeader;
 import org.owasp.proxy.http.RequestHeader;
 import org.owasp.proxy.http.StreamingRequest;
@@ -294,7 +295,7 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 				request.setContent(requestContent);
 
 				StreamingResponse response = null;
-				if (isExpectContinue(request)) {
+				if (MessageUtils.isExpectContinue(request)) {
 					System.err
 							.println("Expecting a Continue response for "
 									+ request.getTarget() + " "
@@ -404,11 +405,6 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 			}
 		}
 		return true;
-	}
-
-	private boolean isExpectContinue(RequestHeader request)
-			throws MessageFormatException {
-		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
 	}
 
 	private static class StateHolder {
