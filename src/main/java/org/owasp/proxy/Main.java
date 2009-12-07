@@ -179,6 +179,7 @@ public class Main {
 			protected HttpClient createClient() {
 				HttpClient client = super.createClient();
 				client.setProxySelector(ps);
+				client.setSoTimeout(90000);
 				return client;
 			}
 		};
