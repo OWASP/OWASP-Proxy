@@ -2,6 +2,7 @@ package org.owasp.proxy;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
@@ -131,13 +132,24 @@ public class Main {
 		AutoGeneratingContextSelector ssl = new AutoGeneratingContextSelector(
 				ca);
 		try {
-			ssl.save(ks, type, password, password, "CA");
+			ssl.save(ks, type, password, password, alias);
 		} catch (GeneralSecurityException e) {
 			System.err.println("Error saving CA keys to keystore: "
 					+ e.getLocalizedMessage());
 		} catch (IOException e) {
 			System.err.println("Error saving CA keys to keystore: "
 					+ e.getLocalizedMessage());
+		}
+		FileWriter pem = null;
+		try {
+			pem = new FileWriter("ca.pem");
+			pem.write(ssl.getCACert());
+		} catch (IOException e) {
+			System.err.println("Error writing CA cert : "
+					+ e.getLocalizedMessage());
+		} finally {
+			if (pem != null)
+				pem.close();
 		}
 		return ssl;
 	}

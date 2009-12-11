@@ -14,6 +14,7 @@ import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 
+import org.owasp.proxy.util.Base64;
 import org.owasp.proxy.util.SunCertificateUtils;
 
 public class AutoGeneratingContextSelector implements SSLContextSelector {
@@ -134,6 +136,19 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		X509Certificate cert = SunCertificateUtils.sign(caName, caPubKey,
 				caName, caPubKey, caKey, begin, ends, 1);
 		caCerts = new X509Certificate[] { cert };
+	}
+
+	public String getCACert() throws CertificateEncodingException {
+		try {
+			return "-----BEGIN CERTIFICATE-----\n"
+					+ Base64.encodeBytes(caCerts[0].getEncoded(),
+							Base64.DO_BREAK_LINES)
+					+ "\n-----END CERTIFICATE-----\n";
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+
 	}
 
 	/**
