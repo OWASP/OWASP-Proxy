@@ -236,9 +236,9 @@ public class HttpClient {
 		IOException lastAttempt = null;
 		for (Proxy proxy : proxies) {
 			direct = true;
+			SocketAddress addr = proxy == Proxy.NO_PROXY ? target : proxy
+					.address();
 			try {
-				SocketAddress addr = proxy == Proxy.NO_PROXY ? target : proxy
-						.address();
 				validateTarget(addr);
 				if (proxy.type() == Proxy.Type.HTTP) {
 					socket = new Socket(Proxy.NO_PROXY);
@@ -269,7 +269,7 @@ public class HttpClient {
 					}
 				}
 			} catch (IOException ioe) {
-				getProxySelector().connectFailed(uri, target, ioe);
+				getProxySelector().connectFailed(uri, addr, ioe);
 				lastAttempt = ioe;
 				if (socket != null) {
 					socket.close();
