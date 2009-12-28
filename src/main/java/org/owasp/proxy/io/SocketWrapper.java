@@ -3,6 +3,7 @@ package org.owasp.proxy.io;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PushbackInputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -10,11 +11,10 @@ import java.net.SocketException;
 import java.nio.channels.SocketChannel;
 
 /**
- * This class supports auto detection of SSL connections. We read the first few
- * bytes from the socket's InputStream, and if it looks like an SSL connection
- * we wrap the InputStream in a PushBackInputStream, push the bytes back into
- * the stream, and create a SocketWrapper to pass to
- * SSLSocketFactory.createSocket()
+ * This class allows substitution of the {@link Socket}'s {@link InputStream}
+ * and {@link OutputStream}. It can be useful for e.g. allowing identification
+ * of data from the socket, using a {@link PushbackInputStream}, and passing the
+ * data to an appropriate handler based on the first few bytes read.
  * 
  * @author rogan
  * 
