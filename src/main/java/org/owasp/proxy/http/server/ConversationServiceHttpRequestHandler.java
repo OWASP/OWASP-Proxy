@@ -10,8 +10,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import org.owasp.proxy.dao.ConversationSummary;
-import org.owasp.proxy.dao.MessageDAO;
 import org.owasp.proxy.http.MessageFormatException;
 import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.NamedValue;
@@ -19,6 +17,8 @@ import org.owasp.proxy.http.RequestHeader;
 import org.owasp.proxy.http.ResponseHeader;
 import org.owasp.proxy.http.StreamingRequest;
 import org.owasp.proxy.http.StreamingResponse;
+import org.owasp.proxy.http.dao.ConversationSummary;
+import org.owasp.proxy.http.dao.MessageDAO;
 import org.owasp.proxy.util.AsciiString;
 import org.springframework.dao.DataAccessException;
 

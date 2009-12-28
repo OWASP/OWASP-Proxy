@@ -1,4 +1,4 @@
-package org.owasp.proxy.dao;
+package org.owasp.proxy.http.dao;
 
 import java.net.InetSocketAddress;
 
