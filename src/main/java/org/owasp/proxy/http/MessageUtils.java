@@ -275,18 +275,35 @@ public class MessageUtils {
 			stream.setContent(new ByteArrayInputStream(content));
 	}
 
-	public static void delayedCopy(StreamingRequest message,
-			MutableBufferedRequest copy, int max, DelayedCopyObserver observer) {
+	public static void delayedCopy(final StreamingRequest message,
+			final MutableBufferedRequest copy, int max,
+			final DelayedCopyObserver observer) {
 		copy.setTarget(message.getTarget());
 		copy.setSsl(message.isSsl());
 		delayedCopy((StreamingMessage) message, (MutableBufferedMessage) copy,
-				max, observer);
+				max, new DelayedCopyObserver() {
+					@Override
+					public void copyCompleted(boolean overflow, int size) {
+						copy.setTime(message.getTime());
+						observer.copyCompleted(overflow, size);
+					}
+				});
 	}
 
-	public static void delayedCopy(StreamingResponse message,
-			MutableBufferedResponse copy, int max, DelayedCopyObserver observer) {
+	public static void delayedCopy(final StreamingResponse message,
+			final MutableBufferedResponse copy, int max,
+			final DelayedCopyObserver observer) {
+		copy.setHeaderTime(message.getHeaderTime());
 		delayedCopy((StreamingMessage) message, (MutableBufferedMessage) copy,
-				max, observer);
+				max, new DelayedCopyObserver() {
+					@Override
+					public void copyCompleted(boolean overflow, int size) {
+						copy.setHeaderTime(message.getHeaderTime());
+						copy.setContentTime(message.getContentTime());
+						observer.copyCompleted(overflow, size);
+					}
+
+				});
 	}
 
 	private static void delayedCopy(StreamingMessage message,
