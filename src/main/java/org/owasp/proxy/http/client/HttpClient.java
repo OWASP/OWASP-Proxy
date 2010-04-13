@@ -297,6 +297,7 @@ public class HttpClient {
 		SSLSocketFactory factory = sslContext.getSocketFactory();
 		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket, socket
 				.getInetAddress().getHostName(), socket.getPort(), true);
+		sslsocket.setEnabledProtocols(new String[] { "SSLv3" });
 		sslsocket.setUseClientMode(true);
 		sslsocket.setSoTimeout(soTimeout);
 		sslsocket.startHandshake();
