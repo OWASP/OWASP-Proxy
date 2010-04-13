@@ -87,6 +87,8 @@ public class HttpClient {
 
 	private int soTimeout = 10000;
 
+	private String[] enabledProtocols = { "SSLv3" };
+
 	public HttpClient() {
 	}
 
@@ -98,6 +100,25 @@ public class HttpClient {
 		if (proxySelector == null)
 			return NO_PROXY;
 		return proxySelector;
+	}
+
+	public void setSslEnabledProtocols(String[] protocols) {
+		if (protocols == null) {
+			enabledProtocols = null;
+		} else {
+			enabledProtocols = new String[protocols.length];
+			System.arraycopy(protocols, 0, enabledProtocols, 0,
+					protocols.length);
+		}
+	}
+
+	public String[] getSslEnabledProtocols() {
+		if (enabledProtocols == null)
+			return null;
+		String[] protocols = new String[enabledProtocols.length];
+		System.arraycopy(enabledProtocols, 0, protocols, 0,
+				enabledProtocols.length);
+		return protocols;
 	}
 
 	public void setSoTimeout(int timeout) {
@@ -297,7 +318,7 @@ public class HttpClient {
 		SSLSocketFactory factory = sslContext.getSocketFactory();
 		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket, socket
 				.getInetAddress().getHostName(), socket.getPort(), true);
-		sslsocket.setEnabledProtocols(new String[] { "SSLv3" });
+		sslsocket.setEnabledProtocols(enabledProtocols);
 		sslsocket.setUseClientMode(true);
 		sslsocket.setSoTimeout(soTimeout);
 		sslsocket.startHandshake();
