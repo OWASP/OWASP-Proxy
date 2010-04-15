@@ -107,7 +107,7 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 			try {
 				trustManager.checkClientTrusted(certs, authType);
 			} catch (CertificateException ce) {
-				ce.printStackTrace();
+				System.err.println(ce.getLocalizedMessage());
 			}
 		}
 
@@ -115,7 +115,7 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 			try {
 				trustManager.checkServerTrusted(certs, authType);
 			} catch (CertificateException ce) {
-				ce.printStackTrace();
+				System.err.println(ce.getLocalizedMessage());
 			}
 		}
 	}
