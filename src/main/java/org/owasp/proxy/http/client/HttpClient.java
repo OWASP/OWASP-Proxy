@@ -28,7 +28,6 @@ import org.owasp.proxy.http.MessageFormatException;
 import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.MutableRequestHeader;
 import org.owasp.proxy.http.MutableResponseHeader;
-import org.owasp.proxy.http.ResponseHeader;
 import org.owasp.proxy.http.StreamingRequest;
 import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.io.ChunkedInputStream;
@@ -206,16 +205,7 @@ public class HttpClient {
 		out.write(req.getHeader());
 		out.flush();
 
-		InputStream is = socket.getInputStream();
-		ResponseHeader header = readResponseHeader(is);
-		if (!"200".equals(header.getStatus())) {
-			StreamingResponse response = new StreamingResponse.Impl();
-			response.setHeader(header.getHeader());
-			response.setHeaderTime(header.getHeaderTime());
-			response.setContent(getContentStream(response, is));
-			return response;
-		}
-		return null;
+		return readResponse(socket.getInputStream());
 	}
 
 	public StreamingResponse connect(String host, int port, boolean ssl)
@@ -418,11 +408,11 @@ public class HttpClient {
 		requestSubmissionTime = System.currentTimeMillis();
 	}
 
-	private ResponseHeader readResponseHeader(InputStream in)
-			throws IOException, MessageFormatException {
+	private StreamingResponse readResponse(InputStream in) throws IOException,
+			MessageFormatException {
 		InputStream is = socket.getInputStream();
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
-		MutableResponseHeader response = new MutableResponseHeader.Impl();
+		StreamingResponse response = new StreamingResponse.Impl();
 		int i = -1;
 		try {
 			while (!header.isEndOfHeader() && (i = is.read()) > -1) {
@@ -446,6 +436,7 @@ public class HttpClient {
 		}
 
 		response.setHeader(header.toByteArray());
+		response.setContent(is);
 		return response;
 	}
 
