@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.SequenceInputStream;
 import java.net.InetAddress;
 
+import org.owasp.proxy.http.BufferedRequest;
 import org.owasp.proxy.http.MessageFormatException;
 import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.MutableBufferedRequest;
@@ -55,8 +56,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 		next.dispose();
 	}
 
-	private void handleRequest(StreamingRequest request) throws IOException,
-			MessageFormatException {
+	private BufferedRequest handleRequest(StreamingRequest request)
+			throws IOException, MessageFormatException {
 		final Action action = interceptor.directRequest(request);
 		final MutableBufferedRequest brq;
 		if (Action.BUFFER.equals(action)) {
@@ -91,10 +92,13 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 							}
 						}
 					});
+		} else {
+			brq = null;
 		}
+		return brq;
 	}
 
-	private void handleResponse(final RequestHeader request,
+	private void handleResponse(final BufferedRequest request,
 			final StreamingResponse response) throws IOException,
 			MessageFormatException {
 		Action action = interceptor.directResponse(request, response);
@@ -150,7 +154,7 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			return get100Continue();
 		}
 
-		handleRequest(request);
+		BufferedRequest brq = handleRequest(request);
 		isContinue = false;
 
 		StreamingResponse response = null;
@@ -163,7 +167,8 @@ public class BufferingHttpRequestHandler implements HttpRequestHandler {
 			}
 		}
 		response = next.handleRequest(source, request, isContinue);
-		handleResponse(request, response);
+		if (brq != null)
+			handleResponse(brq, response);
 		return response;
 	}
 
