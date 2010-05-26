@@ -112,10 +112,12 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 		}
 
 		public void checkServerTrusted(X509Certificate[] certs, String authType) {
+			String dn = certs[0].getSubjectX500Principal().getName();
 			try {
 				trustManager.checkServerTrusted(certs, authType);
 			} catch (CertificateException ce) {
-				System.err.println(ce.getLocalizedMessage());
+				System.err.printf("Untrusted certificate for {0}: {1}\n", dn,
+						ce.getLocalizedMessage());
 			}
 		}
 	}
