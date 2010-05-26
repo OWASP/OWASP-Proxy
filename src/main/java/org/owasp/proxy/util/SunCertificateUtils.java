@@ -1,6 +1,7 @@
 package org.owasp.proxy.util;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -40,7 +41,7 @@ public class SunCertificateUtils {
 
 	public static X509Certificate sign(X500Principal subject, PublicKey pubKey,
 			X500Principal issuer, PublicKey caPubKey, PrivateKey caKey,
-			Date begin, Date ends, int serialNo)
+			Date begin, Date ends, BigInteger serialNo)
 			throws GeneralSecurityException {
 
 		try {

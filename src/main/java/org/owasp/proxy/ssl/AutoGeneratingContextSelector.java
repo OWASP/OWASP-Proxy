@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.math.BigInteger;
 import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
@@ -47,7 +48,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 
 	private X509Certificate[] caCerts;
 
-	private Set<Integer> serials = new HashSet<Integer>();
+	private Set<BigInteger> serials = new HashSet<BigInteger>();
 
 	/**
 	 * creates a {@link AutoGeneratingContextSelector} that will create a RSA
@@ -134,7 +135,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
 		X509Certificate cert = SunCertificateUtils.sign(caName, caPubKey,
-				caName, caPubKey, caKey, begin, ends, 1);
+				caName, caPubKey, caKey, begin, ends, BigInteger.ONE);
 		caCerts = new X509Certificate[] { cert };
 	}
 
@@ -254,10 +255,10 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		return new SingleX509KeyManager(host, keyPair.getPrivate(), chain);
 	}
 
-	protected int getNextSerialNo() {
-		int serial = (int) (System.currentTimeMillis() / 1000L);
+	protected BigInteger getNextSerialNo() {
+		BigInteger serial = BigInteger.valueOf(System.currentTimeMillis());
 		while (serials.contains(serial))
-			serial++;
+			serial = serial.add(BigInteger.ONE);
 		serials.add(serial);
 		return serial;
 	}
