@@ -149,7 +149,7 @@ public class WindowsProxy {
 		option.value.read();
 		if (option.value.pszValue == null)
 			return null;
-		String str = new String(option.value.pszValue.getString(0));
+		String str = option.value.pszValue.getString(0);
 		clibrary.free(option.value.pszValue);
 		return str;
 	}
