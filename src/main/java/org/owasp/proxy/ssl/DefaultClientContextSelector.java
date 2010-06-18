@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -95,8 +96,12 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 
 		private X509TrustManager trustManager;
 
+		private HashMap<X509Certificate, X509Certificate[]> trusted, untrusted;
+
 		public LoggingTrustManager(X509TrustManager trustManager) {
 			this.trustManager = trustManager;
+			trusted = new HashMap<X509Certificate, X509Certificate[]>();
+			untrusted = new HashMap<X509Certificate, X509Certificate[]>();
 		}
 
 		public X509Certificate[] getAcceptedIssuers() {
@@ -104,20 +109,30 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 		}
 
 		public void checkClientTrusted(X509Certificate[] certs, String authType) {
+			if (trusted.containsKey(certs[0])
+					|| untrusted.containsKey(certs[0]))
+				return;
+			String dn = certs[0].getSubjectX500Principal().getName();
 			try {
 				trustManager.checkClientTrusted(certs, authType);
+				trusted.put(certs[0], certs);
 			} catch (CertificateException ce) {
-				System.err.println(ce.getLocalizedMessage());
+				untrusted.put(certs[0], certs);
+				System.err.printf("Untrusted client certificate for %s", dn);
 			}
 		}
 
 		public void checkServerTrusted(X509Certificate[] certs, String authType) {
+			if (trusted.containsKey(certs[0])
+					|| untrusted.containsKey(certs[0]))
+				return;
 			String dn = certs[0].getSubjectX500Principal().getName();
 			try {
-				trustManager.checkServerTrusted(certs, authType);
+				trustManager.checkClientTrusted(certs, authType);
+				trusted.put(certs[0], certs);
 			} catch (CertificateException ce) {
-				System.err.printf("Untrusted certificate for {0}: {1}\n", dn,
-						ce.getLocalizedMessage());
+				untrusted.put(certs[0], certs);
+				System.err.printf("Untrusted server certificate for %s", dn);
 			}
 		}
 	}
