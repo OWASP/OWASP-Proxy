@@ -27,7 +27,7 @@ public abstract class BufferedMessageInterceptor {
 	 * {@value #IGNORE} indicates that the request or response is uninteresting,
 	 * and should not be buffered at all. No further methods in this interface
 	 * will be invoked for that request/response pair once {@value #IGNORE} has
-	 * been returned by.
+	 * been returned.
 	 * 
 	 * @author rogan
 	 * 
