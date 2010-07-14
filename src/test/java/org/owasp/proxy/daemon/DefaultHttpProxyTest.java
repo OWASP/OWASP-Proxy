@@ -139,7 +139,7 @@ public class DefaultHttpProxyTest {
 	@Test
 	@Ignore("needs internet access")
 	public void testChunked() throws Exception {
-		TraceServer.setChunked(true);
+		ts.setChunked(true);
 		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.start();
 
@@ -208,7 +208,7 @@ public class DefaultHttpProxyTest {
 	 */
 	@Test
 	public void testSecondTimeout() throws Exception {
-		TraceServer.setVersion("HTTP/1.1");
+		ts.setVersion("HTTP/1.1");
 		Proxy proxy = new Proxy(listen, ch, null);
 		proxy.setSocketTimeout(1000);
 		proxy.start();

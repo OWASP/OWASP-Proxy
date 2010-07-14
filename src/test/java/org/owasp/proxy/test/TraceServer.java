@@ -38,34 +38,49 @@ import org.owasp.proxy.io.ChunkedOutputStream;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.util.AsciiString;
 
-public class TraceServer extends Server {
+public class TraceServer {
 
 	private static Logger logger = Logger
 			.getLogger(TraceServer.class.getName());
 
-	private static boolean chunked = false;
+	private Server server;
 
-	private static boolean verbose = false;
+	private boolean chunked = false;
 
-	private static String version = "HTTP/1.0";
+	private boolean verbose = false;
+
+	private String version = "HTTP/1.0";
 
 	public TraceServer(int port) throws IOException {
-		super(new InetSocketAddress("localhost", port), new CH());
+		CH ch = new CH();
+		server = new Server(new InetSocketAddress("localhost", port), ch);
 	}
 
-	public static void setChunked(boolean chunked) {
-		TraceServer.chunked = chunked;
+	public void setChunked(boolean chunked) {
+		this.chunked = chunked;
 	}
 
-	public static void setVerbose(boolean verbose) {
-		TraceServer.verbose = verbose;
+	public void setVerbose(boolean verbose) {
+		this.verbose = verbose;
 	}
 
-	public static void setVersion(String version) {
-		TraceServer.version = version;
+	public void setVersion(String version) {
+		this.version = version;
 	}
 
-	private static class CH implements ConnectionHandler {
+	public void start() {
+		server.start();
+	}
+
+	public boolean stop() {
+		return server.stop();
+	}
+
+	public boolean isStopped() {
+		return server.isStopped();
+	}
+
+	private class CH implements ConnectionHandler {
 
 		public void handleConnection(Socket socket) {
 			try {
@@ -168,8 +183,8 @@ public class TraceServer extends Server {
 
 	public static void main(String[] args) throws Exception {
 		TraceServer ts = new TraceServer(9999);
-		TraceServer.setChunked(true);
-		TraceServer.setVerbose(true);
+		ts.setChunked(true);
+		ts.setVerbose(true);
 		ts.start();
 		System.out.println("Started");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
