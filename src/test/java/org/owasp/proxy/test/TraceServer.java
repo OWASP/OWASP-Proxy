@@ -98,8 +98,10 @@ public class TraceServer {
 					// read the whole header. Each line gets written into the
 					// copy defined
 					// above
-					while (!"".equals(in.readLine()))
-						;
+					String line;
+					do {
+						line = in.readLine();
+					} while (line != null && !"".equals(line));
 
 					{
 						byte[] headerBytes = copy.toByteArray();
