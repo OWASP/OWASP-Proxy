@@ -229,7 +229,8 @@ public class HttpClient {
 		List<Proxy> proxies = getProxySelector().select(uri);
 
 		if (isConnected(target)) {
-			if (state == State.RESPONSE_CONTENT_READ) {
+			if (state == State.RESPONSE_CONTENT_READ
+					|| state == State.CONNECTED) {
 				return null;
 			}
 			disconnect();
@@ -594,7 +595,6 @@ public class HttpClient {
 				request.setTime(getRequestTime());
 			}
 		} else {
-			sendRequestHeader(request.getHeader());
 			if (request.getContent() != null)
 				sendRequestContent(request.getContent());
 			request.setTime(System.currentTimeMillis());
