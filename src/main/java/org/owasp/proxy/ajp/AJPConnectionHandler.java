@@ -97,7 +97,7 @@ public class AJPConnectionHandler implements ConnectionHandler {
 			String cl = request.getHeader("Content-Length");
 			if (cl != null) {
 				long len = Long.parseLong(cl);
-				if (len > 0 && len < Integer.MAX_VALUE) {
+				if (len >= 0 && len < Integer.MAX_VALUE) {
 					InputStream content = new AJPInputStream(in, out,
 							(int) len, ajpRequest);
 					content = new EofNotifyingInputStream(content) {
@@ -161,7 +161,9 @@ public class AJPConnectionHandler implements ConnectionHandler {
 		request.setResource(ajp.getString());
 		request.setRemoteAddress(ajp.getString());
 		request.setRemoteHost(ajp.getString());
-		request.setTarget(new InetSocketAddress(ajp.getString(), ajp.getInt()));
+		String target = ajp.getString();
+		int port = ajp.getInt();
+		request.setTarget(new InetSocketAddress(target, port));
 		request.setSsl(ajp.getBoolean());
 
 		getHeaders(ajp, request);
