@@ -278,6 +278,8 @@ public class AJPMessage {
 	 */
 	public String getString() {
 		int len = getInt();
+		if (len == 0xFFFF || len == -1)
+			return null;
 		StringBuilder buff = new StringBuilder(len);
 		for (int i = 0; i < len; i++) {
 			char c = (char) getByte();
