@@ -19,7 +19,7 @@ public class SingleX509KeyManager implements X509KeyManager {
 			X509Certificate[] certs) {
 		this.alias = alias;
 		this.pk = pk;
-		this.certs = certs;
+		this.certs = copy(certs);
 	}
 
 	public String chooseClientAlias(String[] keyType, Principal[] issuers,
@@ -33,7 +33,7 @@ public class SingleX509KeyManager implements X509KeyManager {
 	}
 
 	public X509Certificate[] getCertificateChain(String alias) {
-		return certs;
+		return copy(certs);
 	}
 
 	public String[] getClientAliases(String keyType, Principal[] issuers) {
@@ -47,4 +47,13 @@ public class SingleX509KeyManager implements X509KeyManager {
 	public String[] getServerAliases(String keyType, Principal[] issuers) {
 		return new String[] { alias };
 	}
+
+	private X509Certificate[] copy(X509Certificate[] certs) {
+		if (certs == null)
+			return null;
+		X509Certificate[] copy = new X509Certificate[certs.length];
+		System.arraycopy(certs, 0, copy, 0, certs.length);
+		return copy;
+	}
+
 }
