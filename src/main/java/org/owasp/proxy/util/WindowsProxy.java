@@ -219,7 +219,7 @@ public class WindowsProxy {
 		System.out.println(getProxySettings());
 	}
 
-	public interface WinInet extends Library {
+	public interface WinInet extends com.sun.jna.Library {
 
 		/**
 		 * PER_CONN_FLAGS
