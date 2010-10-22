@@ -68,17 +68,12 @@ public class AJPConnectionHandler implements ConnectionHandler {
 			if (!holder.state.equals(State.READY))
 				throw new IllegalStateException(
 						"Trying to read a new request in state " + holder.state);
-			try {
-				ajpRequest.readMessage(in);
-			} catch (IOException ignore) {
-				return;
-			}
+			ajpRequest.readMessage(in);
 			int type = ajpRequest.peekByte();
 			switch (type) {
 			case AJPConstants.JK_AJP13_CPING_REQUEST:
 				out.write(PONG);
 				out.flush();
-				break;
 			case AJPConstants.JK_AJP13_FORWARD_REQUEST:
 				doForwardRequest(socket, ajpRequest, holder);
 			}
