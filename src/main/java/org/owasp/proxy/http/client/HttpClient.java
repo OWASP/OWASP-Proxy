@@ -79,8 +79,6 @@ public class HttpClient {
 
 	private InputStream responseContent = null;
 
-	private byte[] requestContinueHeader = null;
-
 	private long requestSubmissionTime, responseHeaderStartTime,
 			responseHeaderEndTime;
 
@@ -319,9 +317,6 @@ public class HttpClient {
 	public void sendRequestHeader(byte[] header) throws IOException,
 			MessageFormatException {
 		if (state == State.RESPONSE_CONTINUE) {
-			if (header == requestContinueHeader) {
-				return;
-			}
 			throw new IllegalStateException(
 					"Cannot start a new request when the "
 							+ "previous request content has not yet been sent");
@@ -369,22 +364,11 @@ public class HttpClient {
 	}
 
 	public void sendRequestContent(byte[] content) throws IOException {
-		if (state != State.REQUEST_HEADER_SENT
-				&& state != State.RESPONSE_CONTINUE) {
-			throw new IllegalStateException(
-					"Ilegal state. Can't send request content when state is "
-							+ state);
-		}
 		if (content != null) {
-			OutputStream os = socket.getOutputStream();
-			os.write(content);
-			os.flush();
-		} else if (state == State.RESPONSE_CONTINUE) {
-			throw new IllegalStateException(
-					"Cannot send null content after a 100 Continue response!");
+			sendRequestContent(new ByteArrayInputStream(content));
+		} else {
+			sendRequestContent((InputStream) null);
 		}
-		state = State.REQUEST_CONTENT_SENT;
-		requestSubmissionTime = System.currentTimeMillis();
 	}
 
 	public void sendRequestContent(InputStream content) throws IOException {
