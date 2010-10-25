@@ -1,5 +1,12 @@
 package org.owasp.proxy.http;
 
+import static org.owasp.proxy.http.HttpConstants.CHUNKED;
+import static org.owasp.proxy.http.HttpConstants.CONTENT_ENCODING;
+import static org.owasp.proxy.http.HttpConstants.CONTENT_LENGTH;
+import static org.owasp.proxy.http.HttpConstants.GZIP;
+import static org.owasp.proxy.http.HttpConstants.IDENTITY;
+import static org.owasp.proxy.http.HttpConstants.TRANSFER_ENCODING;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -55,9 +62,9 @@ public class MessageUtils {
 			throws IOException, MessageFormatException {
 		if (content == null)
 			return content;
-		String codings = message.getHeader("Transfer-Encoding");
+		String codings = message.getHeader(TRANSFER_ENCODING);
 		content = decode(codings, content);
-		codings = message.getHeader("Content-Encoding");
+		codings = message.getHeader(CONTENT_ENCODING);
 		content = decode(codings, content);
 		return content;
 	}
@@ -67,14 +74,14 @@ public class MessageUtils {
 		if (codings == null || codings.trim().equals(""))
 			return content;
 		String[] algos = codings.split("[ \t]*,[ \t]*");
-		if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
+		if (algos.length == 1 && IDENTITY.equalsIgnoreCase(algos[0]))
 			return content;
 		for (int i = 0; i < algos.length; i++) {
-			if ("chunked".equalsIgnoreCase(algos[i])) {
+			if (CHUNKED.equalsIgnoreCase(algos[i])) {
 				content = new ChunkedInputStream(content);
-			} else if ("gzip".equalsIgnoreCase(algos[i])) {
+			} else if (GZIP.equalsIgnoreCase(algos[i])) {
 				content = new GunzipInputStream(content);
-			} else if ("identity".equalsIgnoreCase(algos[i])) {
+			} else if (IDENTITY.equalsIgnoreCase(algos[i])) {
 				// nothing to do
 			} else
 				throw new MessageFormatException("Unsupported coding : "
@@ -135,14 +142,14 @@ public class MessageUtils {
 		if (codings == null || codings.trim().equals(""))
 			return content;
 		String[] algos = codings.split("[ \t]*,[ \t]*");
-		if (algos.length == 1 && "identity".equalsIgnoreCase(algos[0]))
+		if (algos.length == 1 && IDENTITY.equalsIgnoreCase(algos[0]))
 			return content;
 		for (int i = 0; i < algos.length; i++) {
-			if ("chunked".equalsIgnoreCase(algos[i])) {
+			if (CHUNKED.equalsIgnoreCase(algos[i])) {
 				content = new ChunkingInputStream(content);
-			} else if ("gzip".equalsIgnoreCase(algos[i])) {
+			} else if (GZIP.equalsIgnoreCase(algos[i])) {
 				content = new GzipInputStream(content);
-			} else if ("identity".equalsIgnoreCase(algos[i])) {
+			} else if (IDENTITY.equalsIgnoreCase(algos[i])) {
 				// nothing to do
 			} else
 				throw new MessageFormatException("Unsupported coding : "
@@ -160,13 +167,13 @@ public class MessageUtils {
 			InputStream in, OutputStream out) throws MessageFormatException,
 			IOException {
 		boolean read = false;
-		String te = header.getHeader("Transfer-Encoding");
-		if ("chunked".equalsIgnoreCase(te)) {
+		String te = header.getHeader(TRANSFER_ENCODING);
+		if (CHUNKED.equalsIgnoreCase(te)) {
 			in = new ChunkedInputStream(in);
 		} else if (te != null) {
 			throw new IOException("Unknown Transfer-Encoding '" + te + "'");
 		} else {
-			String cl = header.getHeader("Content-Length");
+			String cl = header.getHeader(CONTENT_LENGTH);
 			if (cl != null) {
 				try {
 					int l = Integer.parseInt(cl.trim());
@@ -210,14 +217,35 @@ public class MessageUtils {
 	public static boolean expectContent(RequestHeader request)
 			throws MessageFormatException {
 		String method = request.getMethod();
-		return "POST".equals(method) || "PUT".equals(method);
+		if (!"POST".equalsIgnoreCase(method) && !"PUT".equalsIgnoreCase(method))
+			return false;
+		String contentLength = request.getHeader(CONTENT_LENGTH);
+		String transferEncoding = request.getHeader(TRANSFER_ENCODING);
+		if (transferEncoding != null)
+			return true;
+		if (contentLength == null)
+			throw new MessageFormatException(
+					"Request content expected, but no length specified!",
+					request.getHeader());
+		try {
+			int cl = Integer.parseInt(contentLength);
+			if (cl < 0)
+				throw new MessageFormatException("Negative content length: "
+						+ contentLength, request.getHeader());
+			if (cl == 0)
+				return false;
+			return true;
+		} catch (NumberFormatException nfe) {
+			throw new MessageFormatException("Invalid content length: "
+					+ contentLength, nfe, request.getHeader());
+		}
 	}
 
 	public static boolean expectContent(RequestHeader request,
 			ResponseHeader response) throws MessageFormatException {
 		String method = request.getMethod();
 		String status = response.getStatus();
-		return !("HEAD".equals(method) || "204".equals(status) || "304"
+		return !("HEAD".equalsIgnoreCase(method) || "204".equals(status) || "304"
 				.equals(status));
 	}
 
