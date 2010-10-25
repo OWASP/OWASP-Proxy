@@ -75,13 +75,6 @@ public class AJPMessage {
 	}
 
 	/**
-	 * Return the underlying byte buffer.
-	 */
-	public byte[] getBuffer() {
-		return buf;
-	}
-
-	/**
 	 * Return the current message length. For read, it's the length of the
 	 * payload (excluding the header). For write, it's the length of the packet
 	 * as a whole (counting the header).
