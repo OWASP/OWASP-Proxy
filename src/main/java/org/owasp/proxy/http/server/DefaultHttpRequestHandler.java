@@ -9,6 +9,7 @@ import java.net.SocketAddress;
 
 import org.owasp.proxy.daemon.ServerGroup;
 import org.owasp.proxy.http.MessageFormatException;
+import org.owasp.proxy.http.MessageUtils;
 import org.owasp.proxy.http.StreamingRequest;
 import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.http.client.HttpClient;
@@ -96,6 +97,17 @@ public class DefaultHttpRequestHandler implements HttpRequestHandler {
 		StreamingResponse response = new StreamingResponse.Impl();
 		response.setHeader(client.getResponseHeader());
 		response.setHeaderTime(client.getResponseHeaderEndTime());
+		// handle unsolicited 100-continue responses
+		if (!MessageUtils.isExpectContinue(request)
+				&& "100".equals(response.getStatus())) {
+			byte[] cont = response.getHeader();
+			byte[] header = client.getResponseHeader();
+			response.setHeaderTime(client.getResponseHeaderEndTime());
+			byte[] both = new byte[cont.length + header.length];
+			System.arraycopy(cont, 0, both, 0, cont.length);
+			System.arraycopy(header, 0, both, cont.length + 1, header.length);
+			response.setHeader(both);
+		}
 		InputStream content = client.getResponseContent();
 		if (content != null)
 			content = new TimingInputStream(content, response);
