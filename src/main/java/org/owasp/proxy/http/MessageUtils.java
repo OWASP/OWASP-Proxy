@@ -24,6 +24,7 @@ package org.owasp.proxy.http;
 import static org.owasp.proxy.http.HttpConstants.CHUNKED;
 import static org.owasp.proxy.http.HttpConstants.CONTENT_ENCODING;
 import static org.owasp.proxy.http.HttpConstants.CONTENT_LENGTH;
+import static org.owasp.proxy.http.HttpConstants.DEFLATE;
 import static org.owasp.proxy.http.HttpConstants.GZIP;
 import static org.owasp.proxy.http.HttpConstants.IDENTITY;
 import static org.owasp.proxy.http.HttpConstants.TRANSFER_ENCODING;
@@ -38,6 +39,7 @@ import org.owasp.proxy.io.ChunkedInputStream;
 import org.owasp.proxy.io.ChunkingInputStream;
 import org.owasp.proxy.io.CopyInputStream;
 import org.owasp.proxy.io.CountingInputStream;
+import org.owasp.proxy.io.DeflaterInputStream;
 import org.owasp.proxy.io.FixedLengthInputStream;
 import org.owasp.proxy.io.GunzipInputStream;
 import org.owasp.proxy.io.GzipInputStream;
@@ -100,6 +102,8 @@ public class MessageUtils {
 		for (int i = 0; i < algos.length; i++) {
 			if (CHUNKED.equalsIgnoreCase(algos[i])) {
 				content = new ChunkedInputStream(content);
+			} else if (DEFLATE.equalsIgnoreCase(algos[i])) {
+				content = new DeflaterInputStream(content);
 			} else if (GZIP.equalsIgnoreCase(algos[i])) {
 				content = new GunzipInputStream(content);
 			} else if (IDENTITY.equalsIgnoreCase(algos[i])) {

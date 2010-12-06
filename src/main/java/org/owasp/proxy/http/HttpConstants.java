@@ -47,4 +47,6 @@ public class HttpConstants {
 
 	public final static String CONTINUE = "100-continue";
 
+	public final static String DEFLATE = "deflate";
+
 }
