@@ -24,6 +24,7 @@ package org.owasp.proxy.http.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.util.logging.Logger;
 
 import org.owasp.proxy.http.HttpAuthenticator;
 import org.owasp.proxy.http.MessageFormatException;
@@ -41,6 +42,8 @@ public class AuthenticatingHttpRequestHandler implements HttpRequestHandler {
 	private HttpRequestHandler delegate;
 
 	private HttpAuthenticator auth;
+
+	private Logger log = Logger.getLogger(this.getClass().getName());
 
 	public AuthenticatingHttpRequestHandler(HttpRequestHandler delegate) {
 		this(delegate, new HttpAuthenticator());
@@ -85,7 +88,7 @@ public class AuthenticatingHttpRequestHandler implements HttpRequestHandler {
 			if (MessageUtils.expectContent(request)) {
 				MessageUtils.delayedCopy(request, copy, max, copyMonitor);
 			} else {
-				MessageUtils.buffer(request, copy, 0);
+				MessageUtils.buffer(request, copy, max);
 			}
 		}
 
@@ -111,10 +114,12 @@ public class AuthenticatingHttpRequestHandler implements HttpRequestHandler {
 			StreamingRequest req = new StreamingRequest.Impl();
 			MessageUtils.stream(copy, req);
 			if (auth.authenticate(req, response, lastResponse)) {
+				log.info("Authentication required, trying again");
 				consumeContent(response.getContent());
 				lastResponse = response;
 				response = delegate.handleRequest(source, req, isContinue);
 			} else {
+				log.info("Authentication not possible, giving up");
 				return response;
 			}
 			status = response.getStatus();
