@@ -128,7 +128,7 @@ public class Main {
 		return dataSource;
 	}
 
-	private static SSLContextSelector getSSLContextSelector()
+	private static SSLContextSelector getServerSSLContextSelector()
 			throws GeneralSecurityException, IOException {
 		File ks = new File("ca.p12");
 		String type = "PKCS12";
@@ -249,7 +249,7 @@ public class Main {
 		rh = new BufferingHttpRequestHandler(rh, bmi, 10240);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		SSLContextSelector cp = getSSLContextSelector();
+		SSLContextSelector cp = getServerSSLContextSelector();
 		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
 		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
 		hpch.setConnectHandler(tch);
