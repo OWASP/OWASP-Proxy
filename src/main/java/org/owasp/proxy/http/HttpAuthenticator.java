@@ -177,18 +177,23 @@ public class HttpAuthenticator {
 	}
 
 	protected String selectChallenge(List<String> challenges) {
-		if (challenges.size() == 1)
-			return challenges.get(0);
-		Iterator<String> it = challenges.iterator();
-		while (it.hasNext()) {
-			String challenge = it.next();
-			if (challenge.toLowerCase().startsWith("basic"))
-				return challenge;
+		String challenge = null;
+		if (challenges.size() == 1) {
+			challenge = challenges.get(0);
+		} else {
+			Iterator<String> it = challenges.iterator();
+			while (it.hasNext()) {
+				String ch = it.next();
+				if (ch.toLowerCase().startsWith("basic")) {
+					challenge = ch;
+					break;
+				}
+			}
+			if (challenges.contains("NTLM")) {
+				challenge = "NTLM";
+			}
 		}
-		if (challenges.contains("NTLM")) {
-			return "NTLM";
-		}
-		return null;
+		return challenge;
 	}
 
 }
