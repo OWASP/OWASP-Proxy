@@ -57,7 +57,9 @@ public class ConversationServiceHttpRequestHandler implements
 	private static final String CONVERSATIONS = "/conversations";
 	private static final String SUMMARIES = "/summaries";
 	private static final String SUMMARY = "/summary";
+	private static final String REQUEST = "/request";
 	private static final String REQUEST_HEADER = "/requestHeader";
+	private static final String RESPONSE = "/response";
 	private static final String RESPONSE_HEADER = "/responseHeader";
 	private static final String REQUEST_CONTENT = "/requestContent";
 	private static final String RESPONSE_CONTENT = "/responseContent";
@@ -139,10 +141,18 @@ public class ConversationServiceHttpRequestHandler implements
 				String id = NamedValue.findValue(parameters, "id");
 				if (id != null)
 					return getSummary(Integer.parseInt(id));
+			} else if (resource.equals(REQUEST)) {
+				String id = NamedValue.findValue(parameters, "id");
+				if (id != null)
+					return getRequest(Integer.parseInt(id));
 			} else if (resource.equals(REQUEST_HEADER)) {
 				String id = NamedValue.findValue(parameters, "id");
 				if (id != null)
 					return getRequestHeader(Integer.parseInt(id));
+			} else if (resource.equals(RESPONSE)) {
+				String id = NamedValue.findValue(parameters, "id");
+				if (id != null)
+					return getResponse(Integer.parseInt(id));
 			} else if (resource.equals(RESPONSE_HEADER)) {
 				String id = NamedValue.findValue(parameters, "id");
 				if (id != null)
@@ -151,14 +161,14 @@ public class ConversationServiceHttpRequestHandler implements
 				String id = NamedValue.findValue(parameters, "id");
 				String decode = NamedValue.findValue(parameters, "decode");
 				if (id != null)
-					return getRequestContent(Integer.parseInt(id), "true"
-							.equals(decode));
+					return getRequestContent(Integer.parseInt(id),
+							"true".equals(decode));
 			} else if (resource.equals(RESPONSE_CONTENT)) {
 				String id = NamedValue.findValue(parameters, "id");
 				String decode = NamedValue.findValue(parameters, "decode");
 				if (id != null)
-					return getResponseContent(Integer.parseInt(id), "true"
-							.equals(decode));
+					return getResponseContent(Integer.parseInt(id),
+							"true".equals(decode));
 			}
 		} catch (MessageFormatException mfe) {
 			mfe.printStackTrace();
@@ -201,8 +211,8 @@ public class ConversationServiceHttpRequestHandler implements
 		StringBuilder buff = new StringBuilder();
 		buff.append("<conversations>");
 		while (it.hasNext()) {
-			buff.append("<conversation>").append(it.next()).append(
-					"</conversation>");
+			buff.append("<conversation>").append(it.next())
+					.append("</conversation>");
 		}
 		buff.append("</conversations>");
 		return conversation(SUCCESS_XML, buff.toString());
@@ -232,7 +242,10 @@ public class ConversationServiceHttpRequestHandler implements
 	private void xml(StringBuilder buff, ConversationSummary summary) {
 		buff.append("<summary id=\"");
 		buff.append(summary.getId());
-		buff.append("\" requestTime=\"").append(summary.getRequestSubmissionTime());
+		buff.append("\" requestId=\"").append(summary.getRequestId());
+		buff.append("\" responseId=\"").append(summary.getResponseId());
+		buff.append("\" requestTime=\"").append(
+				summary.getRequestSubmissionTime());
 		buff.append("\" responseHeaderTime=\"").append(
 				summary.getResponseHeaderTime());
 		buff.append("\" responseContentTime=\"").append(
@@ -298,6 +311,21 @@ public class ConversationServiceHttpRequestHandler implements
 
 	}
 
+	private StreamingResponse getRequest(int id) throws MessageFormatException {
+		RequestHeader r = dao.loadRequestHeader(id);
+		if (r == null)
+			return err_404();
+		
+		byte[] content = dao.loadMessageContent(id);
+
+		if (content == null)
+			return conversation(SUCCESS_OCTET, r.getHeader());
+		byte[] data = new byte[r.getHeader().length + content.length];
+		System.arraycopy(r.getHeader(), 0, data, 0, r.getHeader().length);
+		System.arraycopy(content, 0, data, r.getHeader().length, content.length);
+		return conversation(SUCCESS_OCTET, data);
+	}
+
 	private StreamingResponse getRequestHeader(int id)
 			throws MessageFormatException {
 		RequestHeader r = dao.loadRequestHeader(id);
@@ -305,6 +333,21 @@ public class ConversationServiceHttpRequestHandler implements
 			return err_404();
 
 		return conversation(SUCCESS_OCTET, r.getHeader());
+	}
+
+	private StreamingResponse getResponse(int id) throws MessageFormatException {
+		ResponseHeader r = dao.loadResponseHeader(id);
+		if (r == null)
+			return err_404();
+		
+		byte[] content = dao.loadMessageContent(id);
+
+		if (content == null)
+			return conversation(SUCCESS_OCTET, r.getHeader());
+		byte[] data = new byte[r.getHeader().length + content.length];
+		System.arraycopy(r.getHeader(), 0, data, 0, r.getHeader().length);
+		System.arraycopy(content, 0, data, r.getHeader().length, content.length);
+		return conversation(SUCCESS_OCTET, data);
 	}
 
 	private StreamingResponse getResponseHeader(int id)

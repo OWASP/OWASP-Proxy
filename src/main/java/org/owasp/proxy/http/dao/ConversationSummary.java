@@ -31,7 +31,7 @@ import org.owasp.proxy.http.ResponseHeader;
 
 public class ConversationSummary {
 
-	private long id;
+	private long id, requestId, responseId;
 
 	private InetSocketAddress target;
 
@@ -56,6 +56,7 @@ public class ConversationSummary {
 
 	public void summarizeRequest(RequestHeader request, int contentSize)
 			throws MessageFormatException {
+		requestId = request.getId();
 		target = request.getTarget();
 		ssl = request.isSsl();
 		requestMethod = request.getMethod();
@@ -74,6 +75,7 @@ public class ConversationSummary {
 
 	public void summarizeResponse(ResponseHeader response, int contentSize)
 			throws MessageFormatException {
+		responseId = response.getId();
 		responseStatus = response.getStatus();
 		responseReason = response.getReason();
 		responseContentType = response.getHeader("Content-Type");
@@ -90,6 +92,22 @@ public class ConversationSummary {
 		this.id = id;
 	}
 
+	public long getRequestId() {
+		return requestId;
+	}
+	
+	public void setRequestId(long id) {
+		requestId = id;
+	}
+	
+	public long getResponseId() {
+		return responseId;
+	}
+	
+	public void setResponseId(long id) {
+		responseId = id;
+	}
+	
 	public InetSocketAddress getTarget() {
 		return target;
 	}
