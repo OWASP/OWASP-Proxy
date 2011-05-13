@@ -45,7 +45,7 @@ public class SingleX509KeyManager implements X509KeyManager {
 
 	public String chooseClientAlias(String[] keyType, Principal[] issuers,
 			Socket socket) {
-		throw new UnsupportedOperationException("Not implemented");
+		return alias;
 	}
 
 	public String chooseServerAlias(String keyType, Principal[] issuers,
@@ -58,7 +58,7 @@ public class SingleX509KeyManager implements X509KeyManager {
 	}
 
 	public String[] getClientAliases(String keyType, Principal[] issuers) {
-		throw new UnsupportedOperationException("Not implemented");
+		return new String[] {alias};
 	}
 
 	public PrivateKey getPrivateKey(String alias) {
