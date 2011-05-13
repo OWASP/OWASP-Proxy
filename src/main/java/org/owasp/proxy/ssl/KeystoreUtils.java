@@ -21,19 +21,31 @@
 
 package org.owasp.proxy.ssl;
 
+import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.PrivateKey;
+import java.security.Provider;
+import java.security.Security;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.net.ssl.X509KeyManager;
-
 
 public class KeystoreUtils {
 
@@ -68,8 +80,8 @@ public class KeystoreUtils {
 
 	public static void addToKeyStore(KeyStore keyStore, X509KeyManager km,
 			String alias, char[] password) throws GeneralSecurityException {
-		keyStore.setKeyEntry(alias, km.getPrivateKey(alias), password, km
-				.getCertificateChain(alias));
+		keyStore.setKeyEntry(alias, km.getPrivateKey(alias), password,
+				km.getCertificateChain(alias));
 	}
 
 	public static void saveToKeyStore(OutputStream out, X509KeyManager km,
@@ -81,4 +93,53 @@ public class KeystoreUtils {
 		ks.store(out, password);
 	}
 
+	public static KeyStore getPKCS11Keystore(String name, File library,
+			int slot, char[] password) throws ClassNotFoundException,
+			NoSuchMethodException, InvocationTargetException,
+			IllegalAccessException, InstantiationException,
+			GeneralSecurityException, IOException {
+		// Set up a virtual config file
+		StringBuffer cardConfig = new StringBuffer();
+		cardConfig.append("name = ").append(name).append("\n");
+		cardConfig.append("library = ").append(library.getAbsolutePath()).append("\n");
+		cardConfig.append("slotListIndex = ").append(Integer.toString(slot))
+				.append("\n");
+		InputStream is = new ByteArrayInputStream(cardConfig.toString()
+				.getBytes());
+
+		// create the provider
+		Class<?> pkcs11Class = Class.forName("sun.security.pkcs11.SunPKCS11");
+		Constructor<?> c = pkcs11Class
+				.getConstructor(new Class[] { InputStream.class });
+		Provider pkcs11 = (Provider) c.newInstance(new Object[] { is });
+		Security.addProvider(pkcs11);
+
+		// init the key store
+		KeyStore ks = KeyStore.getInstance("PKCS11");
+		ks.load(null, password);
+		return ks;
+	}
+
+	public static Map<String, String> getAliases(KeyStore keyStore) throws KeyStoreException {
+		Enumeration<String> aliases = keyStore.aliases();
+		Map<String, String> all = new LinkedHashMap<String, String>();
+		while (aliases.hasMoreElements()) {
+			String alias = aliases.nextElement();
+			all.put(alias, splitDN(getName(keyStore, alias))[0]);
+		}
+		return all;
+	}
+
+	public static String getName(KeyStore ks, String alias) throws KeyStoreException {
+		Certificate cert = ks.getCertificate(alias);
+		if (cert instanceof X509Certificate) {
+			X509Certificate xcert = (X509Certificate) cert;
+			return xcert.getSubjectX500Principal().getName();
+		}
+		return "Unknown";
+	}
+
+	public static String[] splitDN(String name) {
+		return name.split(", *");
+	}
 }
