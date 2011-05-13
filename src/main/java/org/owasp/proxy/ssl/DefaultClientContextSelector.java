@@ -33,9 +33,11 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
 
 public class DefaultClientContextSelector implements SSLContextSelector {
@@ -44,8 +46,19 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 
 	private Map<String, SSLContext> contextMap = new LinkedHashMap<String, SSLContext>();
 
+	private X509KeyManager keyManager = null;
+
 	public DefaultClientContextSelector() {
 		initTrustManager();
+	}
+
+	public DefaultClientContextSelector(X509KeyManager keyManager) {
+		initTrustManager();
+		this.keyManager = keyManager;
+	}
+
+	public X509KeyManager getKeyManager(InetSocketAddress target) {
+		return keyManager;
 	}
 
 	public SSLContext select(InetSocketAddress target) {
@@ -55,7 +68,9 @@ public class DefaultClientContextSelector implements SSLContextSelector {
 			return context;
 		try {
 			context = SSLContext.getInstance("SSL");
-			context.init(null, new TrustManager[] { getTrustManager() },
+			X509KeyManager km = getKeyManager(target);
+			KeyManager[] kms = km == null ? null : new KeyManager[] { km };
+			context.init(kms, new TrustManager[] { getTrustManager() },
 					new SecureRandom());
 			contextMap.put(host, context);
 		} catch (NoSuchAlgorithmException e) {
