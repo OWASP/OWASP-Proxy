@@ -21,9 +21,13 @@
 
 package org.owasp.proxy.ajp;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
@@ -224,4 +228,57 @@ public class AJPClientTest {
 			}
 		}
 	}
+
+	public static void main(String[] args) throws Exception {
+		String[] rgs = { "ips" };
+		args = rgs;
+		if (args != null && args.length > 0) {
+			String targets = args[0];
+			BufferedReader r = new BufferedReader(new FileReader(targets));
+			String ip;
+			while ((ip = r.readLine()) != null) {
+				check(ip);
+			}
+			r.close();
+		} else {
+			check("127.0.0.1");
+		}
+	}
+
+	private static void check(String ip) {
+		String[] resources = { "/admin-console/index.seam", "/web-console/", "/manager/html" };
+
+		System.out.println("Checking IP: " + ip);
+		try {
+			PrintStream log = new PrintStream(new FileOutputStream("logs/" + ip + ".log"));
+			log.println("Checking IP: " + ip);
+			AJPClient client = new AJPClient();
+			AJPProperties props = new AJPProperties();
+			props.setAuthType("BASIC");
+			props.setRemoteAddress("127.0.0.1");
+			props.setRemoteHost("127.0.0.1");
+			props.setRemoteUser("admin");
+			props.setContext("/");
+			props.setSslKeySize("1024");
+			client.setProperties(props);
+			StreamingRequest req = new StreamingRequest.Impl();
+			req.setTarget(new InetSocketAddress(ip, 8009));
+			client.connect(req.getTarget());
+			for (int i = 0; i < resources.length; i++) {
+				req.setMethod("GET");
+				req.setResource(resources[i]);
+				req.setVersion("HTTP/1.0");
+				MutableBufferedResponse resp = new MutableBufferedResponse.Impl();
+				MessageUtils.buffer(client.fetchResponse(req), resp,
+						Integer.MAX_VALUE);
+				log.println(req);
+				log.println(resp);
+			}
+			client.close();
+			log.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
 }
