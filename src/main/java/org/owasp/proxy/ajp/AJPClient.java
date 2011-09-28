@@ -67,7 +67,7 @@ public class AJPClient {
 
 	private State state = State.DISCONNECTED;
 
-	private int timeout = 10000;
+	private int timeout = 10000, connectTimeout = 10000;
 
 	private AJPProperties properties = new AJPProperties();
 
@@ -91,15 +91,30 @@ public class AJPClient {
 		}
 		validateTarget(proxy.address());
 		sock = new Socket(proxy);
-		sock.connect(target);
+		sock.connect(target, connectTimeout);
 		sock.setSoTimeout(timeout);
 		in = sock.getInputStream();
 		out = sock.getOutputStream();
 		state = State.IDLE;
 	}
 
+	public void setConnectTimeout(int timeout) {
+		connectTimeout = timeout;
+	}
+
+	public int getConnectTimeout() {
+		return connectTimeout;
+	}
+
 	public void setTimeout(int timeout) throws IOException {
 		this.timeout = timeout;
+		if (sock != null && sock.isConnected()) {
+			sock.setSoTimeout(timeout);
+		}
+	}
+
+	public int getTimeout() {
+		return timeout;
 	}
 
 	public void close() throws IOException {
