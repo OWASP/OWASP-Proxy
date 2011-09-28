@@ -88,6 +88,7 @@ public class SSLConnectionHandler implements TargetedConnectionHandler {
 		SSLSocket sslsock = (SSLSocket) factory.createSocket(socket, socket
 				.getInetAddress().getHostName(), socket.getPort(), true);
 		sslsock.setUseClientMode(false);
+		sslsock.startHandshake();
 		return sslsock;
 	}
 
