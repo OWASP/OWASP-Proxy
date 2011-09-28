@@ -283,19 +283,19 @@ public class AJPClient {
 			appendRequestHeader(message, headers[i]);
 		}
 
-		appendRequestAttribute(message, AJPConstants.SC_A_CONTEXT, properties
-				.getContext());
+		appendRequestAttribute(message, AJPConstants.SC_A_CONTEXT,
+				properties.getContext());
 		appendRequestAttribute(message, AJPConstants.SC_A_SERVLET_PATH,
 				properties.getServletPath());
 		appendRequestAttribute(message, AJPConstants.SC_A_REMOTE_USER,
 				properties.getRemoteUser());
-		appendRequestAttribute(message, AJPConstants.SC_A_AUTH_TYPE, properties
-				.getAuthType());
+		appendRequestAttribute(message, AJPConstants.SC_A_AUTH_TYPE,
+				properties.getAuthType());
 		appendRequestAttribute(message, AJPConstants.SC_A_QUERY_STRING, query);
-		appendRequestAttribute(message, AJPConstants.SC_A_JVM_ROUTE, properties
-				.getRoute());
-		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CERT, properties
-				.getSslCert());
+		appendRequestAttribute(message, AJPConstants.SC_A_JVM_ROUTE,
+				properties.getRoute());
+		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CERT,
+				properties.getSslCert());
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_CIPHER,
 				properties.getSslCipher());
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_SESSION,
@@ -304,8 +304,8 @@ public class AJPClient {
 				properties.getRequestAttributes());
 		appendRequestAttribute(message, AJPConstants.SC_A_SSL_KEY_SIZE,
 				properties.getSslKeySize());
-		appendRequestAttribute(message, AJPConstants.SC_A_SECRET, properties
-				.getSecret());
+		appendRequestAttribute(message, AJPConstants.SC_A_SECRET,
+				properties.getSecret());
 		appendRequestAttribute(message, AJPConstants.SC_A_STORED_METHOD,
 				properties.getStoredMethod());
 
