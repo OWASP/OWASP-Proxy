@@ -284,6 +284,19 @@ public interface MutableMessageHeader extends MessageHeader {
 			addHeader(headers, name, value);
 		}
 
+		public NamedValue[] getHeaders(String name) throws MessageFormatException {
+			NamedValue[] headers = getHeaders();
+			if (headers == null || headers.length == 0)
+				return null;
+			List<NamedValue> t = new LinkedList<NamedValue>();
+			for (int i = 0; i < headers.length; i++)
+				if (name.equalsIgnoreCase(headers[i].getName()))
+					t.add(headers[i]);
+			if (t.size() > 0)
+				return t.toArray(new NamedValue[t.size()]);
+			return null;
+		}
+
 		/**
 		 * @param name
 		 * @param value

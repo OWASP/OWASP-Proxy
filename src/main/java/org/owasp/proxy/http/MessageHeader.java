@@ -33,4 +33,6 @@ public interface MessageHeader {
 
 	String getHeader(String name) throws MessageFormatException;
 
+	NamedValue[] getHeaders(String name) throws MessageFormatException;
+
 }
