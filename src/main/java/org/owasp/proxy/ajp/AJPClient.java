@@ -125,6 +125,14 @@ public class AJPClient {
 		}
 	}
 
+	/**
+	 * Called prior to making a connection to the target, to allow subclasses
+	 * to determine whether it is acceptable to connect to the target or not.
+	 *
+	 * @param target
+	 * @throws IOException if it is not permitted to connect to the target.
+	 */
+
 	protected void validateTarget(SocketAddress target) throws IOException {
 	}
 
