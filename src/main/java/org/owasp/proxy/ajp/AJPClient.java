@@ -305,8 +305,19 @@ public class AJPClient {
 			String value) {
 		if (value == null)
 			return;
-		message.appendByte(attribute);
-		message.appendString(value);
+		if (attribute == AJPConstants.SC_A_SSL_KEY_SIZE) {
+			// API bug, this must be sent as an Integer
+			try {
+				int size = Integer.parseInt(value);
+				message.appendByte(attribute);
+				message.appendInt(size);
+			} catch (NumberFormatException e) {
+				return;
+			}
+		} else {
+			message.appendByte(attribute);
+			message.appendString(value);
+		}
 	}
 
 	private String getRemoteAddress() {
