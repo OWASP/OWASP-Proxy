@@ -28,7 +28,13 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.Socket;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
+import org.owasp.proxy.ssl.EncryptedConnectionHandler;
+import org.owasp.proxy.ssl.SSLContextSelector;
 
 /**
  * This {@link TargetedConnectionHandler} provides a framework for intercepting
@@ -62,15 +68,22 @@ import org.owasp.proxy.daemon.TargetedConnectionHandler;
  * @author rogan
  * 
  */
-public class InterceptingConnectionHandler implements TargetedConnectionHandler {
+public class InterceptingConnectionHandler implements
+		TargetedConnectionHandler, EncryptedConnectionHandler {
 
 	private StreamInterceptor<InetSocketAddress, InetSocketAddress> interceptor;
+
+	private SSLContextSelector contextSelector;
 
 	public InterceptingConnectionHandler(
 			StreamInterceptor<InetSocketAddress, InetSocketAddress> interceptor) {
 		if (interceptor == null)
 			throw new IllegalArgumentException("Interceptor may not be null");
 		this.interceptor = interceptor;
+	}
+
+	public void setSSLContextSelector(SSLContextSelector contextSelector) {
+		this.contextSelector = contextSelector;
 	}
 
 	/*
@@ -83,13 +96,28 @@ public class InterceptingConnectionHandler implements TargetedConnectionHandler 
 	@Override
 	public void handleConnection(final Socket client, InetSocketAddress target)
 			throws IOException {
+		Socket server = new Socket(Proxy.NO_PROXY);
+		server.connect(target);
+		relay(client, server);
+	}
+
+	@Override
+	public void handleConnection(Socket client, InetSocketAddress target,
+			boolean ssl) throws IOException {
+		Socket server = new Socket(Proxy.NO_PROXY);
+		server.connect(target);
+		if (ssl) {
+			server = layerSsl(server, target);
+		}
+		relay(client, server);
+	}
+
+	private void relay(Socket client, Socket server) throws IOException {
 		InetSocketAddress clientLabel, serverLabel;
 		InputStream ci, si;
 		OutputStream so, co;
 		StreamRelay<InetSocketAddress, InetSocketAddress> sr;
 
-		final Socket server = new Socket(Proxy.NO_PROXY);
-		server.connect(target);
 		clientLabel = (InetSocketAddress) client.getRemoteSocketAddress();
 		ci = client.getInputStream();
 		co = client.getOutputStream();
@@ -102,7 +130,23 @@ public class InterceptingConnectionHandler implements TargetedConnectionHandler 
 		Runnable sch = new Closer(client);
 		sr.setCloseHandlers(cch, sch);
 		sr.run();
+	}
 
+	private Socket layerSsl(Socket socket, InetSocketAddress target)
+			throws IOException {
+		if (contextSelector == null) {
+			throw new IllegalStateException(
+					"SSL Context Selector is null, SSL is not supported!");
+		}
+		SSLContext sslContext = contextSelector.select(target);
+		SSLSocketFactory factory = sslContext.getSocketFactory();
+		SSLSocket sslsocket = (SSLSocket) factory.createSocket(socket, socket
+				.getInetAddress().getHostName(), socket.getPort(), true);
+		// sslsocket.setEnabledProtocols(enabledProtocols);
+		sslsocket.setUseClientMode(true);
+		// sslsocket.setSoTimeout(soTimeout);
+		sslsocket.startHandshake();
+		return sslsocket;
 	}
 
 	private static class Closer implements Runnable {
@@ -115,7 +159,8 @@ public class InterceptingConnectionHandler implements TargetedConnectionHandler 
 
 		public void run() {
 			try {
-				if (!socket.isOutputShutdown())
+				if (!socket.isOutputShutdown()
+						&& !(socket instanceof SSLSocket))
 					socket.shutdownOutput();
 			} catch (IOException e) {
 				try {
