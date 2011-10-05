@@ -59,11 +59,11 @@ public class PacProxySelector extends ProxySelector {
 	 * @param pacReader
 	 *            A {@link Reader} to a PAC script.
 	 */
-	public PacProxySelector(Reader pacReader) throws Exception {
+	public PacProxySelector(Reader pacReader) throws IOException, ScriptException {
 		init(pacReader);
 	}
 
-	protected void init(final Reader pacReader) throws Exception {
+	protected void init(final Reader pacReader) throws IOException, ScriptException {
 		ScriptEngineManager sem = new ScriptEngineManager();
 		final ScriptEngine se = sem.getEngineByName("JavaScript");
 		if (se instanceof Invocable) {
