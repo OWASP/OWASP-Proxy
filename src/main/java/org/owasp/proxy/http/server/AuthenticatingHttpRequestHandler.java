@@ -24,6 +24,7 @@ package org.owasp.proxy.http.server;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import org.owasp.proxy.http.HttpAuthenticator;
@@ -111,6 +112,7 @@ public class AuthenticatingHttpRequestHandler implements HttpRequestHandler {
 
 		ResponseHeader lastResponse = null;
 		while ("401".equals(status) || "407".equals(status)) {
+			log.info(Arrays.toString(response.getHeaders("WWW-Authenticate")));
 			StreamingRequest req = new StreamingRequest.Impl();
 			MessageUtils.stream(copy, req);
 			if (auth.authenticate(req, response, lastResponse)) {
@@ -120,6 +122,7 @@ public class AuthenticatingHttpRequestHandler implements HttpRequestHandler {
 				response = delegate.handleRequest(source, req, isContinue);
 			} else {
 				log.info("Authentication not possible, giving up");
+				log.info(copy.toString());
 				return response;
 			}
 			status = response.getStatus();
