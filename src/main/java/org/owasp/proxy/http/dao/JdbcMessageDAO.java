@@ -41,6 +41,7 @@ import org.owasp.proxy.http.RequestHeader;
 import org.owasp.proxy.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcDaoSupport;
@@ -133,11 +134,16 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 
 	public void createTables() throws DataAccessException {
 		JdbcTemplate template = getJdbcTemplate();
+		try {
 		template.execute(CREATE_CONTENTS_TABLE);
 		template.execute(CREATE_HEADERS_TABLE);
 		template.execute(CREATE_REQUESTS_TABLE);
 		template.execute(CREATE_RESPONSES_TABLE);
 		template.execute(CREATE_CONVERSATIONS_TABLE);
+		} catch (BadSqlGrammarException e) {
+			e.printStackTrace();
+			// FIXME: get database metadata, and see if the tables already exist
+		}
 	}
 
 	/*
