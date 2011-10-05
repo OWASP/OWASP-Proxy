@@ -29,7 +29,9 @@ import java.net.PasswordAuthentication;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Logger;
 
+import jcifs.Config;
 import jcifs.ntlmssp.NtlmFlags;
 import jcifs.ntlmssp.NtlmMessage;
 import jcifs.ntlmssp.Type1Message;
@@ -40,18 +42,27 @@ import org.owasp.proxy.util.Base64;
 
 public class HttpAuthenticator {
 
+	static {
+		Config.setProperty("jcifs.smb.client.useUnicode", "false");
+	}
+	
 	// Flag values determined empirically through observation of successful
 	// authentication using Firefox and WireShark
-	private static int NTLMV2_FLAGS = NtlmFlags.NTLMSSP_NEGOTIATE_NTLM2
-			| NtlmFlags.NTLMSSP_NEGOTIATE_ALWAYS_SIGN
-			| NtlmFlags.NTLMSSP_NEGOTIATE_NTLM
-			| NtlmFlags.NTLMSSP_REQUEST_TARGET
-			| NtlmFlags.NTLMSSP_NEGOTIATE_OEM
-			| NtlmFlags.NTLMSSP_NEGOTIATE_UNICODE;
+	private static int NTLMV2_FLAGS = 0xa2088207;
+	// NtlmFlags.NTLMSSP_NEGOTIATE_NTLM2
+	// | NtlmFlags.NTLMSSP_NEGOTIATE_ALWAYS_SIGN
+	// | NtlmFlags.NTLMSSP_NEGOTIATE_NTLM
+	// | NtlmFlags.NTLMSSP_REQUEST_TARGET
+	// | NtlmFlags.NTLMSSP_NEGOTIATE_OEM
+	// | NtlmFlags.NTLMSSP_NEGOTIATE_UNICODE;
 
-	private static int NTLMV2_FLAGS_TYPE3 = NTLMV2_FLAGS
-			& ~NtlmFlags.NTLMSSP_NEGOTIATE_OEM;
+	private static int NTLMV2_FLAGS_TYPE3 = 0xa2888205;
 
+	// NTLMV2_FLAGS
+	// & ~NtlmFlags.NTLMSSP_NEGOTIATE_OEM;
+
+	private static Logger log = Logger.getLogger(HttpAuthenticator.class.getName());
+	
 	public static boolean requiresAuthentication(ResponseHeader response)
 			throws MessageFormatException {
 		String status = response.getStatus();
@@ -67,23 +78,35 @@ public class HttpAuthenticator {
 		}
 		String status = response.getStatus();
 		String authHeader = null;
-		List<String> challenges = null;
+		List<String> challenges = null, challenges2 = null;
 		if ("407".equals(status)) {
 			// proxy authentication required
 			authHeader = HttpConstants.PROXY_AUTHORIZATION;
 			challenges = getChallenges(response,
 					HttpConstants.PROXY_AUTHENTICATE);
+			challenges2 = getChallenges(response2,
+					HttpConstants.PROXY_AUTHENTICATE);
 		} else if ("401".equals(status)) {
 			// www authentication required
 			authHeader = HttpConstants.AUTHORIZATION;
 			challenges = getChallenges(response, HttpConstants.AUTHENTICATE);
+			challenges2 = getChallenges(response2, HttpConstants.AUTHENTICATE);
 		}
 		if (challenges == null || challenges.size() == 0)
 			return false;
 
 		String challenge = selectChallenge(challenges);
+		
 		if (challenge == null)
 			return false;
+		if (challenge.startsWith("NTLM") && "HTTP/1.0".equals(request.getVersion()))
+			// NTLM requires Connection keepalives, I think
+			request.setVersion("HTTP/1.1");
+		
+		String challenge2 = selectChallenge(challenges2);
+		if (challenge2 != null && challenge2.startsWith(challenge))
+			return false; // NTLM failed, prompting "NTLM" again
+		
 		String authResponse = constructResponse(request.getTarget(), challenge);
 		if (authResponse == null)
 			return false;
@@ -94,10 +117,12 @@ public class HttpAuthenticator {
 	private static List<String> getChallenges(ResponseHeader response,
 			String header) throws MessageFormatException {
 		List<String> challenges = new ArrayList<String>();
-		NamedValue[] headers = response.getHeaders();
-		for (int i = 0; i < headers.length; i++) {
-			if (header.equalsIgnoreCase(headers[i].getName())) {
-				challenges.add(headers[i].getValue());
+		if (response != null) {
+			NamedValue[] headers = response.getHeaders();
+			for (int i = 0; i < headers.length; i++) {
+				if (header.equalsIgnoreCase(headers[i].getName())) {
+					challenges.add(headers[i].getValue());
+				}
 			}
 		}
 		return challenges;
@@ -144,20 +169,21 @@ public class HttpAuthenticator {
 			String challenge) throws IOException {
 		if (challenge.length() == 4) {
 			NtlmMessage type1 = new Type1Message(NTLMV2_FLAGS, null, null);
+			log.info(type1.toString());
 			return "NTLM "
-					+ Base64
-							.encodeBytes(type1.toByteArray(), Base64.NO_OPTIONS);
+					+ Base64.encodeBytes(type1.toByteArray(), Base64.NO_OPTIONS);
 		} else {
 			challenge = challenge.substring(5); // "NTLM "
 			Type2Message type2 = new Type2Message(Base64.decode(challenge,
 					Base64.NO_OPTIONS));
+			log.info(type2.toString());
 			String domain = type2.getTarget();
 			String hostname = target.getHostName();
 			InetAddress addr = target.isUnresolved() ? null : target
 					.getAddress();
 			PasswordAuthentication pa = Authenticator
-					.requestPasswordAuthentication(hostname, addr, target
-							.getPort(), "HTTP", domain, "NTLM");
+					.requestPasswordAuthentication(hostname, addr,
+							target.getPort(), "HTTP", domain, "NTLM");
 			if (pa == null)
 				return null;
 
@@ -168,11 +194,11 @@ public class HttpAuthenticator {
 				domain = username.substring(0, slash);
 				username = username.substring(slash + 1);
 			}
-			Type3Message type3 = new Type3Message(type2, password, domain,
+			Type3Message type3 = new Type3Message(type2, password, "" /*domain*/,
 					username, null, NTLMV2_FLAGS_TYPE3);
+			log.info(type3.toString());
 			return "NTLM "
-					+ Base64
-							.encodeBytes(type3.toByteArray(), Base64.NO_OPTIONS);
+					+ Base64.encodeBytes(type3.toByteArray(), Base64.NO_OPTIONS);
 		}
 	}
 
