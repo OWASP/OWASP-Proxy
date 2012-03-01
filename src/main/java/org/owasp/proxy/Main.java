@@ -23,33 +23,56 @@ package org.owasp.proxy;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Authenticator;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.PasswordAuthentication;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.security.GeneralSecurityException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 
+import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 import javax.sql.DataSource;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.GnuParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.OptionBuilder;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.owasp.proxy.ajp.AJPProperties;
+import org.owasp.proxy.ajp.DefaultAJPRequestHandler;
 import org.owasp.proxy.daemon.LoopAvoidingTargetedConnectionHandler;
 import org.owasp.proxy.daemon.Proxy;
 import org.owasp.proxy.daemon.ServerGroup;
 import org.owasp.proxy.daemon.TargetedConnectionHandler;
+import org.owasp.proxy.http.MessageFormatException;
 import org.owasp.proxy.http.MutableRequestHeader;
 import org.owasp.proxy.http.MutableResponseHeader;
 import org.owasp.proxy.http.RequestHeader;
+import org.owasp.proxy.http.StreamingRequest;
+import org.owasp.proxy.http.StreamingResponse;
 import org.owasp.proxy.http.client.HttpClient;
 import org.owasp.proxy.http.dao.JdbcMessageDAO;
+import org.owasp.proxy.http.server.AuthenticatingHttpRequestHandler;
 import org.owasp.proxy.http.server.BufferedMessageInterceptor;
 import org.owasp.proxy.http.server.BufferingHttpRequestHandler;
 import org.owasp.proxy.http.server.ConversationServiceHttpRequestHandler;
@@ -60,6 +83,8 @@ import org.owasp.proxy.http.server.LoggingHttpRequestHandler;
 import org.owasp.proxy.http.server.RecordingHttpRequestHandler;
 import org.owasp.proxy.socks.SocksConnectionHandler;
 import org.owasp.proxy.ssl.AutoGeneratingContextSelector;
+import org.owasp.proxy.ssl.DefaultClientContextSelector;
+import org.owasp.proxy.ssl.KeystoreUtils;
 import org.owasp.proxy.ssl.SSLConnectionHandler;
 import org.owasp.proxy.ssl.SSLContextSelector;
 import org.owasp.proxy.util.TextFormatter;
@@ -69,18 +94,197 @@ public class Main {
 
 	private static Logger logger = Logger.getLogger("org.owasp.proxy");
 
-	private static void usage() {
-		System.err
-				.println("Usage: java -jar proxy.jar port [\"proxy instruction\"] [ <JDBC Driver> <JDBC URL> <username> <password> ]");
-		System.err.println("Where \'proxy instruction\' might look like:");
-		System.err
-				.println("'DIRECT' or 'PROXY server:port' or 'SOCKS server:port'");
-		System.err.println("and the JDBC connection details might look like:");
-		System.err
-				.println("org.h2.Driver jdbc:h2:mem:webscarab3;DB_CLOSE_DELAY=-1 sa \"\"");
+	private static class Configuration {
+		private static final String OPT_AUTHUSER = "authUser";
+		private static final String OPT_AUTHPASSWORD = "authPassword";
+		private static final String OPT_AJPSERVER = "ajpServer";
+		private static final String OPT_AJPHOST = "ajpHost";
+		private static final String OPT_AJPUSER = "ajpUser";
+		private static final String OPT_AJPCLIENTADDRESS = "ajpClientAddress";
+		private static final String OPT_PKCS11SLOTLOCATION = "pkcs11SlotLocation";
+		private static final String OPT_KEYSTOREPASSWORD = "keyStorePassword";
+		private static final String OPT_KEYSTOREALIAS = "keyStoreAlias";
+		private static final String OPT_KEYSTORELOCATION = "keyStoreLocation";
+		private static final String OPT_KEYSTORETYPE = "keyStoreType";
+		private static final String OPT_JDBCPASSWORD = "jdbcPassword";
+		private static final String OPT_JDBCUSER = "jdbcUser";
+		private static final String OPT_JDBCURL = "jdbcUrl";
+		private static final String OPT_JDBCDRIVER = "jdbcDriver";
+		private static final String OPT_PROXY = "proxy";
+		private static final String OPT_INTERFACE = "interface";
+		private static final String OPT_PORT = "port";
+
+		private int port = 1080;
+		private String iface = "localhost";
+		private String proxy = "DIRECT";
+		private String jdbcDriver, jdbcUrl, jdbcUser, jdbcPassword;
+		private String keystoreType, keyStoreLocation, keyStoreAlias,
+				keyStorePassword;
+		private int pkcs11SlotLocation = 0;
+
+		private String[] ajpHosts = null;
+		private InetSocketAddress ajpServer = null;
+		private String ajpUser = null;
+		private String ajpClientAddress = "127.0.0.1";
+		private String ajpClientCert = null;
+
+		private String authUser, authPassword;
+
+		@SuppressWarnings("static-access")
+		private static Configuration init(String[] args) {
+			Options options = new Options();
+			options.addOption(OptionBuilder.withLongOpt(OPT_PORT).hasArg()
+					.isRequired()
+					.withDescription("the port to accept connections on")
+					.create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_INTERFACE)
+					.hasArg()
+					.withDescription(
+							"the network interface to listen on [default localhost]")
+					.create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_PROXY)
+					.hasArg()
+					.withDescription(
+							"proxy instruction for upstream proxy access")
+					.create());
+
+			options.addOption(OptionBuilder.withLongOpt(OPT_JDBCDRIVER)
+					.hasArg().withDescription("the JDBC driver to use")
+					.create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_JDBCURL).hasArg()
+					.withDescription("the JDBC URL").create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_JDBCUSER).hasArg()
+					.withDescription("the JDBC username").create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_JDBCPASSWORD)
+					.hasArg().withDescription("the JDBC password").create());
+
+			options.addOption(OptionBuilder.withLongOpt(OPT_KEYSTORETYPE)
+					.hasArg()
+					.withDescription("the KeyStore type for client keys")
+					.create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_KEYSTORELOCATION)
+					.hasArg().withDescription("the KeyStore location").create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_KEYSTOREALIAS)
+					.hasArg()
+					.withDescription(
+							"the alias for the desired key [defaults to the first key]")
+					.create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_KEYSTOREPASSWORD)
+					.hasArg().withDescription("the password for the KeyStore")
+					.create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_PKCS11SLOTLOCATION)
+					.hasArg()
+					.withDescription("the index of the hardware token to use")
+					.create());
+
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_AJPUSER)
+					.hasArg()
+					.withDescription(
+							"the username to forward to the AJP server")
+					.create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_AJPCLIENTADDRESS)
+					.hasArg()
+					.withDescription(
+							"the client address to forward to the AJP server [default 127.0.0.1]")
+					.create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_AJPSERVER)
+					.hasArg()
+					.withDescription("the AJP server to connect to [host:port]")
+					.create());
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_AJPHOST)
+					.hasArgs()
+					.withDescription(
+							"the target domain reachable via the AJP server [can be repeated, missing implies all hosts]")
+					.create());
+
+			options.addOption(OptionBuilder.withLongOpt(OPT_AUTHUSER).hasArg()
+					.withDescription("the user to authenticate as").create());
+			options.addOption(OptionBuilder.withLongOpt(OPT_AUTHPASSWORD)
+					.hasArg()
+					.withDescription("the password to use when authenticating")
+					.create());
+
+			try {
+				CommandLine cmd = new GnuParser().parse(options, args);
+
+				Configuration config = new Configuration();
+
+				if (cmd.hasOption(OPT_INTERFACE))
+					config.iface = cmd.getOptionValue(OPT_INTERFACE);
+				if (cmd.hasOption(OPT_PORT))
+					config.port = Integer
+							.parseInt(cmd.getOptionValue(OPT_PORT));
+				if (cmd.hasOption(OPT_PROXY))
+					config.proxy = cmd.getOptionValue(OPT_PROXY);
+
+				if (cmd.hasOption(OPT_JDBCDRIVER))
+					config.jdbcDriver = cmd.getOptionValue(OPT_JDBCDRIVER);
+				if (cmd.hasOption(OPT_JDBCURL))
+					config.jdbcUrl = cmd.getOptionValue(OPT_JDBCURL);
+				if (cmd.hasOption(OPT_JDBCUSER))
+					config.jdbcUser = cmd.getOptionValue(OPT_JDBCUSER);
+				if (cmd.hasOption(OPT_JDBCPASSWORD))
+					config.jdbcPassword = cmd.getOptionValue(OPT_JDBCPASSWORD);
+
+				if (cmd.hasOption(OPT_KEYSTORETYPE))
+					config.keystoreType = cmd.getOptionValue(OPT_KEYSTORETYPE);
+				if (cmd.hasOption(OPT_KEYSTORELOCATION))
+					config.keyStoreLocation = cmd
+							.getOptionValue(OPT_KEYSTORELOCATION);
+				if (cmd.hasOption(OPT_KEYSTOREPASSWORD))
+					config.keyStorePassword = cmd
+							.getOptionValue(OPT_KEYSTOREPASSWORD);
+				if (cmd.hasOption(OPT_KEYSTOREALIAS))
+					config.keyStoreAlias = cmd
+							.getOptionValue(OPT_KEYSTOREALIAS);
+				if (cmd.hasOption(OPT_PKCS11SLOTLOCATION))
+					config.pkcs11SlotLocation = Integer.parseInt(cmd
+							.getOptionValue(OPT_PKCS11SLOTLOCATION));
+
+				if (cmd.hasOption(OPT_AJPUSER))
+					config.ajpUser = cmd.getOptionValue(OPT_AJPUSER);
+				if (cmd.hasOption(OPT_AJPCLIENTADDRESS))
+					config.ajpClientAddress = cmd
+							.getOptionValue(OPT_AJPCLIENTADDRESS);
+				if (cmd.hasOption(OPT_AJPSERVER)) {
+					String server = cmd.getOptionValue(OPT_AJPSERVER);
+					int colon = server.indexOf(':');
+					int port = 8009;
+					if (colon > -1) {
+						port = Integer.parseInt(server.substring(colon + 1));
+						server = server.substring(0, colon - 1);
+					}
+					config.ajpServer = new InetSocketAddress(server, port);
+				}
+				if (cmd.hasOption(OPT_AJPHOST))
+					config.ajpHosts = cmd.getOptionValues(OPT_AJPHOST);
+
+				if (cmd.hasOption(OPT_AUTHUSER))
+					config.authUser = cmd.getOptionValue(OPT_AUTHUSER);
+				if (cmd.hasOption(OPT_AUTHPASSWORD))
+					config.authPassword = cmd.getOptionValue(OPT_AUTHPASSWORD);
+
+				return config;
+			} catch (ParseException e) {
+				// automatically generate the help statement
+				HelpFormatter formatter = new HelpFormatter();
+				formatter.printHelp(Main.class.getCanonicalName(), options);
+				System.exit(2);
+				return null;
+			}
+		}
+
 	}
 
-	private static ProxySelector getProxySelector(String proxy) {
+	private static ProxySelector getProxySelector(Configuration config) {
+		String proxy = config.proxy;
 		final java.net.Proxy upstream;
 		if ("DIRECT".equals(proxy)) {
 			upstream = java.net.Proxy.NO_PROXY;
@@ -98,8 +302,9 @@ public class Main {
 			if (c == -1)
 				throw new IllegalArgumentException("Illegal proxy address: "
 						+ proxy);
-			InetSocketAddress addr = new InetSocketAddress(proxy
-					.substring(0, c), Integer.parseInt(proxy.substring(c + 1)));
+			InetSocketAddress addr = new InetSocketAddress(
+					proxy.substring(0, c), Integer.parseInt(proxy
+							.substring(c + 1)));
 			upstream = new java.net.Proxy(type, addr);
 		}
 		ProxySelector ps = new ProxySelector() {
@@ -118,13 +323,15 @@ public class Main {
 		return ps;
 	}
 
-	private static DataSource createDataSource(String driver, String url,
-			String username, String password) throws SQLException {
+	private static DataSource createDataSource(Configuration config)
+			throws SQLException {
+		if (config.jdbcDriver == null)
+			return null;
 		DriverManagerDataSource dataSource = new DriverManagerDataSource();
-		dataSource.setDriverClassName(driver);
-		dataSource.setUrl(url);
-		dataSource.setUsername(username);
-		dataSource.setPassword(password);
+		dataSource.setDriverClassName(config.jdbcDriver);
+		dataSource.setUrl(config.jdbcUrl);
+		dataSource.setUsername(config.jdbcUser);
+		dataSource.setPassword(config.jdbcPassword);
 		return dataSource;
 	}
 
@@ -175,60 +382,186 @@ public class Main {
 		return ssl;
 	}
 
-	public static void main(String[] args) throws Exception {
-		logger.setUseParentHandlers(false);
-		Handler ch = new ConsoleHandler();
-		ch.setFormatter(new TextFormatter());
-		logger.addHandler(ch);
+	private static SSLContextSelector getClientSSLContextSelector(
+			Configuration config) {
+		String type = config.keystoreType;
+		char[] password = config.keyStorePassword == null ? null
+				: config.keyStorePassword.toCharArray();
+		File location = config.keyStoreLocation == null ? null : new File(
+				config.keyStoreLocation);
+		if (type != null) {
+			KeyStore ks = null;
+			if (type.equals("PKCS11")) {
+				try {
+					int slot = config.pkcs11SlotLocation;
+					ks = KeystoreUtils.getPKCS11Keystore("PKCS11", location,
+							slot, password);
+				} catch (Exception e) {
+					System.err.println(e.getLocalizedMessage());
+					System.exit(2);
+				}
+			} else {
+				try {
+					FileInputStream in = new FileInputStream(location);
+					ks = KeyStore.getInstance(type);
+					ks.load(in, password);
+				} catch (Exception e) {
+					System.err.println(e.getLocalizedMessage());
+					System.exit(2);
+				}
+			}
+			String alias = config.keyStoreAlias;
+			if (alias == null) {
+				try {
+					Map<String, String> aliases = KeystoreUtils.getAliases(ks);
+					if (aliases.size() > 0) {
+						System.err
+								.println("Keystore contains the following aliases: \n");
+						for (String a : aliases.keySet()) {
+							System.err.println("Alias \""+a+"\"" + " : " + aliases.get(a));
+						}
+						alias = aliases.keySet().iterator().next();
+						System.err.println("Using " + alias + " : "
+								+ aliases.get(alias));
+					} else {
+						System.err.println("Keystore contains no aliases!");
+						System.exit(3);
+					}
+				} catch (KeyStoreException kse) {
+					System.err.println(kse.getLocalizedMessage());
+					System.exit(4);
+				}
+			}
+			try {
+				final X509KeyManager km = KeystoreUtils.getKeyManagerForAlias(
+						ks, alias, password);
+				return new DefaultClientContextSelector(km);
+			} catch (GeneralSecurityException gse) {
+				System.err.println(gse.getLocalizedMessage());
+				System.exit(5);
+			}
+		}
+		return new DefaultClientContextSelector();
+	}
 
-		if (args == null
-				|| (args.length != 1 && args.length != 2 && args.length != 5 && args.length != 6)) {
-			usage();
-			return;
-		}
-		InetSocketAddress listen;
-		try {
-			int port = Integer.parseInt(args[0]);
-			listen = new InetSocketAddress("localhost", port);
-		} catch (NumberFormatException nfe) {
-			usage();
-			return;
-		}
-		String proxy = "DIRECT";
-		if (args.length == 2 || args.length == 6) {
-			proxy = args[1];
-		}
-		DataSource dataSource = null;
-		if (args.length == 5) {
-			dataSource = createDataSource(args[1], args[2], args[3], args[4]);
-		} else if (args.length == 6) {
-			dataSource = createDataSource(args[2], args[3], args[4], args[5]);
-		}
+	private static DefaultHttpRequestHandler configureRequestHandler(
+			Configuration config) {
+		final ProxySelector ps = getProxySelector(config);
+		final SSLContextSelector sslc = getClientSSLContextSelector(config);
 
-		final ProxySelector ps = getProxySelector(proxy);
-
-		DefaultHttpRequestHandler drh = new DefaultHttpRequestHandler() {
+		return new DefaultHttpRequestHandler() {
 			@Override
 			protected HttpClient createClient() {
 				HttpClient client = super.createClient();
+				client.setSslContextSelector(sslc);
 				client.setProxySelector(ps);
 				client.setSoTimeout(90000);
 				return client;
 			}
 		};
-		ServerGroup sg = new ServerGroup();
-		sg.addServer(listen);
-		drh.setServerGroup(sg);
-		HttpRequestHandler rh = drh;
-		rh = new LoggingHttpRequestHandler(rh);
+	}
 
+	private static HttpRequestHandler configureAuthentication(
+			HttpRequestHandler rh, final Configuration config) {
+		if (config.authUser != null) {
+			if (config.authPassword == null) {
+				System.err.println("authPassword must be provided!");
+				System.exit(1);
+			}
+			Authenticator.setDefault(new Authenticator() {
+				@Override
+				protected PasswordAuthentication getPasswordAuthentication() {
+					return new PasswordAuthentication(config.authUser,
+							config.authPassword.toCharArray());
+				}
+			});
+			return new AuthenticatingHttpRequestHandler(rh);
+		} else {
+			return rh;
+		}
+	}
+
+	private static HttpRequestHandler configureAJP(HttpRequestHandler rh,
+			Configuration config) {
+		if (config.ajpServer != null) {
+			final DefaultAJPRequestHandler arh = new DefaultAJPRequestHandler();
+			arh.setTarget(config.ajpServer);
+			AJPProperties ajpProperties = new AJPProperties();
+			ajpProperties.setRemoteAddress(config.ajpClientAddress);
+			if (config.ajpClientCert != null
+					&& config.ajpClientCert.endsWith(".pem")) {
+				try {
+					BufferedReader in = new BufferedReader(new FileReader(
+							config.ajpClientCert));
+					StringBuffer buff = new StringBuffer();
+					String line;
+					while ((line = in.readLine()) != null) {
+						buff.append(line);
+					}
+					in.close();
+					ajpProperties.setSslCert(buff.toString());
+					ajpProperties.setSslCipher("ECDHE-RSA-AES256-SHA");
+					ajpProperties.setSslSession("RANDOMID");
+					ajpProperties.setSslKeySize("256");
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+					System.exit(1);
+				}
+			}
+			ajpProperties.setRemoteUser(config.ajpUser);
+			ajpProperties.setAuthType("BASIC");
+			ajpProperties.setContext("/manager");
+			arh.setProperties(ajpProperties);
+			final Set<String> ajpHosts = new HashSet<String>();
+			if (config.ajpHosts != null)
+				ajpHosts.addAll(Arrays.asList(config.ajpHosts));
+			final HttpRequestHandler hrh = rh;
+			return new HttpRequestHandler() {
+
+				@Override
+				public StreamingResponse handleRequest(InetAddress source,
+						StreamingRequest request, boolean isContinue)
+						throws IOException, MessageFormatException {
+					InetSocketAddress target = request.getTarget();
+					if (ajpHosts.isEmpty()
+							|| ajpHosts.contains(target.getHostName())
+							|| ajpHosts.contains(target.getAddress()
+									.getHostAddress())) {
+						return arh.handleRequest(source, request, isContinue);
+					} else {
+						return hrh.handleRequest(source, request, isContinue);
+					}
+				}
+
+				@Override
+				public void dispose() throws IOException {
+					arh.dispose();
+					hrh.dispose();
+				}
+
+			};
+		} else {
+			return rh;
+		}
+	}
+
+	private static HttpRequestHandler configureJDBCLogging(
+			HttpRequestHandler rh, Configuration config) throws SQLException {
+		final DataSource dataSource = createDataSource(config);
 		if (dataSource != null) {
 			JdbcMessageDAO dao = new JdbcMessageDAO();
 			dao.setDataSource(dataSource);
 			dao.createTables();
 			rh = new RecordingHttpRequestHandler(dao, rh, 1024 * 1024);
-			rh = new ConversationServiceHttpRequestHandler("127.0.0.2", dao, rh);
+			return new ConversationServiceHttpRequestHandler("127.0.0.2", dao,
+					rh);
+		} else {
+			return rh;
 		}
+	}
+
+	private static HttpRequestHandler configureInterception(
+			HttpRequestHandler rh, Configuration config) {
 		BufferedMessageInterceptor bmi = new BufferedMessageInterceptor() {
 			@Override
 			public Action directResponse(RequestHeader request,
@@ -246,7 +579,32 @@ public class Main {
 				return Action.STREAM;
 			}
 		};
-		rh = new BufferingHttpRequestHandler(rh, bmi, 10240);
+		return new BufferingHttpRequestHandler(rh, bmi, 10240);
+	}
+
+	public static void main(String[] args) throws Exception {
+		java.lang.System.setProperty(
+				"sun.security.ssl.allowUnsafeRenegotiation", "true");
+		logger.setUseParentHandlers(false);
+		Handler ch = new ConsoleHandler();
+		ch.setFormatter(new TextFormatter());
+		logger.addHandler(ch);
+
+		final Configuration config = Configuration.init(args);
+
+		final InetSocketAddress listen = new InetSocketAddress(config.iface,
+				config.port);
+		DefaultHttpRequestHandler drh = configureRequestHandler(config);
+		ServerGroup sg = new ServerGroup();
+		sg.addServer(listen);
+		drh.setServerGroup(sg);
+
+		HttpRequestHandler rh = drh;
+		rh = configureAuthentication(rh, config);
+		rh = configureAJP(rh, config);
+		rh = new LoggingHttpRequestHandler(rh);
+		rh = configureJDBCLogging(rh, config);
+		rh = configureInterception(rh, config);
 
 		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
 		SSLContextSelector cp = getServerSSLContextSelector();
