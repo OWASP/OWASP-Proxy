@@ -23,6 +23,7 @@ package org.owasp.proxy.ssl;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -63,7 +64,7 @@ public class KeystoreUtils {
 			return new SingleX509KeyManager(alias, (PrivateKey) key, certChain);
 		} else {
 			throw new InvalidKeyException(
-					"The CA private key should implement PrivateKey");
+					"The private key should implement PrivateKey, but is a " + key);
 		}
 	}
 
@@ -96,6 +97,8 @@ public class KeystoreUtils {
 			IllegalAccessException, InstantiationException,
 			GeneralSecurityException, IOException {
 		// Set up a virtual config file
+		if (!library.exists())
+			throw new FileNotFoundException(library + " could not be found");
 		StringBuffer cardConfig = new StringBuffer();
 		cardConfig.append("name = ").append(name).append("\n");
 		cardConfig.append("library = ").append(library.getAbsolutePath()).append("\n");
