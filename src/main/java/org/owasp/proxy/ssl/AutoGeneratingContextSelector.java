@@ -265,15 +265,24 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date begin = new Date();
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		X509Certificate cert = SunCertificateUtils.sign(subject, keyPair
-				.getPublic(), caCerts[0].getSubjectX500Principal(), caCerts[0]
-				.getPublicKey(), caKey, begin, ends, getNextSerialNo());
+		X509Certificate cert = SunCertificateUtils.sign(subject,
+				keyPair.getPublic(), caCerts[0].getSubjectX500Principal(),
+				caCerts[0].getPublicKey(), caKey, begin, ends,
+				getNextSerialNo());
 
 		X509Certificate[] chain = new X509Certificate[caCerts.length + 1];
 		System.arraycopy(caCerts, 0, chain, 1, caCerts.length);
 		chain[0] = cert;
 
-		return new SingleX509KeyManager(host, keyPair.getPrivate(), chain);
+		X509KeyManager km = new SingleX509KeyManager(host,
+				keyPair.getPrivate(), chain);
+		try {
+			KeystoreUtils.saveToKeyStore(new FileOutputStream(host + ".p12"),
+					km, host, "PKCS12", "password".toCharArray());
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		return km;
 	}
 
 	protected BigInteger getNextSerialNo() {
