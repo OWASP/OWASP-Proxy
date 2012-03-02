@@ -399,4 +399,32 @@ public class MessageUtils {
 		return "100-continue".equalsIgnoreCase(request.getHeader("Expect"));
 	}
 
+	private static final byte[] CRLF = { '\r', '\n' };
+	
+	public static MessageHeader readHeader(InputStream in) throws IOException, MessageFormatException {
+		int match = 0;
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		int i;
+		try {
+			do {
+				i = in.read();
+				if (i == -1) {
+					if (out.size() > 0)
+						throw new MessageFormatException("Unexpected end of stream", out.toByteArray());
+					return null;
+				}
+				out.write(i);
+				if (i == CRLF[match % 2])
+					match++;
+			} while (match < 4);
+		} catch (IOException e) {
+			if (out.size() > 0)
+				throw new MessageFormatException("Incomplete message header", e, out.toByteArray());
+			throw e;
+		}
+		MutableMessageHeader header = new MutableMessageHeader.Impl();
+		header.setHeader(out.toByteArray());
+		return header;
+	}
+
 }

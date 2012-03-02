@@ -87,6 +87,7 @@ import org.owasp.proxy.ssl.DefaultClientContextSelector;
 import org.owasp.proxy.ssl.KeystoreUtils;
 import org.owasp.proxy.ssl.SSLConnectionHandler;
 import org.owasp.proxy.ssl.SSLContextSelector;
+import org.owasp.proxy.tcp.ConnectConnectionHandler;
 import org.owasp.proxy.util.TextFormatter;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
@@ -113,6 +114,7 @@ public class Main {
 		private static final String OPT_PROXY = "proxy";
 		private static final String OPT_INTERFACE = "interface";
 		private static final String OPT_PORT = "port";
+		private static final String OPT_CONNECT = "httpConnect";
 
 		private int port = 1080;
 		private String iface = "localhost";
@@ -129,6 +131,8 @@ public class Main {
 		private String ajpClientCert = null;
 
 		private String authUser, authPassword;
+
+		private InetSocketAddress httpConnect = null;
 
 		@SuppressWarnings("static-access")
 		private static Configuration init(String[] args) {
@@ -211,6 +215,13 @@ public class Main {
 					.withDescription("the password to use when authenticating")
 					.create());
 
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_CONNECT)
+					.hasArg()
+					.withDescription(
+							"Uses the specified upstream HTTP proxy to CONNECT to the desired end point [host:port]. Disables all other proxy functionality.")
+					.create());
+
 			try {
 				CommandLine cmd = new GnuParser().parse(options, args);
 
@@ -271,8 +282,20 @@ public class Main {
 				if (cmd.hasOption(OPT_AUTHPASSWORD))
 					config.authPassword = cmd.getOptionValue(OPT_AUTHPASSWORD);
 
+				if (cmd.hasOption(OPT_CONNECT)) {
+					String proxy = cmd.getOptionValue(OPT_CONNECT);
+					int colon = proxy.indexOf(':');
+					int port = 3128;
+					if (colon > -1) {
+						port = Integer.parseInt(proxy.substring(colon + 1));
+						proxy = proxy.substring(0, colon);
+						System.out.println("Proxy is " + proxy + ":" + port);
+					}
+					config.httpConnect = new InetSocketAddress(proxy, port);
+				}
 				return config;
 			} catch (ParseException e) {
+				System.out.println(e.getLocalizedMessage());
 				// automatically generate the help statement
 				HelpFormatter formatter = new HelpFormatter();
 				formatter.printHelp(Main.class.getCanonicalName(), options);
@@ -418,7 +441,8 @@ public class Main {
 						System.err
 								.println("Keystore contains the following aliases: \n");
 						for (String a : aliases.keySet()) {
-							System.err.println("Alias \""+a+"\"" + " : " + aliases.get(a));
+							System.err.println("Alias \"" + a + "\"" + " : "
+									+ aliases.get(a));
 						}
 						alias = aliases.keySet().iterator().next();
 						System.err.println("Using " + alias + " : "
@@ -594,23 +618,28 @@ public class Main {
 
 		final InetSocketAddress listen = new InetSocketAddress(config.iface,
 				config.port);
-		DefaultHttpRequestHandler drh = configureRequestHandler(config);
-		ServerGroup sg = new ServerGroup();
-		sg.addServer(listen);
-		drh.setServerGroup(sg);
-
-		HttpRequestHandler rh = drh;
-		rh = configureAuthentication(rh, config);
-		rh = configureAJP(rh, config);
-		rh = new LoggingHttpRequestHandler(rh);
-		rh = configureJDBCLogging(rh, config);
-		rh = configureInterception(rh, config);
-
-		HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
-		SSLContextSelector cp = getServerSSLContextSelector();
-		TargetedConnectionHandler tch = new SSLConnectionHandler(cp, true, hpch);
-		tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
-		hpch.setConnectHandler(tch);
+		TargetedConnectionHandler tch;
+		if (config.httpConnect == null) {
+			DefaultHttpRequestHandler drh = configureRequestHandler(config);
+			ServerGroup sg = new ServerGroup();
+			sg.addServer(listen);
+			drh.setServerGroup(sg);
+	
+			HttpRequestHandler rh = drh;
+			rh = configureAuthentication(rh, config);
+			rh = configureAJP(rh, config);
+			rh = new LoggingHttpRequestHandler(rh);
+			rh = configureJDBCLogging(rh, config);
+			rh = configureInterception(rh, config);
+	
+			HttpProxyConnectionHandler hpch = new HttpProxyConnectionHandler(rh);
+			SSLContextSelector cp = getServerSSLContextSelector();
+			tch = new SSLConnectionHandler(cp, true, hpch);
+			tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
+			hpch.setConnectHandler(tch);
+		} else {
+			tch = new ConnectConnectionHandler(config.httpConnect);
+		}
 		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
 		Proxy p = new Proxy(listen, socks, null);
 		p.setSocketTimeout(90000);
