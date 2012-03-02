@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?><project>
+  <properties>
+    <maven.build.timestamp.format>yyyyMMdd_HHmm</maven.build.timestamp.format>
+  </properties>
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.owasp</groupId>
   <artifactId>proxy</artifactId>
   <name>OWASP Proxy</name>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.1-${maven.build.timestamp}</version>
   <url>http://www.owasp.org/index.php/Category:OWASP_Proxy</url>
   <inceptionYear>2008</inceptionYear>
   <developers>
