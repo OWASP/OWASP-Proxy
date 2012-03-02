@@ -25,7 +25,6 @@ import org.owasp.proxy.util.WindowsProxy.WinInet.INTERNET_PER_CONN_OPTION;
 import org.owasp.proxy.util.WindowsProxy.WinInet.INTERNET_PER_CONN_OPTION_LIST;
 
 import com.sun.jna.LastErrorException;
-import com.sun.jna.Library;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
@@ -259,7 +258,8 @@ public class WindowsProxy {
 		System.out.println(getProxySettings());
 	}
 
-	interface WinInet extends Library {
+	// bizarrely, use of an import for this Library symbol fails the build in Maven
+	interface WinInet extends com.sun.jna.Library { 
 
 		/**
 		 * PER_CONN_FLAGS
