@@ -112,12 +112,10 @@ public class Main {
 		private static final String OPT_JDBCURL = "jdbcUrl";
 		private static final String OPT_JDBCDRIVER = "jdbcDriver";
 		private static final String OPT_PROXY = "proxy";
-		private static final String OPT_INTERFACE = "interface";
-		private static final String OPT_PORT = "port";
+		private static final String OPT_LISTEN = "listen";
 		private static final String OPT_CONNECT = "httpConnect";
-
-		private int port = 1080;
-		private String iface = "localhost";
+		private static final String OPT_TARGET = "target";
+		
 		private String proxy = "DIRECT";
 		private String jdbcDriver, jdbcUrl, jdbcUser, jdbcPassword;
 		private String keystoreType, keyStoreLocation, keyStoreAlias,
@@ -132,20 +130,16 @@ public class Main {
 
 		private String authUser, authPassword;
 
+		private InetSocketAddress listen = null;
 		private InetSocketAddress httpConnect = null;
+		private InetSocketAddress target = null;
 
 		@SuppressWarnings("static-access")
 		private static Configuration init(String[] args) {
 			Options options = new Options();
-			options.addOption(OptionBuilder.withLongOpt(OPT_PORT).hasArg()
+			options.addOption(OptionBuilder.withLongOpt(OPT_LISTEN).hasArg()
 					.isRequired()
-					.withDescription("the port to accept connections on")
-					.create());
-			options.addOption(OptionBuilder
-					.withLongOpt(OPT_INTERFACE)
-					.hasArg()
-					.withDescription(
-							"the network interface to listen on [default localhost]")
+					.withDescription("the [interface:port] to accept connections on. Can be abbreviated as [:port] for all interfaces")
 					.create());
 			options.addOption(OptionBuilder
 					.withLongOpt(OPT_PROXY)
@@ -222,16 +216,31 @@ public class Main {
 							"Uses the specified upstream HTTP proxy to CONNECT to the desired end point [host:port]. Disables all other proxy functionality.")
 					.create());
 
+			options.addOption(OptionBuilder
+					.withLongOpt(OPT_TARGET)
+					.hasArg()
+					.withDescription(
+							"Uses the specified destination ([host:port])as the default destination for connections. This will be overriden by SOCKS requests that specify their own target.")
+					.create());
+			
 			try {
 				CommandLine cmd = new GnuParser().parse(options, args);
 
 				Configuration config = new Configuration();
 
-				if (cmd.hasOption(OPT_INTERFACE))
-					config.iface = cmd.getOptionValue(OPT_INTERFACE);
-				if (cmd.hasOption(OPT_PORT))
-					config.port = Integer
-							.parseInt(cmd.getOptionValue(OPT_PORT));
+				if (cmd.hasOption(OPT_LISTEN)) {
+					String addr = cmd.getOptionValue(OPT_LISTEN);
+					int colon = addr.indexOf(':');
+					int port;
+					String host = "*";
+					if (colon > -1) {
+						port = Integer.parseInt(addr.substring(colon + 1));
+						if (colon > 0)
+							host = addr.substring(0, colon);
+					} else 
+						throw new ParseException("Invalid " + OPT_LISTEN + " argument: " + addr);
+					config.listen = new InetSocketAddress(host, port);
+				}
 				if (cmd.hasOption(OPT_PROXY))
 					config.proxy = cmd.getOptionValue(OPT_PROXY);
 
@@ -283,16 +292,33 @@ public class Main {
 					config.authPassword = cmd.getOptionValue(OPT_AUTHPASSWORD);
 
 				if (cmd.hasOption(OPT_CONNECT)) {
-					String proxy = cmd.getOptionValue(OPT_CONNECT);
-					int colon = proxy.indexOf(':');
-					int port = 3128;
+					String addr = cmd.getOptionValue(OPT_CONNECT);
+					int colon = addr.indexOf(':');
+					int port;
+					String host = "*";
 					if (colon > -1) {
-						port = Integer.parseInt(proxy.substring(colon + 1));
-						proxy = proxy.substring(0, colon);
-						System.out.println("Proxy is " + proxy + ":" + port);
-					}
-					config.httpConnect = new InetSocketAddress(proxy, port);
+						port = Integer.parseInt(addr.substring(colon + 1));
+						if (colon > 0)
+							host = addr.substring(0, colon);
+					} else 
+						throw new ParseException("Invalid " + OPT_CONNECT + " argument: " + addr);
+					config.httpConnect = new InetSocketAddress(host, port);
 				}
+				if (cmd.hasOption(OPT_TARGET)) {
+					String addr = cmd.getOptionValue(OPT_TARGET);
+					int colon = addr.indexOf(':');
+					int port;
+					String host = "*";
+					if (colon > -1) {
+						port = Integer.parseInt(addr.substring(colon + 1));
+						if (colon > 0)
+							host = addr.substring(0, colon);
+					} else 
+						throw new ParseException("Invalid " + OPT_TARGET + " argument: " + addr);
+					config.target = new InetSocketAddress(host, port);
+				}
+				if (config.httpConnect != null && config.target == null)
+					throw new ParseException("Must specify " + OPT_TARGET + " when using " + OPT_CONNECT);
 				return config;
 			} catch (ParseException e) {
 				System.out.println(e.getLocalizedMessage());
@@ -616,13 +642,11 @@ public class Main {
 
 		final Configuration config = Configuration.init(args);
 
-		final InetSocketAddress listen = new InetSocketAddress(config.iface,
-				config.port);
 		TargetedConnectionHandler tch;
 		if (config.httpConnect == null) {
 			DefaultHttpRequestHandler drh = configureRequestHandler(config);
 			ServerGroup sg = new ServerGroup();
-			sg.addServer(listen);
+			sg.addServer(config.listen);
 			drh.setServerGroup(sg);
 	
 			HttpRequestHandler rh = drh;
@@ -637,15 +661,15 @@ public class Main {
 			tch = new SSLConnectionHandler(cp, true, hpch);
 			tch = new LoopAvoidingTargetedConnectionHandler(sg, tch);
 			hpch.setConnectHandler(tch);
+			tch = new SocksConnectionHandler(tch, true);
 		} else {
 			tch = new ConnectConnectionHandler(config.httpConnect);
 		}
-		TargetedConnectionHandler socks = new SocksConnectionHandler(tch, true);
-		Proxy p = new Proxy(listen, socks, null);
+		Proxy p = new Proxy(config.listen, tch, config.target);
 		p.setSocketTimeout(90000);
 		p.start();
 
-		System.out.println("Listener started on " + listen);
+		System.out.println("Listener started on " + config.listen);
 		System.out.println("Press Enter to terminate");
 		new BufferedReader(new InputStreamReader(System.in)).readLine();
 		p.stop();
