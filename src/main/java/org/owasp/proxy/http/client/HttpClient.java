@@ -38,6 +38,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
@@ -416,6 +417,8 @@ public class HttpClient {
 
 	private StreamingResponse readResponse(InputStream in) throws IOException,
 			MessageFormatException {
+		byte[] headerValue = null;
+		boolean headerValid = false;
 		InputStream is = socket.getInputStream();
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
 		StreamingResponse response = new StreamingResponse.Impl();
@@ -425,23 +428,27 @@ public class HttpClient {
 				header.write(i);
 			}
 			response.setHeaderTime(System.currentTimeMillis());
+			headerValue = header.toByteArray();
 		} catch (SocketTimeoutException ste) {
-			if (header.size() > 0) {
+			if (headerValue.length > 0) {
 				MessageFormatException mfe = new MessageFormatException(
-						"Timeout reading response header", header.toByteArray());
+						"Timeout reading response header", headerValue);
 				mfe.initCause(ste);
 				throw mfe;
 			}
 			throw ste;
+		} finally {
+			headerValid = header.isEndOfHeader();
+			header.close();
 		}
-		if (!header.isEndOfHeader() && i == -1) {
-			if (header.size() > 0)
-				throw new MessageFormatException("Invalid header ", header
-						.toByteArray());
+
+		if (!headerValid) {
+			if (headerValue.length > 0)
+				throw new MessageFormatException("Invalid header ", headerValue);
 			throw new IOException("Unexpected end of stream reading header");
 		}
 
-		response.setHeader(header.toByteArray());
+		response.setHeader(headerValue);
 		response.setContent(is);
 		return response;
 	}
@@ -484,13 +491,17 @@ public class HttpClient {
 			if (header.size() > 0) {
 				logger.fine(AsciiString.create(header.toByteArray()));
 			}
+			header.close();
 			throw ste;
 		}
 		if (i == -1) {
+			header.close();
 			throw new IOException("Unexpected end of stream reading header");
 		}
 		MutableResponseHeader.Impl rh = new MutableResponseHeader.Impl();
 		rh.setHeader(header.toByteArray());
+		header.close();
+
 		String status = rh.getStatus();
 		if (status.equals("100")) {
 			state = State.RESPONSE_CONTINUE;
@@ -584,6 +595,7 @@ public class HttpClient {
 				response.setHeader(getResponseHeader());
 				response.setHeaderTime(getResponseHeaderEndTime());
 			} catch (SocketTimeoutException ste) {
+				logger.log(Level.WARNING, "Socket Timeout:" + ste.getMessage());
 			} finally {
 				socket.setSoTimeout(getSoTimeout());
 			}
