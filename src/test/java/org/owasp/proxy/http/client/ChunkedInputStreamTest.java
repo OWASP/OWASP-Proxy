@@ -131,5 +131,7 @@ public class ChunkedInputStreamTest {
 		logger.fine(new String(result));
 		assertEquals(sample.length(), result.length);
 		assertTrue(Arrays.equals(sample.getBytes(), result));
+		raw.close();
+		baos.close();
 	}
 }
