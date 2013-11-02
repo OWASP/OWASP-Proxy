@@ -77,8 +77,7 @@ public class GzipInputStreamTest {
 		gzos.close();
 		byte[] gzipped = baos.toByteArray();
 
-		InputStream in = new ByteArrayInputStream(test);
-		in = new GzipInputStream(in);
+		InputStream in = new GzipInputStream(new ByteArrayInputStream(test));
 		byte[] buff = new byte[gzipped.length];
 		int read = 0, got;
 		while ((got = in.read(buff, read, buff.length - read)) > -1) {
@@ -86,6 +85,7 @@ public class GzipInputStreamTest {
 			read += got;
 		}
 		compare(gzipped, 0, buff, 0, read);
+		in.close();
 	}
 
 	private void compare(byte[] a, int ao, byte[] b, int bo, int len) {
