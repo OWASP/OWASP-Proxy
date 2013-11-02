@@ -21,7 +21,8 @@
 
 package org.owasp.proxy.io;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -48,8 +49,9 @@ public class CopyInputStreamTest {
 
 	@Test
 	public void testRead() {
+		CopyInputStream cis = null;
 		try {
-			CopyInputStream cis = new CopyInputStream(in, copies);
+			cis = new CopyInputStream(in, copies);
 			while (cis.read() > -1)
 				;
 			assertEquals(sample, new String(copies[0].toByteArray()));
@@ -58,14 +60,23 @@ public class CopyInputStreamTest {
 		} catch (IOException ioe) {
 			fail("IOException not expected!" + ioe);
 			ioe.printStackTrace();
+		} finally {
+			if (cis != null) {
+				try {
+					cis.close();
+				} catch (IOException e) {
+					// We were only trying to close the InputStream.
+				}
+			}
 		}
 	}
 
 	@Test
 	public void testReadByteArray() {
 		byte[] buff = new byte[4];
+		CopyInputStream cis = null;
 		try {
-			CopyInputStream cis = new CopyInputStream(in, copies);
+			cis = new CopyInputStream(in, copies);
 			while (cis.read(buff) > 0)
 				;
 			assertEquals(sample, new String(copies[0].toByteArray()));
@@ -74,14 +85,23 @@ public class CopyInputStreamTest {
 		} catch (IOException ioe) {
 			fail("IOException not expected!" + ioe);
 			ioe.printStackTrace();
+		} finally {
+			if (cis != null) {
+				try {
+					cis.close();
+				} catch (IOException e) {
+					// We were only trying to close the InputStream.
+				}
+			}
 		}
 	}
 
 	@Test
 	public void testReadByteArrayIntInt() {
 		byte[] buff = new byte[6];
+		CopyInputStream cis = null;
 		try {
-			CopyInputStream cis = new CopyInputStream(in, copies);
+			cis = new CopyInputStream(in, copies);
 			while (cis.read(buff, 1, 4) > 0)
 				;
 			assertEquals(sample, new String(copies[0].toByteArray()));
@@ -90,6 +110,14 @@ public class CopyInputStreamTest {
 		} catch (IOException ioe) {
 			fail("IOException not expected!" + ioe);
 			ioe.printStackTrace();
+		} finally {
+			if (cis != null) {
+				try {
+					cis.close();
+				} catch (IOException e) {
+					// We were only trying to close the InputStream.
+				}
+			}
 		}
 	}
 
