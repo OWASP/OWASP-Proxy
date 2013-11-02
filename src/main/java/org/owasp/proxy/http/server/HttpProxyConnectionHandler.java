@@ -179,6 +179,8 @@ public class HttpProxyConnectionHandler implements ConnectionHandler,
 				return null;
 			throw new MessageFormatException("Incomplete request header", e,
 					headerBytes);
+		} finally {
+		  cis.close();
 		}
 
 		byte[] headerBytes = copy.toByteArray();
