@@ -104,11 +104,11 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 
 	private final static String CREATE_CONTENTS_TABLE = "CREATE TABLE contents ("
 			+ "id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
-			+ "content LONGVARBINARY NOT NULL," + "size INTEGER NOT NULL)";
+																	+ "content LONG VARBINARY NOT NULL," + "size INTEGER NOT NULL)";
 
 	private final static String CREATE_HEADERS_TABLE = "CREATE TABLE headers ("
 			+ "id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
-			+ "header LONGVARBINARY NOT NULL,"
+																	+ "header LONG VARBINARY NOT NULL,"
 			+ "contentId INTEGER,"
 			+ "CONSTRAINT content_fk FOREIGN KEY (contentId) REFERENCES contents(id) ON DELETE CASCADE)";
 
