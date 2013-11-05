@@ -326,9 +326,7 @@ public class AJPMessage {
 			}
 			return -1;
 		}
-		if (false) {
-			System.err.println("Received " + len + " " + buf[0]);
-		}
+//	System.err.println("Received " + len + " " + buf[0]);
 		return len;
 	}
 

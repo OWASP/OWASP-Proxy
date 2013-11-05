@@ -68,11 +68,8 @@ public class ChangeMonitorInputStreamTest {
 
 	@Test
 	public void testChangingWatch() throws Exception {
-		InputStream in = new ByteArrayInputStream(original);
-		ChangeMonitorInputStream cmis = new ChangeMonitorInputStream(in);
-		in = cmis;
-		in = new ModuloInputStream(in, 16);
-		in = cmis.watch(in, "Modulo 16");
+		ChangeMonitorInputStream cmis = new ChangeMonitorInputStream(new ByteArrayInputStream(original));
+		InputStream in = cmis.watch(new ModuloInputStream(cmis, 16), "Modulo 16");
 		int read = flush(in);
 		Assert.assertEquals("Read the wrong number of bytes", original.length,
 				read);
@@ -82,6 +79,7 @@ public class ChangeMonitorInputStreamTest {
 		for (int i = 0; i < original.length; i++)
 			Assert.assertEquals("Incorrect modulo at " + i,
 					(byte) ((original[i] % 16) & 0xFF), copy[i]);
+		in.close();
 	}
 
 	private int flush(InputStream in) throws IOException {

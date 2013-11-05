@@ -66,9 +66,9 @@ public class MessageUtils {
 
 	public static byte[] decode(MessageHeader message, byte[] content)
 			throws MessageFormatException {
+	  InputStream is = null;
 		try {
-			InputStream is = new ByteArrayInputStream(content);
-			is = decode(message, is);
+			is = decode(message, new ByteArrayInputStream(content));
 			ByteArrayOutputStream copy = new ByteArrayOutputStream();
 			byte[] buff = new byte[4096];
 			int got;
@@ -78,6 +78,16 @@ public class MessageUtils {
 		} catch (IOException ioe) {
 			throw new MessageFormatException("Malformed encoded content: "
 					+ ioe.getMessage(), ioe);
+		} finally {
+		  if (is != null)
+		  {
+        try
+        {
+          is.close();
+        } catch (IOException e) {
+          // Ignore - we were only trying to close the InputStream.
+        }
+		  }
 		}
 	}
 
@@ -133,8 +143,7 @@ public class MessageUtils {
 
 	public static byte[] encode(MessageHeader header, byte[] content)
 			throws MessageFormatException {
-		InputStream contentStream = new ByteArrayInputStream(content);
-		contentStream = encode(header, contentStream);
+		InputStream contentStream = encode(header, new ByteArrayInputStream(content));
 		ByteArrayOutputStream copy = new ByteArrayOutputStream();
 		byte[] buff = new byte[4096];
 		int got;
@@ -143,6 +152,13 @@ public class MessageUtils {
 				copy.write(buff, 0, got);
 		} catch (IOException ioe) {
 			throw new MessageFormatException("Error encoding content", ioe);
+		} finally {
+      try
+      {
+        contentStream.close();
+      } catch (IOException e) {
+        // Ignore - we were only trying to close the InputStream.
+      }
 		}
 		return copy.toByteArray();
 	}
@@ -183,6 +199,14 @@ public class MessageUtils {
 		return content;
 	}
 
+	/**
+	 * FIXME: Does caller realise that the InputStream might be swapped out ?
+	 * @param header
+	 * @param in
+	 * @return
+	 * @throws MessageFormatException
+	 * @throws IOException
+	 */
 	public static boolean flushContent(MutableMessageHeader header,
 			InputStream in) throws MessageFormatException, IOException {
 		return flushContent(header, in, null);
@@ -204,6 +228,7 @@ public class MessageUtils {
 					int l = Integer.parseInt(cl.trim());
 					if (l == 0)
 						return read;
+					in.close();
 					in = new FixedLengthInputStream(in, l);
 				} catch (NumberFormatException nfe) {
 					throw new MessageFormatException(
@@ -294,8 +319,7 @@ public class MessageUtils {
 		buffered.setHeader(message.getHeader());
 		InputStream in = message.getContent();
 		if (in != null) {
-			ByteArrayOutputStream copy;
-			copy = new SizeLimitedByteArrayOutputStream(max);
+			ByteArrayOutputStream copy = new SizeLimitedByteArrayOutputStream(max);
 			byte[] b = new byte[1024];
 			int got;
 			try {
@@ -306,6 +330,8 @@ public class MessageUtils {
 			} catch (SizeLimitExceededException slee) {
 				buffered.setContent(copy.toByteArray());
 				throw slee;
+			} finally {
+			  copy.close();
 			}
 		}
 	}
