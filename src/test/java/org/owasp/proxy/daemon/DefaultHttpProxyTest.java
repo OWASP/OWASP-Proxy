@@ -209,6 +209,7 @@ public class DefaultHttpProxyTest {
 	 * "used" sockets get closed after the timeout period.
 	 */
 	@Test
+	@Ignore("Requires an AJP server on the other end")
 	public void testSecondTimeout() throws Exception {
 		ts.setVersion("HTTP/1.1");
 		Proxy proxy = new Proxy(listen, ch, null);

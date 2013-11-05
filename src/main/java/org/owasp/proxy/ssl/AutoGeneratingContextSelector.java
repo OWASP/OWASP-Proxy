@@ -51,7 +51,7 @@ import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 
 import org.owasp.proxy.util.Base64;
-import org.owasp.proxy.util.SunCertificateUtils;
+import org.owasp.proxy.util.BouncyCastleSigner;
 
 public class AutoGeneratingContextSelector implements SSLContextSelector {
 
@@ -70,6 +70,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 	private X509Certificate[] caCerts;
 
 	private Set<BigInteger> serials = new HashSet<BigInteger>();
+
+	private final SigningService signingService = BouncyCastleSigner.getInstance();
 
 	/**
 	 * creates a {@link AutoGeneratingContextSelector} that will create a RSA
@@ -145,8 +147,7 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		}
 	}
 
-	private void create(X500Principal caName) throws GeneralSecurityException,
-			IOException {
+	private void create(X500Principal caName) throws GeneralSecurityException {
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
 		keyGen.initialize(1024);
 		KeyPair caPair = keyGen.generateKeyPair();
@@ -155,8 +156,9 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date begin = new Date();
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		X509Certificate cert = SunCertificateUtils.sign(caName, caPubKey,
-				caName, caPubKey, caKey, begin, ends, BigInteger.ONE);
+		// FIXME: We may not want to use the first certificate in the chain.
+		X509Certificate cert = signingService.sign(caName, caPubKey, caName, caPubKey, caKey, begin, ends, BigInteger.ONE,
+																		caCerts[0]);
 		caCerts = new X509Certificate[] { cert };
 	}
 
@@ -167,10 +169,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 							Base64.DO_BREAK_LINES)
 					+ "\n-----END CERTIFICATE-----\n";
 		} catch (IOException e) {
-			e.printStackTrace();
-			return null;
+			throw new CertificateEncodingException(e);
 		}
-
 	}
 
 	/**
@@ -265,10 +265,9 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date begin = new Date();
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		X509Certificate cert = SunCertificateUtils.sign(subject,
-				keyPair.getPublic(), caCerts[0].getSubjectX500Principal(),
-				caCerts[0].getPublicKey(), caKey, begin, ends,
-				getNextSerialNo());
+		// FIXME: We may not want to use the first certificate in the chain.
+		X509Certificate cert = signingService.sign(subject, keyPair.getPublic(), caCerts[0].getSubjectX500Principal(),
+																		caCerts[0].getPublicKey(), caKey, begin, ends, getNextSerialNo(), caCerts[0]);
 
 		X509Certificate[] chain = new X509Certificate[caCerts.length + 1];
 		System.arraycopy(caCerts, 0, chain, 1, caCerts.length);
