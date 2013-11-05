@@ -101,7 +101,8 @@ public class InterceptingConnectionHandler implements
 		relay(client, server);
 	}
 
-	@Override
+	@SuppressWarnings("resource") // The server stream is left running, a handler will close on termination.
+  @Override
 	public void handleConnection(Socket client, InetSocketAddress target,
 			boolean ssl) throws IOException {
 		Socket server = new Socket(Proxy.NO_PROXY);

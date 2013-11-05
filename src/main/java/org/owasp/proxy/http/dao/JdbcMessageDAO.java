@@ -40,6 +40,7 @@ import org.owasp.proxy.http.MutableResponseHeader;
 import org.owasp.proxy.http.RequestHeader;
 import org.owasp.proxy.io.CountingInputStream;
 import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -103,11 +104,11 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 
 	private final static String CREATE_CONTENTS_TABLE = "CREATE TABLE contents ("
 			+ "id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
-			+ "content LONGVARBINARY NOT NULL," + "size INTEGER NOT NULL)";
+																	+ "content LONG VARBINARY NOT NULL," + "size INTEGER NOT NULL)";
 
 	private final static String CREATE_HEADERS_TABLE = "CREATE TABLE headers ("
 			+ "id INTEGER NOT NULL AUTO_INCREMENT PRIMARY KEY,"
-			+ "header LONGVARBINARY NOT NULL,"
+																	+ "header LONG VARBINARY NOT NULL,"
 			+ "contentId INTEGER,"
 			+ "CONSTRAINT content_fk FOREIGN KEY (contentId) REFERENCES contents(id) ON DELETE CASCADE)";
 
@@ -135,14 +136,13 @@ public class JdbcMessageDAO extends NamedParameterJdbcDaoSupport implements
 	public void createTables() throws DataAccessException {
 		JdbcTemplate template = getJdbcTemplate();
 		try {
-		template.execute(CREATE_CONTENTS_TABLE);
-		template.execute(CREATE_HEADERS_TABLE);
-		template.execute(CREATE_REQUESTS_TABLE);
-		template.execute(CREATE_RESPONSES_TABLE);
-		template.execute(CREATE_CONVERSATIONS_TABLE);
+		  template.execute(CREATE_CONTENTS_TABLE);
+		  template.execute(CREATE_HEADERS_TABLE);
+		  template.execute(CREATE_REQUESTS_TABLE);
+		  template.execute(CREATE_RESPONSES_TABLE);
+		  template.execute(CREATE_CONVERSATIONS_TABLE);
 		} catch (BadSqlGrammarException e) {
-			e.printStackTrace();
-			// FIXME: get database metadata, and see if the tables already exist
+			throw new DataAccessResourceFailureException("Failed to initialise tables.", e);
 		}
 	}
 

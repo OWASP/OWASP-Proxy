@@ -32,7 +32,6 @@ import java.util.List;
 import java.util.logging.Logger;
 
 import jcifs.Config;
-import jcifs.ntlmssp.NtlmFlags;
 import jcifs.ntlmssp.NtlmMessage;
 import jcifs.ntlmssp.Type1Message;
 import jcifs.ntlmssp.Type2Message;
