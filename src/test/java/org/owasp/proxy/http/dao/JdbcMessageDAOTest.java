@@ -39,8 +39,6 @@ import org.owasp.proxy.http.MutableBufferedRequest;
 import org.owasp.proxy.http.MutableBufferedResponse;
 import org.owasp.proxy.http.RequestHeader;
 import org.owasp.proxy.http.ResponseHeader;
-import org.owasp.proxy.http.dao.Conversation;
-import org.owasp.proxy.http.dao.JdbcMessageDAO;
 import org.owasp.proxy.util.AsciiString;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
@@ -87,7 +85,7 @@ public class JdbcMessageDAOTest {
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-		dao.getJdbcTemplate().execute("SHUTDOWN");
+		// dao.getJdbcTemplate().execute("SHUTDOWN");
 	}
 
 	@Test
