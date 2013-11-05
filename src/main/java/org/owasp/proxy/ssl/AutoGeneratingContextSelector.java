@@ -50,10 +50,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.X509KeyManager;
 import javax.security.auth.x500.X500Principal;
 
-import org.bouncycastle.cert.CertIOException;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.owasp.proxy.util.Base64;
-import org.owasp.proxy.util.SunCertificateUtils;
+import org.owasp.proxy.util.BouncyCastleSigner;
 
 public class AutoGeneratingContextSelector implements SSLContextSelector {
 
@@ -72,6 +70,8 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 	private X509Certificate[] caCerts;
 
 	private Set<BigInteger> serials = new HashSet<BigInteger>();
+
+	private final SigningService signingService = BouncyCastleSigner.getInstance();
 
 	/**
 	 * creates a {@link AutoGeneratingContextSelector} that will create a RSA
@@ -156,19 +156,9 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date begin = new Date();
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		X509Certificate cert = null;
-		try
-		{
-			// FIXME: We may not want to use the first certificate in the chain.
-			cert = SunCertificateUtils.sign(caName, caPubKey, caName, caPubKey, caKey, begin, ends, BigInteger.ONE,
-																			caCerts[0]);
-		} catch (OperatorCreationException e) {
-			throw new GeneralSecurityException(e);
-		} catch (CertIOException e) {
-			throw new GeneralSecurityException(e);
-		} catch (IOException e) {
-			throw new GeneralSecurityException(e);
-		}
+		// FIXME: We may not want to use the first certificate in the chain.
+		X509Certificate cert = signingService.sign(caName, caPubKey, caName, caPubKey, caKey, begin, ends, BigInteger.ONE,
+																		caCerts[0]);
 		caCerts = new X509Certificate[] { cert };
 	}
 
@@ -275,18 +265,9 @@ public class AutoGeneratingContextSelector implements SSLContextSelector {
 		Date begin = new Date();
 		Date ends = new Date(begin.getTime() + DEFAULT_VALIDITY);
 
-		X509Certificate cert;
-		try {
-			// FIXME: We may not want to use the first certificate in the chain.
-			cert = SunCertificateUtils.sign(subject, keyPair.getPublic(), caCerts[0].getSubjectX500Principal(),
-																			caCerts[0].getPublicKey(), caKey, begin, ends, getNextSerialNo(), caCerts[0]);
-		} catch (CertIOException e) {
-			throw new GeneralSecurityException(e);
-		} catch (OperatorCreationException e) {
-			throw new GeneralSecurityException(e);
-		} catch (IOException e) {
-			throw new GeneralSecurityException(e);
-		}
+		// FIXME: We may not want to use the first certificate in the chain.
+		X509Certificate cert = signingService.sign(subject, keyPair.getPublic(), caCerts[0].getSubjectX500Principal(),
+																		caCerts[0].getPublicKey(), caKey, begin, ends, getNextSerialNo(), caCerts[0]);
 
 		X509Certificate[] chain = new X509Certificate[caCerts.length + 1];
 		System.arraycopy(caCerts, 0, chain, 1, caCerts.length);
