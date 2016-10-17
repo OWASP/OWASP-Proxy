@@ -14,7 +14,7 @@
  * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to:
- * The Free Software Foundation, Inc., 
+ * The Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
@@ -101,11 +101,11 @@ public class HttpClient {
 	private InputStream responseContent = null;
 
 	private long requestSubmissionTime, responseHeaderStartTime,
-			responseHeaderEndTime;
+	responseHeaderEndTime;
 
 	private int soTimeout = 10000;
 
-	private String[] enabledProtocols = { "SSLv3" };
+	private String[] enabledProtocols = { "SSLv2Hello", "TLSv1.2" };
 
 	public HttpClient() {
 	}
@@ -336,7 +336,7 @@ public class HttpClient {
 	}
 
 	public void sendRequestHeader(byte[] header) throws IOException,
-			MessageFormatException {
+	MessageFormatException {
 		if (state == State.RESPONSE_CONTINUE) {
 			throw new IllegalStateException(
 					"Cannot start a new request when the "
@@ -415,7 +415,7 @@ public class HttpClient {
 	}
 
 	private StreamingResponse readResponse(InputStream in) throws IOException,
-			MessageFormatException {
+	MessageFormatException {
 		InputStream is = socket.getInputStream();
 		HeaderByteArrayOutputStream header = new HeaderByteArrayOutputStream();
 		StreamingResponse response = new StreamingResponse.Impl();
@@ -459,7 +459,7 @@ public class HttpClient {
 	 * @throws MessageFormatException
 	 */
 	public byte[] getResponseHeader() throws IOException,
-			MessageFormatException {
+	MessageFormatException {
 		if (state != State.REQUEST_HEADER_SENT
 				&& state != State.REQUEST_CONTENT_SENT) {
 			throw new IllegalStateException(
@@ -624,7 +624,7 @@ public class HttpClient {
 	}
 
 	private static class HeaderByteArrayOutputStream extends
-			ByteArrayOutputStream {
+	ByteArrayOutputStream {
 
 		// we do it here because we have direct access to the buffer
 		public boolean isEndOfHeader() {
