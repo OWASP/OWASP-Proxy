@@ -14,13 +14,14 @@
  * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to:
- * The Free Software Foundation, Inc., 
+ * The Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
 
 package org.owasp.proxy.ssl;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -36,7 +37,7 @@ public class DefaultServerContextSelector implements SSLContextSelector {
 	private SSLContext sslContext = null;
 
 	public DefaultServerContextSelector() throws GeneralSecurityException,
-			IOException {
+	IOException {
 		this(null, "password", "password");
 	}
 
@@ -48,12 +49,11 @@ public class DefaultServerContextSelector implements SSLContextSelector {
 		}
 
 		KeyStore ks = KeyStore.getInstance("PKCS12");
-		InputStream is = getClass().getClassLoader().getResourceAsStream(
-				resource);
+		InputStream is = new FileInputStream(resource);
 		if (is != null) {
 			char[] ksp = storePassword.toCharArray();
 			ks.load(is, ksp);
-			KeyManagerFactory kmf = KeyManagerFactory.getInstance("X509");
+			KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
 			char[] kp = keyPassword.toCharArray();
 			kmf.init(ks, kp);
 			sslContext = SSLContext.getInstance("SSLv3");
@@ -69,6 +69,7 @@ public class DefaultServerContextSelector implements SSLContextSelector {
 	 * @return an SSLSocketFactory generated from the relevant server key
 	 *         material
 	 */
+	@Override
 	public SSLContext select(InetSocketAddress target) {
 		if (sslContext == null) {
 			throw new NullPointerException("sslContext is null!");
