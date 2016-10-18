@@ -14,7 +14,7 @@
  * 
  * You should have received a copy of the GNU Lesser General Public
  * License along with this library; if not, write to:
- * The Free Software Foundation, Inc., 
+ * The Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
  */
@@ -40,9 +40,7 @@ import sun.security.x509.AuthorityKeyIdentifierExtension;
 import sun.security.x509.BasicConstraintsExtension;
 import sun.security.x509.CertificateAlgorithmId;
 import sun.security.x509.CertificateExtensions;
-import sun.security.x509.CertificateIssuerName;
 import sun.security.x509.CertificateSerialNumber;
-import sun.security.x509.CertificateSubjectName;
 import sun.security.x509.CertificateValidity;
 import sun.security.x509.CertificateVersion;
 import sun.security.x509.CertificateX509Key;
@@ -52,18 +50,17 @@ import sun.security.x509.KeyUsageExtension;
 import sun.security.x509.NetscapeCertTypeExtension;
 import sun.security.x509.SubjectKeyIdentifierExtension;
 import sun.security.x509.X500Name;
-import sun.security.x509.X500Signer;
 import sun.security.x509.X509CertImpl;
 import sun.security.x509.X509CertInfo;
 
 public class SunCertificateUtils {
 
-	private static final String SIGALG = "SHA1withRSA";
+	private static final String SIGALG = "SHA256withRSA";
 
 	public static X509Certificate sign(X500Principal subject, PublicKey pubKey,
 			X500Principal issuer, PublicKey caPubKey, PrivateKey caKey,
 			Date begin, Date ends, BigInteger serialNo)
-			throws GeneralSecurityException {
+					throws GeneralSecurityException {
 
 		try {
 			X500Name subjectName = new X500Name(subject.getName());
@@ -84,12 +81,10 @@ public class SunCertificateUtils {
 			AlgorithmId algID = signer.getAlgorithmId();
 			info.set(X509CertInfo.ALGORITHM_ID, new CertificateAlgorithmId(
 					algID));
-			info.set(X509CertInfo.SUBJECT, new CertificateSubjectName(
-					subjectName));
+			info.set(X509CertInfo.SUBJECT, issuerName);
 			info.set(X509CertInfo.KEY, new CertificateX509Key(pubKey));
 			info.set(X509CertInfo.VALIDITY, valid);
-			info.set(X509CertInfo.ISSUER, new CertificateIssuerName(signer
-					.getSigner()));
+			info.set(X509CertInfo.ISSUER, issuerName);
 
 			// add Extensions
 			CertificateExtensions ext = (subject == issuer) ? getCACertificateExtensions()
@@ -112,7 +107,7 @@ public class SunCertificateUtils {
 
 		// Basic Constraints
 		ext.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(
-		/* isCritical */true, /* isCA */true, 0));
+				/* isCritical */true, /* isCA */true, 0));
 
 		return ext;
 	}
@@ -131,7 +126,7 @@ public class SunCertificateUtils {
 
 		// Basic Constraints
 		ext.set(BasicConstraintsExtension.NAME, new BasicConstraintsExtension(
-		/* isCritical */true, /* isCA */false, /* pathLen */5));
+				/* isCritical */true, /* isCA */false, /* pathLen */5));
 
 		// Netscape Cert Type Extension
 		boolean[] ncteOk = new boolean[8];
@@ -172,5 +167,7 @@ public class SunCertificateUtils {
 		return ext;
 
 	}
+
+
 
 }

@@ -26,12 +26,6 @@
     <developerConnection>scm:git:ssh://dawes.za.net/home/rdawes/dawes.za.net/rogan/owasp-proxy/owasp-proxy.git/</developerConnection>
     <url>http://dawes.za.net/gitweb.cgi?p=rogan/owasp-proxy/owasp-proxy.git;a=summary.com</url>
   </scm>
-  <pluginRepositories>
-    <pluginRepository>
-      <id>onejar-maven-plugin.googlecode.com</id>
-      <url>http://onejar-maven-plugin.googlecode.com/svn/mavenrepo</url>
-    </pluginRepository>
-  </pluginRepositories>
   <build>
     <pluginManagement>
       <plugins>
@@ -80,9 +74,9 @@
         </executions>
       </plugin>
       <plugin>
-        <groupId>org.dstovall</groupId>
+        <groupId>com.jolira</groupId>
         <artifactId>onejar-maven-plugin</artifactId>
-        <version>1.4.3</version>
+        <version>1.4.4</version>
         <executions>
           <execution>
             <configuration>
@@ -99,20 +93,10 @@
   </build>
   <repositories>
     <repository>
-      <id>Jenkins</id>
-      <name>Jenkins</name>
-      <url>http://maven.jenkins-ci.org/content/groups/java.net2/</url>
-    </repository>
-    <repository>
-      <id>Shibboleth</id>
-      <name>Shibboleth</name>
-      <url>http://shibboleth.internet2.edu/downloads/maven2/</url>
-    </repository>
-    <repository>
-      <id>maven2-repository.dev.java.net</id>
-      <name>Java.net Repository for Maven</name>
-      <url>http://download.java.net/maven/2/</url>
-    </repository>
+            <id>java.net-Public</id>
+            <name>Maven Java Net Snapshots and Releases</name>
+            <url>https://maven.java.net/content/groups/public/</url>
+        </repository>
   </repositories>
   <dependencies>
     <dependency>
